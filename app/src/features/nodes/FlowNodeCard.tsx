@@ -922,7 +922,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                   handleTitleKey(event);
                 }}
                 onPointerDown={(event) => event.stopPropagation()}
-                className="flow-node__title-input"
+                className="flow-node__title-input nodrag"
               />
             ) : (
               <button
@@ -1054,7 +1054,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
           {isAiNode && (
             <section className="flex flex-col gap-3">
               <textarea
-                className="min-h-[160px] w-full resize-none rounded-lg bg-black/10 p-3 text-sm leading-relaxed text-white/90 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                className="nodrag min-h-[160px] w-full resize-none rounded-lg bg-black/10 p-3 text-sm leading-relaxed text-white/90 focus:outline-none focus:ring-2 focus:ring-primary/60"
                 value={promptDraft}
                 onChange={(event) => setPromptDraft(event.target.value)}
                 onBlur={handlePromptBlur}
@@ -1190,7 +1190,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                         <div className="mt-3 space-y-1">
                           {field.type === 'textarea' ? (
                             <textarea
-                              className="min-h-[80px] w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-primary focus:outline-none"
+                              className="nodrag min-h-[80px] w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-primary focus:outline-none"
                               value={state.value}
                               onChange={(event) => handleFieldValueChange(field.key, event.target.value)}
                               onBlur={handleFieldBlur}
@@ -1200,7 +1200,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                           ) : (
                             <input
                               type="text"
-                              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-primary focus:outline-none"
+                              className="nodrag w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-primary focus:outline-none"
                               value={state.value}
                               onChange={(event) => handleFieldValueChange(field.key, event.target.value)}
                               onBlur={handleFieldBlur}
@@ -1264,7 +1264,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                       <label className="flex flex-col gap-1">
                         <span className="text-[10px] uppercase tracking-wide text-white/50">Системный промпт</span>
                         <textarea
-                          className="min-h-[80px] w-full rounded bg-black/20 p-2 text-xs leading-relaxed text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
+                          className="nodrag min-h-[80px] w-full rounded bg-black/20 p-2 text-xs leading-relaxed text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
                           value={systemPromptDraft}
                           onChange={(event) => setSystemPromptDraft(event.target.value)}
                           onBlur={handleSystemPromptBlur}
@@ -1274,7 +1274,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                         <span className="text-[10px] uppercase tracking-wide text-white/50">Схема ответа</span>
                         <input
                           type="text"
-                          className="w-full rounded bg-black/20 px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
+                          className="nodrag w-full rounded bg-black/20 px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
                           value={outputSchemaDraft}
                           onChange={(event) => setOutputSchemaDraft(event.target.value)}
                           onBlur={handleOutputSchemaBlur}
@@ -1289,7 +1289,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                         <input
                           type="number"
                           step="0.1"
-                          className="w-full rounded bg-black/20 px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
+                          className="nodrag w-full rounded bg-black/20 px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
                           value={temperatureDraft}
                           onChange={(event) => setTemperatureDraft(event.target.value)}
                           onBlur={handleTemperatureBlur}
@@ -1306,7 +1306,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
             <section className="flex flex-col gap-2">
               {editingText ? (
                 <textarea
-                  className="h-56 w-full resize-none rounded-lg border border-white/15 bg-black/15 p-3 text-sm leading-relaxed text-white/90 focus:border-primary focus:outline-none"
+                  className="nodrag h-56 w-full resize-none rounded-lg border border-white/15 bg-black/15 p-3 text-sm leading-relaxed text-white/90 focus:border-primary focus:outline-none"
                   value={textDraft}
                   onChange={(event) => setTextDraft(event.target.value)}
                   onBlur={commitText}
@@ -1327,7 +1327,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                 />
               ) : (
                 <div
-                  className="min-h-[160px] whitespace-pre-wrap rounded-lg bg-black/10 p-3 text-sm leading-relaxed text-white/85"
+                  className="nodrag min-h-[160px] whitespace-pre-wrap rounded-lg bg-black/10 p-3 text-sm leading-relaxed text-white/85"
                   onDoubleClick={(event) => {
                     event.stopPropagation();
                     if (!collapsed) setEditingText(true);
