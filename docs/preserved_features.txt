@@ -1,0 +1,18 @@
+Custom GraphCanvas tweaks (pending reimplementation)
+---------------------------------------------------
+1. Edge management
+   - Custom removable edges with inline delete button (RemovableEdge component).
+   - onCreateEdge/onRemoveEdges callbacks to sync edges with backend.
+   - Additional validation preventing agent-to-agent and non-empty data connections.
+
+2. Provider-aware node data
+   - Passing providerOptions and upstream source nodes into FlowNodeCard for richer UI.
+
+3. Aggressive layout fixes
+   - Multiple resize timers and manual fitView calls to adjust viewport.
+   - Transparent background wrapper + empty-state overlay.
+
+4. Debug logging
+   - Console logs for project load and viewport adjustments.
+
+These enhancements were causing instability; revisit after stabilising the base GraphCanvas.

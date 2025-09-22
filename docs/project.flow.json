@@ -1,0 +1,174 @@
+{
+  "project_id": "proj_2025_09_19_001",
+  "title": "Рекламный ролик чипсов — демо",
+  "created_at": "2025-09-19T10:00:00Z",
+  "updated_at": "2025-09-19T10:00:00Z",
+  "description": "Демонстрационный проект полуавтоматического пайплайна.",
+  "settings": {
+    "language": "ru",
+    "ai_default_model": "local-llm-7b-q5",
+    "ai_temperature": 0.3,
+    "max_parallel_workers": 4,
+    "auto_save_interval_sec": 60,
+    "allow_network": false
+  },
+  "nodes": [
+    {
+      "node_id": "n1_text_brief",
+      "type": "text",
+      "title": "Текстовый бриф",
+      "content_type": "text/plain",
+      "content": "Реклама чипсов для школьников, нужно показать, что чипсы полезные (пример по рофлу).",
+      "meta": { "tags": ["brief", "demo"] }
+    },
+    {
+      "node_id": "n2_ai_planner",
+      "type": "ai",
+      "title": "ИИ-планировщик",
+      "ai": {
+        "model": "local-llm-7b-q5",
+        "temperature": 0.2,
+        "system_prompt": "Ты — продюсер, умеющий строить производственные пайплайны для видео.",
+        "user_prompt_template": "Составь план генерации видео с ИИ-инструментами. Выведи строго в JSON по схеме PLAN_SCHEMA.",
+        "output_schema_ref": "PLAN_SCHEMA"
+      },
+      "visibility_rules": {
+        "prev_node_full_content": true,
+        "next_nodes_metadata_only": true,
+        "next_nodes_metadata_max_chars": 200,
+        "future_nodes_visibility": "metadata_only"
+      },
+      "meta": { "tags": ["planner"] }
+    },
+    {
+      "node_id": "n3_text_shortplan",
+      "type": "text",
+      "title": "Короткий план рекламы",
+      "content_type": "application/json",
+      "content": "",
+      "meta": { "tags": ["plan"] }
+    },
+    {
+      "node_id": "n4_text_actors",
+      "type": "text",
+      "title": "АКТЕРЫ",
+      "content_type": "text/plain",
+      "content": "Список ключевых актеров.",
+      "meta": { "tags": ["actors"] }
+    },
+    {
+      "node_id": "n5_text_scenes",
+      "type": "text",
+      "title": "СЦЕНЫ",
+      "content_type": "text/plain",
+      "content": "Список сцен.",
+      "meta": { "tags": ["scenes"] }
+    },
+    {
+      "node_id": "n6_text_env",
+      "type": "text",
+      "title": "ОКРУЖЕНИЕ",
+      "content_type": "text/plain",
+      "content": "Список локаций и окружения.",
+      "meta": { "tags": ["environment"] }
+    }
+  ],
+  "edges": [
+    { "from": "n1_text_brief", "to": "n2_ai_planner", "label": "brief→planner" },
+    { "from": "n2_ai_planner", "to": "n3_text_shortplan", "label": "plan JSON output" },
+    { "from": "n3_text_shortplan", "to": "n4_text_actors", "label": "actors branch" },
+    { "from": "n3_text_shortplan", "to": "n5_text_scenes", "label": "scenes branch" },
+    { "from": "n3_text_shortplan", "to": "n6_text_env", "label": "environment branch" }
+  ],
+  "schemas": {
+    "PLAN_SCHEMA": {
+      "type": "object",
+      "required": ["overview", "phases", "nodes"],
+      "properties": {
+        "overview": {
+          "type": "object",
+          "required": ["goal", "target_audience", "tone", "duration_sec"],
+          "properties": {
+            "goal": { "type": "string" },
+            "target_audience": { "type": "string" },
+            "tone": { "type": "string" },
+            "duration_sec": { "type": "integer", "minimum": 5, "maximum": 180 }
+          },
+          "additionalProperties": false
+        },
+        "phases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "steps"],
+            "properties": {
+              "name": { "type": "string" },
+              "steps": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["node_id", "type", "title", "description", "outputs"],
+            "properties": {
+              "node_id": { "type": "string" },
+              "type": {
+                "type": "string",
+                "enum": ["text", "ai", "parser", "python", "image_gen", "audio_gen", "video_gen"]
+              },
+              "title": { "type": "string" },
+              "description": { "type": "string" },
+              "outputs": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 3
+        }
+      },
+      "additionalProperties": false
+    },
+    "ACTOR_SCHEMA": {
+      "type": "object",
+      "required": ["name", "age_range", "traits", "bio", "visual_prompt", "voice_prompt"],
+      "properties": {
+        "name": { "type": "string" },
+        "age_range": { "type": "string" },
+        "traits": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 3
+        },
+        "bio": { "type": "string" },
+        "visual_prompt": { "type": "string" },
+        "voice_prompt": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "PARSE_SCHEMA": {
+      "type": "object",
+      "required": ["source", "title", "text", "links"],
+      "properties": {
+        "source": { "type": "string" },
+        "title": { "type": "string" },
+        "text": { "type": "string" },
+        "links": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

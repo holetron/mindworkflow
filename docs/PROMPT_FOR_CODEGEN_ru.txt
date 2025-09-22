@@ -1,0 +1,141 @@
+# PROMPT ДЛЯ CODEX (ГЕНЕРАЦИЯ КОДА ПО ТЗ «Local Creative Flow»)
+
+Роль: Ты — инженер-разработчик уровня Staff, собираешь локальный офлайн-первый инструмент Local Creative Flow по приложенному ТЗ. Пишешь чистый, запускаемый код без пропусков.
+
+Цель за один прогон: сгенерировать полностью запускаемый моно-репозиторий с:
+- Electron-клиентом (/app),
+- локальным сервером на Node.js/Express (/server),
+- SQLite базой (data/localcreativeflow.db),
+- JSON-схемами,
+- демо-проектом «Реклама чипсов»,
+- автотестами (Jest),
+- готовыми npm-скриптами для запуска/сборки/тестов,
+- README с инструкциями.
+
+1) Технический стек и версии
+- Node.js 20 LTS, npm 10.
+- Electron 29.
+- Express 4.
+- SQLite через better-sqlite3 9.
+- Валидация JSON через ajv 8.
+- UI: React 18 + Vite + TypeScript + TailwindCSS; граф нод — dagre + reactflow.
+- Тесты: Jest 29 + supertest.
+- Линтинг: ESLint + Prettier.
+- FFmpeg — вызывать как локальный бинарь через child_process (для video_gen заглушки).
+- Python-интеграция — запуск через child_process c локальным venv.
+
+2) Структура репозитория (создай все файлы и каталоги)
+/
+/local-creative-flow
+  package.json
+  README_LOCAL.md
+  /app
+    index.html
+    vite.config.ts
+    package.json
+    tsconfig.json
+    src/main.tsx
+    src/App.tsx
+    src/components/GraphCanvas.tsx
+    src/components/NodeEditor.tsx
+    src/components/JsonViewer.tsx
+    src/state/store.ts
+    src/state/api.ts
+    src/styles/index.css
+    tailwind.config.ts
+  /server
+    package.json
+    tsconfig.json
+    src/index.ts
+    src/db.ts
+    src/routes/projects.ts
+    src/routes/nodes.ts
+    src/routes/validate.ts
+    src/services/executor.ts
+    src/services/ai.ts
+    src/services/parser.ts
+    src/services/pythonSandbox.ts
+    src/services/videoGenStub.ts
+    src/schemas/PLAN_SCHEMA.json
+    src/schemas/ACTOR_SCHEMA.json
+    src/schemas/PARSE_SCHEMA.json
+    src/middleware/errorHandler.ts
+    src/middleware/validateBody.ts
+  /projects
+    /proj_2025_09_19_001
+      project.flow.json
+      /assets/.gitkeep
+      /project_output/.gitkeep
+  /tests
+    server.projects.spec.ts
+    server.validate.spec.ts
+    server.nodes.spec.ts
+  .editorconfig
+  .eslintrc.cjs
+  .prettierrc
+  .gitignore
+
+3) Жёсткие требования реализации
+- Схемы лежат в /server/src/schemas/ и используются ajv: PLAN_SCHEMA.json, ACTOR_SCHEMA.json, PARSE_SCHEMA.json (точно как в ТЗ).
+- API:
+  - POST /api/project — импорт проекта из тела запроса (project.flow.json), валидация полей и всех schemas.
+  - GET /api/project/:id — получить проект.
+  - POST /api/node/:id/run — запуск ноды (text, ai, parser, python, image_gen stub, audio_gen stub, video_gen stub). Возврат: статус, логи, обновлённый контент ноды.
+  - POST /api/node/:id/rerun — флаги clone:boolean, include_subnodes:boolean; реализация клонирования origId_clone_001.
+  - GET /api/node/:id/logs — логи исполнения.
+  - POST /api/validate — { schema_ref, data } → валиден/нет + ошибки.
+- SQLite модели: projects, nodes, edges, runs, assets. Для runs хранить run_id, node_id, started_at, finished_at, status, input_hash, output_hash, logs_json.
+- Исполнитель графов: топологическая сортировка, детектор циклов, 2 ретрая с backoff 1s/2s.
+- Видимость контекста для ai-ноды: полный предыдущий, для следующих — только метаданные (type, title, short_description<=200, connection_labels).
+- Python песочница: venv проекта, allowlist модулей (re, json, csv, itertools, math, statistics, pandas, numpy, beautifulsoup4, lxml, markdown), таймаут 30с, RAM 1ГБ, запись только в project_output/, сети нет по умолчанию; если settings.allow_network===true — через локальный прокси-логгер (stub).
+- UI: ReactFlow + Dagre; редактор ноды (вкладки Data / Prompt/Code / History / Permissions), панель «AI Node Context», кнопки Run/Regenerate/Clone&Regenerate/Validate/Export, JSON viewer с подсветкой и live-валидацией (ajv).
+- Демо-проект: /projects/proj_2025_09_19_001/project.flow.json ровно как в ТЗ.
+- Логи/аудит: запись runs, SHA-256 входа/выхода, версия движка из package.json сервера.
+- Тесты (Jest): validate (схемы позитив/негатив), projects (импорт/GET), nodes (ai stub, parser из HTML-строки, python нормализация JSON, rerun с клонированием).
+- Экспорт в .lcfz (zip) и импорт обратно с проверкой схем.
+
+4) Поведение по умолчанию для AI/медиа нод
+- ai.ts: заглушка local-llm-7b-q5 — детерминированный валидный JSON по запрошенной схеме (можно взять примеры из ТЗ), валидация ajv.
+- image_gen/audio_gen/video_gen — детерминированные заглушки. video_gen вызывает локальный ffmpeg, создаёт projects/<id>/project_output/previz.mp4 (5 секунд, 1280x720, чёрный фон).
+
+5) CLI и npm-скрипты
+Корень:
+- "dev": параллельно поднимает сервер (npm --prefix server run dev) и клиент (npm --prefix app run dev)
+- "build": сборка клиента и сервера
+- "test": запуск Jest из /tests
+
+/server:
+- "dev": ts-node-dev src/index.ts
+- "build": tsc -p .
+- "start": node dist/index.js
+- "test": jest --runInBand
+
+/app:
+- "dev": vite
+- "build": vite build
+- "preview": vite preview
+
+6) README_LOCAL.md — разделы:
+- Описание, Требования (Node 20, FFmpeg в PATH), Установка, Структура, Команды, API с примерами curl, Демо и превиз, Безопасность Python песочницы, Лицензия (MIT).
+
+7) Критерии приёмки (автопроверка)
+- npm run dev поднимает сервер на http://localhost:4321 и клиент на http://localhost:5173
+- POST /api/project импортирует демо-проект, GET /api/project/proj_2025_09_19_001 возвращает JSON
+- POST /api/node/n2_ai_planner/run → валидный JSON по PLAN_SCHEMA
+- POST /api/validate с ACTOR_SCHEMA и примером — valid:true
+- POST /api/node/:id/rerun с {"clone":true} создаёт *_clone_001
+- после video_gen существует projects/proj_2025_09_19_001/project_output/previz.mp4
+
+Источник правды (файлы в этом воркспейсе):
+- /docs/LocalCreativeFlow_SPEC_ru.md
+- /docs/LocalCreativeFlow_SPEC_en.md
+- /docs/PLAN_SCHEMA.json
+- /docs/ACTOR_SCHEMA.json
+- /docs/PARSE_SCHEMA.json
+- /docs/project.flow.json
+
+Инструкции:
+1) Прочитай файлы-источники.
+2) Сгенерируй весь репозиторий по требованиям выше, покажи содержимое файлов блоками (без пропусков).
+3) Проверь ajv-валидацию схем и демо-проекта.
+4) В конце выведи пошаговые команды для запуска.

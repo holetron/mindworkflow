@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PLAN_SCHEMA",
+  "type": "object",
+  "required": ["overview", "phases", "nodes"],
+  "properties": {
+    "overview": {
+      "type": "object",
+      "required": ["goal", "target_audience", "tone", "duration_sec"],
+      "properties": {
+        "goal": { "type": "string" },
+        "target_audience": { "type": "string" },
+        "tone": { "type": "string" },
+        "duration_sec": { "type": "integer", "minimum": 5, "maximum": 180 }
+      },
+      "additionalProperties": false
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "steps"],
+        "properties": {
+          "name": { "type": "string" },
+          "steps": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["node_id", "type", "title", "description", "outputs"],
+        "properties": {
+          "node_id": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["text", "ai", "parser", "python", "image_gen", "audio_gen", "video_gen"]
+          },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "outputs": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 3
+    }
+  },
+  "additionalProperties": false
+}

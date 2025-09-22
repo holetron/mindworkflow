@@ -1,0 +1,305 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-slate-900 text-slate-100 font-sans;
+}
+
+button {
+  @apply rounded-md bg-primary px-3 py-2 font-medium text-white transition hover:bg-blue-600 disabled:opacity-50;
+}
+
+input,
+textarea {
+  @apply w-full rounded-md border border-slate-600 bg-slate-800 p-2 text-slate-100;
+}
+
+.rf-smart-edge__path {
+  fill: none;
+  stroke: #38bdf8;
+  stroke-width: 2.4px;
+  stroke-linecap: round;
+  transition: stroke 120ms ease-in-out;
+}
+
+.rf-smart-edge__path--selected {
+  stroke: #a855f7;
+  stroke-width: 3px;
+}
+
+.rf-smart-edge__halo {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14px;
+  pointer-events: stroke;
+}
+
+.rf-smart-edge__preview {
+  fill: none;
+  stroke: #94a3b8;
+  stroke-width: 2px;
+  stroke-dasharray: 6 6;
+  animation: rf-edge-dash 600ms linear infinite;
+}
+
+@keyframes rf-edge-dash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 12;
+  }
+}
+
+.flow-node__handle {
+  width: 12px !important;
+  height: 12px !important;
+  border: 2px solid rgba(255, 255, 255, 0.65) !important;
+  background: #0f172a !important;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.flow-node__handle--source {
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
+}
+
+.flow-node__handle--target {
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.4);
+}
+
+.flow-node__handle--highlight {
+  transform: scale(1.3);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4);
+}
+
+.flow-node--dragging {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45) !important;
+  border-color: rgba(56, 189, 248, 0.6) !important;
+}
+
+.flow-node--resizing {
+  cursor: nwse-resize;
+}
+
+.react-flow__node {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 160ms ease;
+}
+
+.react-flow__node.dragging,
+.react-flow__node.selectable.dragging {
+  transition: none;
+}
+
+.flow-node {
+  transition: width 180ms ease, height 180ms ease, box-shadow 180ms ease, border-color 180ms ease,
+    background 180ms ease;
+}
+
+.flow-node.flow-node--dragging,
+.flow-node.flow-node--resizing {
+  transition: none;
+}
+
+.flow-node__resize-handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  bottom: 6px;
+  right: 6px;
+  cursor: nwse-resize;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.8);
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.flow-node__resize-handle:hover {
+  transform: scale(1.15);
+  background: rgba(59, 130, 246, 0.5);
+}
+
+.flow-node__resize-handle:active {
+  transform: scale(1.25);
+  background: rgba(56, 189, 248, 0.65);
+}
+
+.flow-node__header {
+  @apply flex items-center justify-between rounded-t-xl border-b px-3 py-2;
+  border-bottom-width: 1px;
+}
+
+.flow-node__identity {
+  @apply flex items-center gap-3 text-white/80 text-[11px];
+  cursor: grab;
+}
+
+.flow-node--dragging .flow-node__identity {
+  cursor: grabbing;
+}
+
+.flow-node__type-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: #0f172a;
+  transition: transform 120ms ease;
+}
+
+.flow-node__identity:hover .flow-node__type-icon {
+  transform: scale(1.05);
+}
+
+.flow-node__identity-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.flow-node__title-button {
+  @apply max-w-[240px] truncate rounded-md bg-black/20 px-3 py-1 text-left text-[12px] font-semibold text-white/90 transition;
+}
+
+.flow-node__title-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.flow-node__title-input {
+  @apply w-48 rounded-md bg-black/20 px-3 py-1 text-[12px] font-semibold text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-400;
+}
+
+.flow-node__meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(226, 232, 240, 0.65);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+.flow-node__meta-pill {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  padding: 2px 8px;
+  text-transform: uppercase;
+}
+
+.flow-node__meta-id {
+  font-family: 'JetBrains Mono', monospace;
+  opacity: 0.6;
+}
+
+.flow-node__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 120px;
+  justify-content: flex-end;
+}
+
+.flow-node__toolbar-button {
+  @apply flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 text-xs text-white shadow transition;
+  background: rgba(30, 41, 59, 0.85);
+}
+
+.flow-node__toolbar-button:hover {
+  filter: brightness(1.1);
+}
+
+.flow-node__toolbar-button--danger {
+  border-color: rgba(248, 113, 113, 0.6);
+}
+
+.flow-node__connections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 6px;
+}
+
+.flow-node__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.flow-node__chip--incoming {
+  background: rgba(56, 189, 248, 0.18);
+  color: #bae6fd;
+}
+
+.flow-node__chip--outgoing {
+  background: rgba(147, 197, 253, 0.18);
+  color: #c7d2fe;
+}
+
+.flow-node__chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
+}
+
+.flow-node__chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.flow-node__chip-arrow {
+  font-size: 11px;
+}
+
+.flow-node__body {
+  @apply flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-3;
+}
+
+.flow-node__section {
+  @apply flex flex-col gap-3;
+}
+
+.flow-node__textarea {
+  @apply min-h-[160px] w-full resize-none rounded-lg bg-black/10 p-3 text-sm leading-relaxed text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-400/70;
+}
+
+.flow-node__actions {
+  @apply flex items-center justify-between gap-3;
+}
+
+.flow-node__actions-group {
+  @apply flex items-center gap-2;
+}
+
+.flow-node__pill-button {
+  @apply flex h-9 w-9 items-center justify-center rounded-lg bg-black/25 text-white transition hover:bg-slate-700 disabled:opacity-40;
+}
+
+.flow-node__pill-button--primary {
+  background: rgba(16, 185, 129, 0.45);
+}
+
+.flow-node__pill-button--primary:hover {
+  background: rgba(16, 185, 129, 0.6);
+}
+
+.flow-node__pill-button--accent {
+  background: rgba(217, 119, 6, 0.45);
+}
+
+.flow-node__pill-button--accent:hover {
+  background: rgba(217, 119, 6, 0.65);
+}
+
+.flow-node__info {
+  @apply rounded-lg border border-white/15 bg-black/20 p-3 text-[11px] text-white/85;
+  border-color: rgba(148, 163, 184, 0.2);
+}
