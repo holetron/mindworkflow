@@ -108,6 +108,7 @@ function GraphCanvasInner({
   const reactFlow = useReactFlow<FlowNodeCardData>();
   const [nodes, setNodes] = useState<Node<FlowNodeCardData>[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const [isLocked, setIsLocked] = useState(false);
   const initialFitRef = useRef(true);
 
   const projectSignature = useMemo(() => {
@@ -127,8 +128,7 @@ function GraphCanvasInner({
       selectedNodeId,
       providerOptions,
       loading,
-      // Pass a dummy draggingId, it's not used for rendering anymore
-      draggingId: null,
+      isLocked,
       onRunNode,
       onRegenerateNode,
       onDeleteNode,
@@ -153,7 +153,7 @@ function GraphCanvasInner({
     // fundamental structure changes. Adding reactive props that change
     // during user interactions (like dragging) will cause severe
     // performance issues by re-rendering the entire graph.
-  }, [projectSignature]);
+  }, [projectSignature, isLocked]);
 
   useEffect(() => {
     setNodes((prev) =>
@@ -320,6 +320,7 @@ function GraphCanvasInner({
         panOnDrag
         zoomAnimation
         zoomOnDoubleClick={false}
+        nodesDraggable={!isLocked}
         multiSelectionKeyCode="Shift"
         deleteKeyCode={['Delete']}
         minZoom={0.3}
@@ -330,7 +331,11 @@ function GraphCanvasInner({
         className="bg-slate-900"
       >
         <Background color="#1e293b" gap={24} />
-        <Controls position="bottom-right" showInteractive={false} />
+        <Controls position="bottom-right" showInteractive={false}>
+          <ControlButton onClick={() => setIsLocked((prev) => !prev)} title={isLocked ? 'Unlock' : 'Lock'}>
+            {isLocked ? '🔒' : '🔓'}
+          </ControlButton>
+        </Controls>
       </ReactFlow>
       {(!project || project.nodes.length === 0) && !loading && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-slate-400">
@@ -363,7 +368,7 @@ function buildGraphElements({
   selectedNodeId,
   providerOptions,
   loading,
-  draggingId,
+  isLocked,
   onRunNode,
   onRegenerateNode,
   onDeleteNode,
@@ -403,7 +408,6 @@ function buildGraphElements({
           type: sourceNode.type,
         })),
       disabled: loading,
-      isDragging: draggingId === node.node_id,
     };
 
     return {
@@ -411,7 +415,7 @@ function buildGraphElements({
       type: 'flowNode',
       position,
       data,
-      draggable: !loading,
+      draggable: !loading && !isLocked,
       selected: node.node_id === selectedNodeId,
       style: {
         width,
