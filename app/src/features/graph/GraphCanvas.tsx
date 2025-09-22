@@ -318,6 +318,8 @@ function GraphCanvasInner({
         selectionOnDrag
         panOnScroll
         panOnDrag
+        zoomAnimation
+        zoomOnDoubleClick={false}
         multiSelectionKeyCode="Shift"
         deleteKeyCode={['Delete']}
         minZoom={0.3}
