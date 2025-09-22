@@ -260,10 +260,10 @@ function GraphCanvasInner({
 
   const handleNodeDragStop = useCallback(
     (_event: ReactMouseEvent, node: Node<FlowNodeCardData>) => {
-      const x1 = Math.round(node.position.x);
-      const y1 = Math.round(node.position.y);
-      const width = Math.max(NODE_MIN_WIDTH, Math.round(node.measured?.width ?? NODE_DEFAULT_WIDTH));
-      const height = Math.max(NODE_MIN_HEIGHT, Math.round(node.measured?.height ?? NODE_DEFAULT_HEIGHT));
+      const x1 = node.position.x;
+      const y1 = node.position.y;
+      const width = Math.max(NODE_MIN_WIDTH, node.measured?.width ?? NODE_DEFAULT_WIDTH);
+      const height = Math.max(NODE_MIN_HEIGHT, node.measured?.height ?? NODE_DEFAULT_HEIGHT);
       onChangeNodeUi(node.id, {
         bbox: {
           x1,
@@ -315,8 +315,6 @@ function GraphCanvasInner({
         onNodeDragStart={handleNodeDragStart}
         onNodeDragStop={handleNodeDragStop}
         nodeDragHandle=".flow-node__drag-handle"
-        snapToGrid
-        snapGrid={SNAP_GRID}
         selectionOnDrag
         panOnScroll
         panOnDrag
