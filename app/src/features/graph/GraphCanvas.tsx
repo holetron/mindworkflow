@@ -111,6 +111,17 @@ function GraphCanvasInner({
   const [isLocked, setIsLocked] = useState(false);
   const initialFitRef = useRef(true);
 
+  useEffect(() => {
+    const storedIsLocked = localStorage.getItem('lc-flow-is-locked');
+    if (storedIsLocked) {
+      setIsLocked(JSON.parse(storedIsLocked));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('lc-flow-is-locked', JSON.stringify(isLocked));
+  }, [isLocked]);
+
   const projectSignature = useMemo(() => {
     if (!project) return 'empty';
     return `${project.project_id}:${project.updated_at}:${project.nodes.length}:${project.edges.length}`;
