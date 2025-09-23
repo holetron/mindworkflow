@@ -644,7 +644,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   const [systemPromptValue, setSystemPromptValue] = useState(String(node.ai?.system_prompt || ''));
   
   // HTML node specific states
-  const [htmlUrl, setHtmlUrl] = useState<string>((node.meta?.htmlUrl as string) || 'https://example.com');
+  const [htmlUrl, setHtmlUrl] = useState<string>((node.meta?.htmlUrl as string) || 'https://google.com');
   const [screenWidth, setScreenWidth] = useState<string>((node.meta?.screenWidth as string) || 'desktop');
 
   // Refs for DOM manipulation
@@ -1174,7 +1174,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
       {!collapsed ? (
         <div 
           ref={contentRef} 
-          className="flow-node__content"
+          className="flow-node__content nodrag"
           style={{ 
             padding: '16px', 
             paddingBottom: '8px', // Less padding at bottom since footer provides separation
@@ -1195,7 +1195,8 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                         value={String(node.ai?.provider || '')}
                         onChange={(e) => handleProviderChange(e.target.value)}
                         disabled={disabled}
-                        className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm"
+                        className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm nodrag"
+                        data-nodrag="true"
                       >
                         {providers.map(p => (
                           <option key={p.id} value={p.id} disabled={!p.available}>
@@ -1211,7 +1212,8 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                           value={String(node.ai?.model || selectedProvider.defaultModel)}
                           onChange={(e) => handleModelChange(e.target.value)}
                           disabled={disabled}
-                          className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm"
+                          className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm nodrag"
+                          data-nodrag="true"
                         >
                           {selectedProvider.models.map(m => (
                             <option key={m} value={m}>{m}</option>
@@ -1227,7 +1229,12 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                         placeholder="Например: Ты — полезный ассистент."
                         rows={3}
                         disabled={disabled}
-                        className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm resize-y"
+                        className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm resize-y nodrag"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        draggable={false}
+                        data-nodrag="true"
                       />
                     </div>
                   </div>
@@ -1331,9 +1338,14 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                       type="url"
                       value={htmlUrl}
                       onChange={(e) => handleHtmlUrlChange(e.target.value)}
-                      placeholder="https://example.com"
-                      className="w-full p-1.5 bg-black/20 border border-white/10 rounded text-xs text-white"
+                      placeholder="https://google.com"
+                      className="w-full p-1.5 bg-black/20 border border-white/10 rounded text-xs text-white nodrag"
+                      onMouseDown={(e) => e.stopPropagation()} // Prevent node dragging when clicking in input
+                      onPointerDown={(e) => e.stopPropagation()} // Prevent pointer events from bubbling
+                      draggable={false} // Explicitly disable dragging
+                      data-nodrag="true" // Additional React Flow hint
                       onKeyDown={(e) => {
+                        e.stopPropagation(); // Prevent keyboard events from bubbling
                         if (e.key === 'Enter') {
                           // Force iframe reload on Enter
                           const iframe = e.currentTarget.closest('.flex')?.previousElementSibling?.querySelector('iframe') as HTMLIFrameElement;
@@ -1349,8 +1361,9 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                     <select
                       value={screenWidth}
                       onChange={(e) => handleScreenWidthChange(e.target.value)}
-                      className="w-full p-1.5 bg-black/20 border border-white/10 rounded text-xs text-white"
+                      className="w-full p-1.5 bg-black/20 border border-white/10 rounded text-xs text-white nodrag"
                       title="Масштабирование для разных размеров экранов"
+                      data-nodrag="true"
                     >
                       {SCREEN_WIDTHS.map(sw => (
                         <option key={sw.id} value={sw.id}>
@@ -1383,7 +1396,16 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                 onChange={(e) => handleContentChange(e.target.value)}
                 placeholder="Введите содержимое..."
                 disabled={disabled}
-                className="w-full bg-transparent border-none outline-none text-white/90 resize-none"
+                className="w-full bg-transparent border-none outline-none text-white/90 resize-none nodrag"
+                onMouseDown={(e) => e.stopPropagation()} // Prevent node dragging when clicking in textarea
+                onMouseMove={(e) => e.stopPropagation()} // Prevent node dragging during text selection
+                onMouseUp={(e) => e.stopPropagation()}   // Prevent interference with text selection
+                onPointerDown={(e) => e.stopPropagation()} // Prevent pointer events from bubbling
+                onPointerMove={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()} // Prevent keyboard events from bubbling
+                draggable={false} // Explicitly disable dragging
+                data-nodrag="true" // Additional React Flow hint
                 style={{ 
                   height: '100%',
                   minHeight: '80px',
