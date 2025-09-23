@@ -61,7 +61,7 @@ export class AiService {
 
   private async runOpenAi(context: AiContext, aiConfig: Record<string, unknown>): Promise<AiResult> {
     const integrations = (context.settings?.integrations ?? {}) as Record<string, unknown>;
-    const openaiConfig = (integrations.openai ?? integrations.open_ai ?? {}) as {
+    const openaiConfig = (integrations.openai ?? integrations.open_ai ?? integrations.openai_gpt ?? {}) as {
       api_key?: string;
       organization?: string;
       base_url?: string;

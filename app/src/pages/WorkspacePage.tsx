@@ -30,6 +30,7 @@ import {
   findNextNodes,
   type NodeTemplate,
 } from '../state/store';
+import { useGlobalIntegrationsStore } from '../state/globalIntegrationsStore';
 import { AI_PROVIDER_PRESETS } from '../data/aiProviders';
 import type { AiProviderOption } from '../features/nodes/FlowNodeCard';
 import type { IntegrationFieldConfig } from '../state/api';
@@ -81,6 +82,8 @@ function WorkspacePage() {
     removeNode,
     setEdges,
   } = useProjectStore();
+
+  const { integrations: globalIntegrations, fetchIntegrations } = useGlobalIntegrationsStore();
 
   const [validation, setValidation] = useState<ValidationState>({ status: 'idle' });
   const [sidebarWidth, setSidebarWidth] = useState(260);
@@ -136,26 +139,21 @@ function WorkspacePage() {
   }, []);
 
   const providerOptions = useMemo<AiProviderOption[]>(() => {
-    const integrations =
-      project && project.settings && typeof project.settings === 'object'
-        ? ((project.settings as { integrations?: Record<string, unknown> }).integrations ?? {})
-        : {};
+    // Используем глобальные интеграции вместо project.settings.integrations
+    const integrationsMap = globalIntegrations.reduce((acc: Record<string, any>, integration: any) => {
+      acc[integration.key] = integration;
+      return acc;
+    }, {} as Record<string, any>);
 
     return AI_PROVIDER_PRESETS.map((preset) => {
       const integrationKey = preset.integrationKey ?? preset.id;
-      const integration =
-        integrations && typeof integrations === 'object'
-          ? (integrations as Record<string, unknown>)[integrationKey]
-          : undefined;
-      const integrationConfig =
-        integration && typeof integration === 'object'
-          ? (integration as Record<string, unknown>)
-          : undefined;
-      const apiKey =
-        integrationConfig && typeof integrationConfig['api_key'] === 'string'
+      const integration = integrationsMap[integrationKey];
+      const integrationConfig = integration?.config || {};
+      const apiKey = 
+        typeof integrationConfig['api_key'] === 'string'
           ? String(integrationConfig['api_key']).trim()
           : '';
-      const available = preset.integrationKey === null ? true : apiKey.length > 0;
+      const available = preset.integrationKey === null ? true : (integration?.enabled === true && apiKey.length > 0);
 
       const option: AiProviderOption = {
         id: preset.id,
@@ -176,7 +174,7 @@ function WorkspacePage() {
       };
       return option;
     });
-  }, [project]);
+  }, [globalIntegrations]);
 
   useEffect(() => {
     return () => {
@@ -188,6 +186,11 @@ function WorkspacePage() {
       clearProject();
     };
   }, [clearProject]);
+
+  // Загружаем глобальные интеграции при инициализации
+  useEffect(() => {
+    fetchIntegrations();
+  }, [fetchIntegrations]);
 
   useEffect(() => {
     if (!projectId) return;
