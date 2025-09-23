@@ -1,4 +1,5 @@
 import { ReactNode, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   title?: string;
@@ -18,7 +19,7 @@ function Modal({ title, children, onClose, actions }: ModalProps) {
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-6">
       <div className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-xl">
         <header className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
@@ -36,6 +37,9 @@ function Modal({ title, children, onClose, actions }: ModalProps) {
       </div>
     </div>
   );
+
+  // Render modal using portal to document.body to avoid z-index issues
+  return createPortal(modalContent, document.body);
 }
 
 export default Modal;

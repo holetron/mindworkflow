@@ -227,6 +227,17 @@ function GraphCanvasInner({
   const handleConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) return;
+      
+      // Check if edge already exists in project to avoid server conflicts
+      const edgeExists = project?.edges.some(edge => 
+        edge.from === connection.source && edge.to === connection.target
+      );
+      
+      if (edgeExists) {
+        console.warn(`Edge ${connection.source} -> ${connection.target} already exists in project`);
+        return;
+      }
+      
       setEdges((prev) => {
         if (!connection.target || !connection.source) return prev;
         const exists = prev.some((edge) => edge.source === connection.source && edge.target === connection.target);
@@ -242,7 +253,7 @@ function GraphCanvasInner({
       });
       onCreateEdge?.({ from: connection.source, to: connection.target });
     },
-    [onCreateEdge],
+    [onCreateEdge, project?.edges],
   );
 
   const handleNodeClick = useCallback(

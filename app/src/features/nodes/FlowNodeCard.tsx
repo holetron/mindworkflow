@@ -639,12 +639,15 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [activeAiTab, setActiveAiTab] = useState<'settings' | 'fields' | 'routing'>('settings');
   
+  // Color state for immediate UI updates
+  const [currentColor, setCurrentColor] = useState(node.ui?.color ?? DEFAULT_COLOR);
+  
   // Text content states for controlled components
   const [contentValue, setContentValue] = useState(node.content || '');
   const [systemPromptValue, setSystemPromptValue] = useState(String(node.ai?.system_prompt || ''));
   
   // HTML node specific states
-  const [htmlUrl, setHtmlUrl] = useState<string>((node.meta?.htmlUrl as string) || 'https://google.com');
+  const [htmlUrl, setHtmlUrl] = useState<string>((node.meta?.htmlUrl as string) || 'https://wikipedia.org');
   const [screenWidth, setScreenWidth] = useState<string>((node.meta?.screenWidth as string) || 'desktop');
 
   // Refs for DOM manipulation
@@ -656,7 +659,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   const resizeStartPos = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
   // Node properties
-  const baseColor = node.ui?.color ?? DEFAULT_COLOR;
+  const baseColor = currentColor; // Use local state for immediate updates
   const isAiNode = node.type === 'ai';
   const typeIcon = TYPE_ICONS[node.type] || '❓';
 
@@ -669,6 +672,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   // Color change handler
   const handleColorChange = useCallback(
     (color: string) => {
+      setCurrentColor(color); // Update local state immediately
       onChangeUi?.(node.node_id, { color });
       setColorOpen(false);
     },
@@ -733,6 +737,10 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   useEffect(() => {
     setSystemPromptValue(String(node.ai?.system_prompt || ''));
   }, [node.ai?.system_prompt]);
+
+  useEffect(() => {
+    setCurrentColor(node.ui?.color ?? DEFAULT_COLOR);
+  }, [node.ui?.color]);
 
   // Focus title input when editing starts
   useEffect(() => {
@@ -1338,7 +1346,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                       type="url"
                       value={htmlUrl}
                       onChange={(e) => handleHtmlUrlChange(e.target.value)}
-                      placeholder="https://google.com"
+                      placeholder="https://wikipedia.org"
                       className="w-full p-1.5 bg-black/20 border border-white/10 rounded text-xs text-white nodrag"
                       onMouseDown={(e) => e.stopPropagation()} // Prevent node dragging when clicking in input
                       onPointerDown={(e) => e.stopPropagation()} // Prevent pointer events from bubbling
