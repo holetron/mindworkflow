@@ -1,5 +1,6 @@
 import Ajv from 'ajv';
 import { StoredNode } from '../db';
+import { db } from '../db';
 
 export interface AiContext {
   projectId: string;
@@ -52,7 +53,7 @@ export class AiService {
     const aiConfig = (context.node.config.ai ?? {}) as Record<string, unknown>;
     const providerId = typeof aiConfig.provider === 'string' ? aiConfig.provider : 'stub';
 
-    if (providerId === 'openai') {
+    if (providerId === 'openai' || providerId === 'openai_gpt') {
       return this.runOpenAi(context, aiConfig);
     }
 
@@ -60,17 +61,39 @@ export class AiService {
   }
 
   private async runOpenAi(context: AiContext, aiConfig: Record<string, unknown>): Promise<AiResult> {
-    const integrations = (context.settings?.integrations ?? {}) as Record<string, unknown>;
-    const openaiConfig = (integrations.openai ?? integrations.open_ai ?? integrations.openai_gpt ?? {}) as {
+    // Получаем глобальные интеграции из базы данных
+    const globalIntegrations = db.prepare('SELECT * FROM global_integrations WHERE providerId = ?').all('openai_gpt');
+    
+    let openaiConfig: {
       api_key?: string;
       organization?: string;
       base_url?: string;
       input_fields?: ProviderFieldConfig[];
-    };
+    } = {};
+
+    // Если найдена глобальная интеграция, используем её
+    if (globalIntegrations.length > 0) {
+      const integration = globalIntegrations[0] as any;
+      openaiConfig = {
+        api_key: integration.apiKey,
+        organization: integration.organization,
+        base_url: integration.baseUrl,
+        input_fields: integration.inputFields ? JSON.parse(integration.inputFields) : [],
+      };
+    } else {
+      // Fallback к старому способу через project settings
+      const integrations = (context.settings?.integrations ?? {}) as Record<string, unknown>;
+      openaiConfig = (integrations.openai ?? integrations.open_ai ?? integrations.openai_gpt ?? {}) as {
+        api_key?: string;
+        organization?: string;
+        base_url?: string;
+        input_fields?: ProviderFieldConfig[];
+      };
+    }
 
     const apiKey = typeof openaiConfig.api_key === 'string' ? openaiConfig.api_key.trim() : '';
     if (!apiKey) {
-      throw new Error('OpenAI API key is not configured for this project.');
+      throw new Error('OpenAI API key is not configured. Please add OpenAI integration.');
     }
 
     const baseUrl =
