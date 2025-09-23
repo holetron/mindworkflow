@@ -65,6 +65,9 @@ export const SmartBezierEdge = memo(
       y: (start.y + end.y) / 2,
     }), [start, end]);
 
+    // Extract stroke color for the edge
+    const strokeColor = style?.stroke || '#38bdf8';
+
     const handleDelete = useCallback((e: React.MouseEvent) => {
       e.stopPropagation();
       setEdges(edges => edges.filter(edge => edge.id !== id));
@@ -80,12 +83,23 @@ export const SmartBezierEdge = memo(
           id={id}
           className={`rf-smart-edge__path${selected ? ' rf-smart-edge__path--selected' : ''}`}
           d={path}
-          style={style}
+          style={{
+            ...style,
+            stroke: strokeColor,
+            strokeWidth: selected ? 3 : 2,
+            fill: 'none',
+          }}
           markerEnd={markerEnd}
         />
         <path
           d={path}
           className="rf-smart-edge__halo"
+          style={{
+            stroke: strokeColor,
+            strokeOpacity: 0.1,
+            strokeWidth: 12,
+            fill: 'none',
+          }}
         />
         
         {/* Delete button on hover */}
@@ -124,12 +138,29 @@ export const SmartConnectionLine = memo(
     toY,
     fromPosition,
     toPosition,
+    connectionStatus,
+    fromNode,
   }: ConnectionLineComponentProps): JSX.Element => {
     const start = getPointFromParams(fromX, fromY, fromPosition ?? Position.Right);
     const end = getPointFromParams(toX, toY, toPosition ?? Position.Left);
     const path = calculateBezierPath(start, end);
 
-    return <path className="rf-smart-edge__preview" d={path} />;
+    // Get the source node color if available
+    const sourceColor = fromNode?.style?.borderColor || '#38bdf8';
+
+    return (
+      <path 
+        className="rf-smart-edge__preview" 
+        d={path} 
+        style={{
+          stroke: sourceColor,
+          strokeWidth: 2,
+          fill: 'none',
+          strokeDasharray: '5,5',
+          opacity: 0.7,
+        }}
+      />
+    );
   },
 );
 SmartConnectionLine.displayName = 'SmartConnectionLine';

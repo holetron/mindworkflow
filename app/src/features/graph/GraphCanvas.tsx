@@ -52,6 +52,7 @@ interface GraphCanvasProps {
   onRegenerateNode: (nodeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
   onAddNodeFromPalette: (slug: string, position: { x: number; y: number }) => void | Promise<void>;
+  onCopyNode?: (node: FlowNode, position: { x: number; y: number }) => void | Promise<void>;
   onChangeNodeMeta: (nodeId: string, patch: Record<string, unknown>) => void;
   onChangeNodeContent: (nodeId: string, content: string) => void;
   onChangeNodeTitle: (nodeId: string, title: string) => void;
@@ -97,6 +98,7 @@ function GraphCanvasInner({
   onRegenerateNode,
   onDeleteNode,
   onAddNodeFromPalette,
+  onCopyNode,
   onChangeNodeMeta,
   onChangeNodeContent,
   onChangeNodeTitle,
@@ -310,24 +312,63 @@ function GraphCanvasInner({
 
   const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
+    // Проверяем есть ли данные для drop
+    const hasNodeData = event.dataTransfer.types.includes('application/reactflow-node-copy');
+    const hasSlugData = event.dataTransfer.types.includes('application/reactflow-node');
+    
+    if (hasNodeData || hasSlugData) {
+      event.dataTransfer.dropEffect = 'copy';
+    } else {
+      event.dataTransfer.dropEffect = 'move';
+    }
   }, []);
 
   const handleDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
-      const slug = event.dataTransfer.getData('application/reactflow-node');
-      if (!slug) return;
+      console.log('Drop event triggered');
+      console.log('DataTransfer types:', event.dataTransfer.types);
+      
       const position = reactFlow.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
-      void onAddNodeFromPalette(slug, {
-        x: Math.round(position.x),
-        y: Math.round(position.y),
-      });
+
+      // Проверяем, это drag from palette или copy from sidebar
+      const slug = event.dataTransfer.getData('application/reactflow-node');
+      const nodeCopyData = event.dataTransfer.getData('application/reactflow-node-copy');
+      
+      console.log('Drop data - slug:', slug, 'nodeCopyData length:', nodeCopyData?.length);
+
+      if (slug) {
+        // Drag from palette - создаем новую ноду
+        console.log('Creating new node from palette:', slug);
+        void onAddNodeFromPalette(slug, {
+          x: Math.round(position.x),
+          y: Math.round(position.y),
+        });
+      } else if (nodeCopyData) {
+        // Copy from sidebar - копируем существующую ноду
+        try {
+          const nodeData = JSON.parse(nodeCopyData);
+          console.log('Copying node:', nodeData.node_id, nodeData.title);
+          if (onCopyNode) {
+            console.log('Calling onCopyNode with position:', position);
+            onCopyNode(nodeData, {
+              x: Math.round(position.x),
+              y: Math.round(position.y),
+            });
+          } else {
+            console.error('onCopyNode function not provided');
+          }
+        } catch (err) {
+          console.error('Failed to parse node copy data:', err);
+        }
+      } else {
+        console.log('No valid drag data found. Available types:', event.dataTransfer.types);
+      }
     },
-    [onAddNodeFromPalette, reactFlow],
+    [onAddNodeFromPalette, onCopyNode, reactFlow],
   );
 
   return (
@@ -363,31 +404,66 @@ function GraphCanvasInner({
       >
         <Background color="#1e293b" gap={24} />
         <Controls 
-          showFitView
-          showZoom
-          showInteractive
+          showFitView={false}
+          showZoom={false}
+          showInteractive={false}
           position="bottom-left"
-          className="!bottom-4 !left-4"
+          className="!bottom-4 !left-4 !gap-1"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px', // четверть высоты кнопки (24px * 0.25 = 6px)
+          }}
         >
+          {/* Custom Fit View Button */}
+          <ControlButton
+            onClick={() => reactFlow.fitView({ padding: 0.2, duration: 220 })}
+            title="Уместить все ноды в видимую область"
+            className="!bg-slate-800/80 !text-slate-300 !h-6 !w-6 !min-h-6 !min-w-6"
+          >
+            📐
+          </ControlButton>
+          
+          {/* Custom Zoom In Button */}
+          <ControlButton
+            onClick={() => reactFlow.zoomIn({ duration: 200 })}
+            title="Увеличить масштаб"
+            className="!bg-slate-800/80 !text-slate-300 !h-6 !w-6 !min-h-6 !min-w-6"
+          >
+            ➕
+          </ControlButton>
+          
+          {/* Custom Zoom Out Button */}
+          <ControlButton
+            onClick={() => reactFlow.zoomOut({ duration: 200 })}
+            title="Уменьшить масштаб"
+            className="!bg-slate-800/80 !text-slate-300 !h-6 !w-6 !min-h-6 !min-w-6"
+          >
+            ➖
+          </ControlButton>
+          
+          {/* Lock/Unlock Button */}
           <ControlButton
             onClick={() => setIsLocked(!isLocked)}
             title={isLocked ? 'Разблокировать узлы' : 'Заблокировать узлы'}
-            className={isLocked ? '!bg-orange-500/20 !text-orange-300' : '!bg-slate-800/80 !text-slate-300'}
+            className={`${isLocked ? '!bg-orange-500/20 !text-orange-300' : '!bg-slate-800/80 !text-slate-300'} !h-6 !w-6 !min-h-6 !min-w-6`}
           >
             {isLocked ? '🔒' : '🔓'}
           </ControlButton>
+          
+          {/* MiniMap Toggle Button */}
           <ControlButton
             onClick={() => setShowMiniMap(!showMiniMap)}
             title={showMiniMap ? 'Скрыть обзор' : 'Показать обзор рабочего процесса'}
-            className={showMiniMap ? '!bg-blue-500/20 !text-blue-300' : '!bg-slate-800/80 !text-slate-300'}
+            className={`${showMiniMap ? '!bg-slate-700/80 !text-emerald-300' : '!bg-slate-800/80 !text-slate-300'} !h-6 !w-6 !min-h-6 !min-w-6 hover:!bg-slate-600/80 transition-colors`}
           >
-            �️
+            🗺️
           </ControlButton>
         </Controls>
         {showMiniMap && (
           <MiniMap 
-            position="bottom-right"
-            className="!bottom-4 !right-4 !w-48 !h-32 !bg-slate-900/90 !border !border-slate-600 !rounded-md"
+            position="bottom-left"
+            className="!bottom-4 !left-[198px] !w-48 !h-32 !bg-slate-900/90 !border-2 !border-slate-500 !rounded-md !shadow-lg"
             nodeColor={(node) => {
               const nodeData = node.data as FlowNodeCardData;
               switch (nodeData.node.type) {
@@ -397,7 +473,7 @@ function GraphCanvasInner({
                 default: return '#64748b';
               }
             }}
-            maskColor="rgba(15, 23, 42, 0.7)"
+            maskColor="rgba(15, 23, 42, 0.8)"
           />
         )}
       </ReactFlow>
@@ -494,14 +570,26 @@ function buildGraphElements({
     } satisfies Node<FlowNodeCardData>;
   });
 
-  const edges: Edge[] = project.edges.map((edge, index) => ({
-    id: `${edge.from}-${edge.to}-${index}`,
-    source: edge.from,
-    target: edge.to,
-    label: edge.label,
-    type: 'smart',
-    markerEnd: { type: MarkerType.ArrowClosed, color: '#38bdf8' },
-  }));
+  const edges: Edge[] = project.edges.map((edge, index) => {
+    // Find the source node to get its color
+    const sourceNode = project.nodes.find(node => node.node_id === edge.from);
+    const sourceColor = sourceNode?.ui?.color ?? NODE_DEFAULT_COLOR;
+    
+    return {
+      id: `${edge.from}-${edge.to}-${index}`,
+      source: edge.from,
+      target: edge.to,
+      label: edge.label,
+      type: 'smart',
+      style: {
+        stroke: sourceColor,
+      },
+      markerEnd: { 
+        type: MarkerType.ArrowClosed, 
+        color: sourceColor 
+      },
+    };
+  });
 
   return { nodes, edges };
 }

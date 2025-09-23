@@ -22,6 +22,8 @@ import {
   type EdgeListResponse,
   type CreateNodePayload,
   type NodeUI,
+  type ProjectFlow,
+  type FlowNode,
 } from '../state/api';
 import {
   useProjectStore,
@@ -59,8 +61,10 @@ type ValidationState = ValidationIdle | ValidationSuccess | ValidationError;
 
 const SIDEBAR_MIN_WIDTH = 220;
 const SIDEBAR_MAX_WIDTH = 400;
+const SIDEBAR_DEFAULT_WIDTH = 300;
 const PALETTE_MIN_WIDTH = 220;
 const PALETTE_MAX_WIDTH = 420;
+const PALETTE_DEFAULT_WIDTH = 320;
 
 function WorkspacePage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -86,8 +90,10 @@ function WorkspacePage() {
   const { integrations: globalIntegrations, fetchIntegrations } = useGlobalIntegrationsStore();
 
   const [validation, setValidation] = useState<ValidationState>({ status: 'idle' });
-  const [sidebarWidth, setSidebarWidth] = useState(260);
-  const [paletteWidth, setPaletteWidth] = useState(280);
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
+  const [paletteWidth, setPaletteWidth] = useState(PALETTE_DEFAULT_WIDTH);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showNodeModal, setShowNodeModal] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -307,6 +313,51 @@ function WorkspacePage() {
     [createNodeFromTemplate, paletteMap],
   );
 
+  // Функция для копирования ноды из NodeSidebar
+  const handleNodeCopy = useCallback(
+    async (node: FlowNode, position: { x: number; y: number }) => {
+      if (!project) return;
+      
+      // Создаем копию ноды с новыми координатами
+      const copyPayload: CreateNodePayload = {
+        type: node.type,
+        title: `${node.title} (копия)`,
+        content_type: node.content_type,
+        content: node.content,
+        meta: node.meta ? { ...node.meta } : undefined,
+        ai: node.ai ? { ...node.ai } : undefined,
+        parser: node.parser ? { ...node.parser } : undefined,
+        python: node.python ? { ...node.python } : undefined,
+        visibility_rules: node.visibility_rules,
+        position,
+        ui: {
+          color: node.ui?.color || NODE_DEFAULT_COLOR,
+          bbox: {
+            x1: Math.round(position.x),
+            y1: Math.round(position.y),
+            x2: Math.round(position.x) + NODE_DEFAULT_WIDTH,
+            y2: Math.round(position.y) + NODE_DEFAULT_HEIGHT,
+          },
+        },
+        ai_visible: node.ai_visible,
+        connections: { incoming: [], outgoing: [] },
+      };
+
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await createNode(project.project_id, copyPayload);
+        addNodeFromServer(response.node, response.project_updated_at);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [project, setLoading, setError, addNodeFromServer],
+  );
+
   const persistNodeUpdate = useCallback(
     async (nodeId: string, patch: NodeUpdatePayload) => {
       if (!project) return;
@@ -389,22 +440,43 @@ function WorkspacePage() {
             y2: adjustedY + NODE_DEFAULT_HEIGHT,
           },
         },
+        ai_visible: true,
+        connections: { incoming: [], outgoing: [] },
       };
 
       try {
-        const newNode = await createNode(project.project_id, newNodePayload);
-        addNodeFromServer(newNode.node, newNode.project_updated_at);
+        const newNodeResponse = await createNode(project.project_id, newNodePayload);
+        addNodeFromServer(newNodeResponse.node, newNodeResponse.project_updated_at);
         
         // Create edge connection from source to new node
-        await createEdge(project.project_id, {
+        const edgeResponse = await createEdge(project.project_id, {
           from: sourceNode.node_id,
-          to: newNode.node.node_id,
+          to: newNodeResponse.node.node_id,
+          label: 'generated',
         });
+        
+        // Update edges in state to prevent ReactFlow state desync
+        setEdges(edgeResponse.edges, edgeResponse.updated_at);
+        
+        // Force ReactFlow to completely reset its internal state
+        // This fixes the sticky drag behavior
+        setTimeout(() => {
+          // Force clear all ReactFlow internal drag states
+          const reactFlowWrapper = document.querySelector('.react-flow');
+          if (reactFlowWrapper) {
+            // Create and dispatch multiple events to ensure clean state
+            ['mouseup', 'mouseleave', 'touchend', 'pointerup', 'dragend'].forEach(eventType => {
+              const event = new Event(eventType, { bubbles: true, cancelable: true });
+              reactFlowWrapper.dispatchEvent(event);
+            });
+          }
+        }, 50);
+        
       } catch (err) {
         console.error('Failed to create new node from generation:', err);
       }
     },
-    [project, addNodeFromServer],
+    [project, addNodeFromServer, setEdges],
   );
 
   const handleRegenerateNode = useCallback(
@@ -641,7 +713,7 @@ function WorkspacePage() {
 
   return (
     <div className="flex h-screen min-h-0 gap-4 p-4" style={{ width: '100vw', height: '100vh' }}>
-      <aside className="flex-shrink-0" style={{ width: sidebarWidth }}>
+      <aside className="flex-shrink-0 flex flex-col" style={{ width: sidebarCollapsed ? 48 : sidebarWidth, paddingTop: '60px' }}>
         <div className="mb-4 flex items-center justify-between text-slate-200">
           <button
             type="button"
@@ -652,11 +724,21 @@ function WorkspacePage() {
           </button>
           <span className="text-xs uppercase tracking-wide text-slate-500">Workspace</span>
         </div>
-        <div className="h-[calc(100%-2.5rem)] overflow-auto">
-          <NodeSidebar project={project} selectedNodeId={selectedNodeId} onSelectNode={selectNode} />
+        <div className="flex-1 overflow-auto">
+          <NodeSidebar 
+            project={project} 
+            selectedNodeId={selectedNodeId} 
+            onSelectNode={selectNode} 
+            onCopyNode={handleNodeCopy}
+            onOpenNodeModal={setShowNodeModal}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
         </div>
       </aside>
-      <ResizeHandle orientation="vertical" ariaLabel="Изменить ширину меню нод" onResize={(delta) => setSidebarWidth((prev) => clamp(prev + delta, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH))} />
+      {!sidebarCollapsed && (
+        <ResizeHandle orientation="vertical" ariaLabel="Изменить ширину меню нод" onResize={(delta: number) => setSidebarWidth((prev: number) => clamp(prev + delta, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH))} />
+      )}
       <div className="flex flex-1 flex-col gap-4 min-h-0">
         <header className="flex items-center justify-between rounded-lg bg-slate-800 p-4 shadow">
           <div>
@@ -734,6 +816,7 @@ function WorkspacePage() {
               onChangeNodeAi={handleUpdateNodeAi}
               onChangeNodeUi={handleUpdateNodeUi}
               onAddNodeFromPalette={handlePaletteDrop}
+              onCopyNode={handleNodeCopy}
               onCreateEdge={handleConnectEdge}
               onRemoveEdges={handleRemoveEdges}
               providerOptions={providerOptions}
@@ -745,7 +828,7 @@ function WorkspacePage() {
       <ResizeHandle
         orientation="vertical"
         ariaLabel="Изменить ширину магазина"
-        onResize={(delta) => setPaletteWidth((prev) => clamp(prev - delta, PALETTE_MIN_WIDTH, PALETTE_MAX_WIDTH))}
+        onResize={(delta: number) => setPaletteWidth((prev: number) => clamp(prev - delta, PALETTE_MIN_WIDTH, PALETTE_MAX_WIDTH))}
       />
       <aside className="flex-shrink-0" style={{ width: paletteWidth }}>
         <div className="h-full overflow-auto flex flex-col gap-4 p-4">
@@ -753,6 +836,72 @@ function WorkspacePage() {
           <NodePalette onCreateNode={handlePaletteCreate} disabled={loading || !project} />
         </div>
       </aside>
+      
+      {/* Node Modal */}
+      {showNodeModal && project && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="max-w-4xl max-h-[80vh] w-full mx-4 bg-slate-800 rounded-lg shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h2 className="text-lg font-semibold text-white">
+                {project.nodes.find(n => n.node_id === showNodeModal)?.title || 'Нода'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowNodeModal(null)}
+                className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition rounded"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {(() => {
+                const node = project.nodes.find(n => n.node_id === showNodeModal);
+                if (!node) return <div>Нода не найдена</div>;
+                
+                return (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">ID:</label>
+                      <div className="text-sm text-slate-400 font-mono">{node.node_id}</div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">Тип:</label>
+                      <div className="text-sm text-slate-400">{node.type}</div>
+                    </div>
+                    {node.content && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Содержимое:</label>
+                        <div className="text-sm text-slate-200 bg-slate-900 p-3 rounded max-h-40 overflow-y-auto">
+                          <pre className="whitespace-pre-wrap">{node.content}</pre>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex gap-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          selectNode(showNodeModal);
+                          setShowNodeModal(null);
+                        }}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded transition"
+                      >
+                        Выбрать на поле
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowNodeModal(null)}
+                        className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded transition"
+                      >
+                        Закрыть
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 export const NODE_MIN_WIDTH = 400;
 export const NODE_MIN_HEIGHT = 200;
 export const NODE_MAX_WIDTH = 1600;
-export const NODE_MAX_HEIGHT = 800; // Reduced max height for better UX
+export const NODE_MAX_HEIGHT = 3200; // Increased max height (4 times the original 800px)
 export const NODE_DEFAULT_WIDTH = 400;
 export const NODE_DEFAULT_HEIGHT = 200;
 export const NODE_DEFAULT_COLOR = '#6B7280';
