@@ -49,7 +49,7 @@ export default app;
 
 function loadCoreSchemas(validator: Ajv): void {
   const schemaDir = path.resolve(__dirname, 'schemas');
-  const files = ['PLAN_SCHEMA.json', 'ACTOR_SCHEMA.json', 'PARSE_SCHEMA.json'];
+  const files = ['PLAN_SCHEMA.json', 'ACTOR_SCHEMA.json', 'PARSE_SCHEMA.json', 'TEXT_RESPONSE.json'];
   for (const file of files) {
     const schemaPath = path.join(schemaDir, file);
     const raw = fs.readFileSync(schemaPath, 'utf8');

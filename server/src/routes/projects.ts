@@ -468,6 +468,31 @@ export function createProjectsRouter(ajv: Ajv): Router {
     },
   );
 
+  // Update project metadata (title, description)
+  router.patch('/:projectId', (req, res, next) => {
+    try {
+      const projectId = req.params.projectId;
+      const { title, description } = req.body;
+      
+      // Validate input
+      if (title !== undefined && (typeof title !== 'string' || title.trim().length === 0)) {
+        const err = new Error('Title must be a non-empty string');
+        (err as any).status = 400;
+        throw err;
+      }
+      if (description !== undefined && typeof description !== 'string') {
+        const err = new Error('Description must be a string');
+        (err as any).status = 400;
+        throw err;
+      }
+
+      const project = updateProjectMetadata(projectId, { title, description });
+      res.json(project);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.delete('/:projectId', (req, res, next) => {
     try {
       const { projectId } = req.params;
@@ -698,7 +723,7 @@ function validateEdges(project: ProjectImportRequest): void {
 }
 
 function validateSchemas(ajv: Ajv, schemas: Record<string, unknown>): void {
-  const required = ['PLAN_SCHEMA', 'ACTOR_SCHEMA', 'PARSE_SCHEMA'];
+  const required = ['PLAN_SCHEMA', 'ACTOR_SCHEMA', 'PARSE_SCHEMA', 'TEXT_RESPONSE'];
   for (const key of required) {
     if (!schemas[key]) {
       throw new Error(`Schema ${key} missing in project`);
@@ -727,7 +752,7 @@ function loadProjectFromDisk(ajv: Ajv, projectId: string): ProjectFlow | null {
 }
 
 function snapshotSchemas(validator: Ajv): Record<string, unknown> {
-  const schemaNames = ['PLAN_SCHEMA', 'ACTOR_SCHEMA', 'PARSE_SCHEMA'];
+  const schemaNames = ['PLAN_SCHEMA', 'ACTOR_SCHEMA', 'PARSE_SCHEMA', 'TEXT_RESPONSE'];
   const result: Record<string, unknown> = {};
   for (const name of schemaNames) {
     const schema = validator.getSchema(name)?.schema;

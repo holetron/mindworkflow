@@ -1139,6 +1139,44 @@ export function deleteProjectRecord(projectId: string): void {
   }
 }
 
+export function deleteProjectNode(projectId: string, nodeId: string): ProjectFlow {
+  const trx = db.transaction((projId: string, nodeId: string) => {
+    // First check if the node exists in the project
+    const nodeExists = db.prepare('SELECT 1 FROM nodes WHERE project_id = ? AND node_id = ?').get(projId, nodeId);
+    if (!nodeExists) {
+      const error = new Error(`Node ${nodeId} not found in project ${projId}`);
+      (error as { status?: number }).status = 404;
+      throw error;
+    }
+
+    // Delete the node
+    db.prepare('DELETE FROM nodes WHERE project_id = ? AND node_id = ?').run(projId, nodeId);
+    
+    // Delete associated edges
+    db.prepare('DELETE FROM edges WHERE project_id = ? AND (from_node = ? OR to_node = ?)').run(projId, nodeId, nodeId);
+    
+    // Delete associated runs
+    db.prepare('DELETE FROM runs WHERE project_id = ? AND node_id = ?').run(projId, nodeId);
+    
+    // Delete associated assets
+    db.prepare('DELETE FROM assets WHERE project_id = ? AND node_id = ?').run(projId, nodeId);
+    
+    // Update project timestamp
+    const now = new Date().toISOString();
+    db.prepare('UPDATE projects SET updated_at = ? WHERE project_id = ?').run(now, projId);
+  });
+
+  trx(projectId, nodeId);
+  
+  const project = getProject(projectId);
+  if (!project) {
+    throw createHttpError(404, `Project ${projectId} not found after node deletion`);
+  }
+  
+  writeProjectFile(project);
+  return project;
+}
+
 export function generateCloneProjectId(baseId: string): string {
   const normalized = baseId.replace(/[^a-zA-Z0-9_-]/g, '_');
   let candidate = `${normalized}_copy`;

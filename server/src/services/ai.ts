@@ -217,6 +217,13 @@ export class AiService {
   private generateStubPlan(context: AiContext): AiResult {
     const { previousNodes, schemaRef, nextNodes } = context;
     const promptSource = previousNodes[previousNodes.length - 1]?.content ?? '';
+    
+    // Handle TEXT_RESPONSE schema for simple text responses
+    if (schemaRef === 'TEXT_RESPONSE') {
+      return this.generateStubTextResponse(context, promptSource);
+    }
+    
+    // Handle PLAN_SCHEMA and other complex schemas
     const targetAudience = this.inferTargetAudience(promptSource);
     const goal = this.inferGoal(promptSource);
     const tone = this.inferTone(promptSource);
@@ -271,6 +278,65 @@ export class AiService {
 
     return {
       output: JSON.stringify(plan, null, 2),
+      contentType: 'application/json',
+      logs,
+    };
+  }
+
+  private generateStubTextResponse(context: AiContext, promptSource: string): AiResult {
+    // Generate a simple text response for ai_improved nodes
+    const nodeContent = context.node.content || '';
+    const combinedPrompt = nodeContent.trim() ? nodeContent : promptSource;
+    
+    // Create a simple text response based on the prompt
+    let responseText = '';
+    if (combinedPrompt.toLowerCase().includes('ремонт')) {
+      responseText = `Пошаговый план ремонта:
+
+1. **Подготовительный этап**
+   - Демонтаж старой сантехники
+   - Очистка поверхностей
+   - Подготовка инструментов и материалов
+
+2. **Основные работы**
+   - Замена тумбы под раковиной
+   - Установка нового зеркала
+   - Замена унитаза
+   - Установка фартука перед раковиной
+
+3. **Завершающий этап**
+   - Подключение коммуникаций
+   - Герметизация стыков
+   - Уборка рабочего места
+   - Проверка работоспособности`;
+    } else {
+      responseText = `Ответ на запрос: "${combinedPrompt}"
+
+Это детальный ответ агента, сгенерированный на основе вашего промпта. Содержание адаптировано под контекст вашего запроса.`;
+    }
+
+    const textResponse = {
+      response: responseText
+    };
+
+    const validator = this.ajv.getSchema('TEXT_RESPONSE');
+    if (!validator) {
+      throw new Error('TEXT_RESPONSE schema not found');
+    }
+
+    if (!validator(textResponse)) {
+      const message = this.ajv.errorsText(validator.errors, { dataVar: 'TEXT_RESPONSE' });
+      throw new Error(`AI stub produced invalid TEXT_RESPONSE: ${message}`);
+    }
+
+    const logs = [
+      `AI text response generated for node ${context.node.node_id}`,
+      `Prompt source: ${combinedPrompt.substring(0, 50)}...`,
+      `Response length: ${responseText.length} characters`,
+    ];
+
+    return {
+      output: JSON.stringify(textResponse, null, 2),
       contentType: 'application/json',
       logs,
     };

@@ -347,6 +347,21 @@ export async function deleteEdge(
   return response.json();
 }
 
+export async function deleteNode(
+  projectId: string,
+  nodeId: string,
+): Promise<ProjectFlow> {
+  const response = await fetch(`/api/node/${encodeURIComponent(nodeId)}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ project_id: projectId }),
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
 export interface IntegrationFieldConfig {
   id: string;
   label: string;
@@ -458,6 +473,20 @@ export async function updateProjectSettingsRemote(
   return response.json();
 }
 
+export async function updateProjectMeta(
+  projectId: string,
+  payload: { title?: string; description?: string },
+): Promise<ProjectFlow> {
+  const response = await fetch(`/api/project/${encodeURIComponent(projectId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
 
 export async function deleteProject(projectId: string): Promise<void> {
   const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}`, {

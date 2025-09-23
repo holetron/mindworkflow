@@ -42,7 +42,7 @@ import { SmartBezierEdge, SmartConnectionLine } from './EdgeRenderer';
 
 const nodeTypes = { flowNode: FlowNodeCard };
 const edgeTypes = { smart: SmartBezierEdge };
-const SNAP_GRID: [number, number] = [16, 16];
+const SNAP_GRID: [number, number] = [20, 20];
 
 interface GraphCanvasProps {
   project: ProjectFlow | null;
@@ -85,6 +85,7 @@ interface BuildGraphArgs {
   onChangeNodeTitle: GraphCanvasProps['onChangeNodeTitle'];
   onChangeNodeAi: GraphCanvasProps['onChangeNodeAi'];
   onChangeNodeUi: GraphCanvasProps['onChangeNodeUi'];
+  currentNodeSizes?: Map<string, { width: number; height: number }>;
 }
 
 interface GraphElements {
@@ -120,6 +121,21 @@ function GraphCanvasInner({
   const [showMiniMap, setShowMiniMap] = useState(false);
   const initialFitRef = useRef(true);
 
+  // Function to forcefully clear selection
+  const clearSelection = useCallback(() => {
+    // Clear our app state first
+    onSelectNode(null);
+    // Force update nodes to deselect
+    setNodes((prev) =>
+      prev.map((node) => ({
+        ...node,
+        selected: false,
+      })),
+    );
+  }, [onSelectNode]);
+
+
+
   useEffect(() => {
     const storedIsLocked = localStorage.getItem('lc-flow-is-locked');
     if (storedIsLocked) {
@@ -143,6 +159,17 @@ function GraphCanvasInner({
       return;
     }
 
+    // Preserve current node sizes before rebuilding
+    const currentNodeSizes = new Map<string, { width: number; height: number }>();
+    nodes.forEach(node => {
+      if (node.style?.width && node.style?.height) {
+        currentNodeSizes.set(node.id, {
+          width: typeof node.style.width === 'number' ? node.style.width : parseInt(String(node.style.width)) || NODE_DEFAULT_WIDTH,
+          height: typeof node.style.height === 'number' ? node.style.height : parseInt(String(node.style.height)) || NODE_DEFAULT_HEIGHT,
+        });
+      }
+    });
+
     const next = buildGraphElements({
       project,
       selectedNodeId,
@@ -158,6 +185,7 @@ function GraphCanvasInner({
       onChangeNodeTitle,
       onChangeNodeAi,
       onChangeNodeUi,
+      currentNodeSizes, // Pass current sizes
     });
 
     setNodes(next.nodes);
@@ -183,6 +211,19 @@ function GraphCanvasInner({
         selected: node.id === selectedNodeId,
       })),
     );
+  }, [selectedNodeId]);
+
+  // Force clear selection after certain operations to prevent sticky behavior
+  useEffect(() => {
+    if (selectedNodeId === null) {
+      // Additional cleanup when selection is cleared
+      setNodes((prev) =>
+        prev.map((node) => ({
+          ...node,
+          selected: false,
+        })),
+      );
+    }
   }, [selectedNodeId]);
 
   const handleNodesChange = useCallback(
@@ -316,22 +357,28 @@ function GraphCanvasInner({
 
   const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    // Проверяем есть ли данные для drop
+    event.stopPropagation();
+    
+    // Always allow drop for palette items and node copies
     const hasNodeData = event.dataTransfer.types.includes('application/reactflow-node-copy');
     const hasSlugData = event.dataTransfer.types.includes('application/reactflow-node');
     
     if (hasNodeData || hasSlugData) {
       event.dataTransfer.dropEffect = 'copy';
     } else {
-      event.dataTransfer.dropEffect = 'move';
+      // Still allow drop for unknown data types to be safe
+      event.dataTransfer.dropEffect = 'copy';
     }
   }, []);
 
   const handleDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
+      event.stopPropagation();
+      
       console.log('Drop event triggered');
       console.log('DataTransfer types:', event.dataTransfer.types);
+      console.log('DataTransfer items:', [...event.dataTransfer.items].map(item => item.type));
       
       const position = reactFlow.screenToFlowPosition({
         x: event.clientX,
@@ -344,14 +391,18 @@ function GraphCanvasInner({
       
       console.log('Drop data - slug:', slug, 'nodeCopyData length:', nodeCopyData?.length);
 
-      if (slug) {
+      if (slug && slug.trim()) {
         // Drag from palette - создаем новую ноду
         console.log('Creating new node from palette:', slug);
-        void onAddNodeFromPalette(slug, {
-          x: Math.round(position.x),
-          y: Math.round(position.y),
-        });
-      } else if (nodeCopyData) {
+        try {
+          void onAddNodeFromPalette(slug, {
+            x: Math.round(position.x),
+            y: Math.round(position.y),
+          });
+        } catch (err) {
+          console.error('Error creating node from palette:', err);
+        }
+      } else if (nodeCopyData && nodeCopyData.trim()) {
         // Copy from sidebar - копируем существующую ноду
         try {
           const nodeData = JSON.parse(nodeCopyData);
@@ -370,6 +421,9 @@ function GraphCanvasInner({
         }
       } else {
         console.log('No valid drag data found. Available types:', event.dataTransfer.types);
+        console.log('All available data:', [...event.dataTransfer.types].map(type => {
+          return { type, data: event.dataTransfer.getData(type) };
+        }));
       }
     },
     [onAddNodeFromPalette, onCopyNode, reactFlow],
@@ -401,12 +455,14 @@ function GraphCanvasInner({
         deleteKeyCode={['Delete']}
         minZoom={0.3}
         maxZoom={2}
+        snapToGrid={!isLocked}
+        snapGrid={SNAP_GRID}
         connectionLineComponent={SmartConnectionLine}
         defaultEdgeOptions={{ type: 'smart', markerEnd: { type: MarkerType.ArrowClosed } }}
         proOptions={{ hideAttribution: true }}
         className="bg-slate-900"
       >
-        <Background color="#1e293b" gap={24} />
+        <Background color="#1e293b" gap={20} />
         <Controls 
           showFitView={false}
           showZoom={false}
@@ -525,6 +581,7 @@ function buildGraphElements({
   onChangeNodeTitle,
   onChangeNodeAi,
   onChangeNodeUi,
+  currentNodeSizes,
 }: BuildGraphArgs): GraphElements {
   if (!project) {
     return { nodes: [], edges: [] };
@@ -532,11 +589,14 @@ function buildGraphElements({
 
   const nodes: Node<FlowNodeCardData>[] = project.nodes.map((node) => {
     const position = getStoredPosition(node);
-    const width = getNodeWidth(node);
-    const height = getNodeHeight(node);
+    // Use current size if available, otherwise calculate from node data
+    const currentSize = currentNodeSizes?.get(node.node_id);
+    const width = currentSize?.width ?? getNodeWidth(node);
+    const height = currentSize?.height ?? getNodeHeight(node);
 
     const data: FlowNodeCardData = {
       node,
+      projectId: project.project_id,
       onRun: onRunNode,
       onRegenerate: onRegenerateNode,
       onDelete: onDeleteNode,

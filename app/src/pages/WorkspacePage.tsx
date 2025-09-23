@@ -12,7 +12,9 @@ import {
   runNode,
   rerunNode,
   deleteProject,
+  deleteNode,
   updateNode,
+  updateProjectMeta,
   createEdge,
   deleteEdge,
   createNode,
@@ -99,6 +101,10 @@ function WorkspacePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const pendingUiRef = useRef<Map<string, NodeUI>>(new Map());
   const pendingUiTimersRef = useRef<Map<string, number>>(new Map());
 
@@ -373,44 +379,26 @@ function WorkspacePage() {
     [project, setError, upsertNodeContent],
   );
 
-  const handleRunNode = useCallback(
-    async (nodeId: string) => {
-      if (!project) return;
-      try {
-        setLoading(true);
-        selectNode(nodeId);
-        const response = await runNode(project.project_id, nodeId);
-        upsertNodeContent(response.nodeId, {
-          content: response.content ?? undefined,
-          content_type: response.contentType ?? undefined,
-        });
-        
-        // For AI nodes, automatically create a new node to the right with the generated content
-        const sourceNode = selectNodeById(project, nodeId);
-        if (sourceNode && sourceNode.type === 'ai' && response.content) {
-          await createNewNodeFromGeneration(sourceNode, response.content);
-        }
-        
-        const refreshedLogs = await fetchNodeLogs(project.project_id, response.nodeId);
-        setRuns(response.nodeId, refreshedLogs);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        setError(message);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [project, selectNode, setLoading, upsertNodeContent, setRuns, setError],
-  );
-
   // Helper function to create a new node from AI generation
   const createNewNodeFromGeneration = useCallback(
     async (sourceNode: any, content: string) => {
       if (!project) return;
 
-      // Calculate position for new node (to the right with 20px spacing)
+      // Parse AI response to extract clean text
+      let cleanContent = content;
+      try {
+        // Try to parse as JSON and extract the response field
+        const parsedContent = JSON.parse(content);
+        if (parsedContent && typeof parsedContent === 'object' && parsedContent.response) {
+          cleanContent = parsedContent.response;
+        }
+      } catch (err) {
+        // If not valid JSON, use content as-is
+      }
+
+      // Calculate position for new node (to the right with more spacing)
       const sourcePos = sourceNode.ui?.bbox || DEFAULT_NODE_BBOX;
-      const newX = sourcePos.x2 + 20;
+      const newX = sourcePos.x2 + 100; // Increased spacing from 20px to 100px
       const newY = sourcePos.y1;
 
       // Check for overlapping nodes and adjust position if needed
@@ -420,9 +408,9 @@ function WorkspacePage() {
       for (const node of allNodes) {
         const nodeBbox = node.ui?.bbox || DEFAULT_NODE_BBOX;
         // Check if there's overlap in X range and adjust Y if needed
-        if (newX < nodeBbox.x2 + 20 && newX + NODE_DEFAULT_WIDTH > nodeBbox.x1 - 20) {
-          if (adjustedY < nodeBbox.y2 + 20 && adjustedY + NODE_DEFAULT_HEIGHT > nodeBbox.y1 - 20) {
-            adjustedY = nodeBbox.y2 + 20; // Move below the overlapping node
+        if (newX < nodeBbox.x2 + 50 && newX + NODE_DEFAULT_WIDTH > nodeBbox.x1 - 50) {
+          if (adjustedY < nodeBbox.y2 + 50 && adjustedY + NODE_DEFAULT_HEIGHT > nodeBbox.y1 - 50) {
+            adjustedY = nodeBbox.y2 + 50; // Move below the overlapping node with more spacing
           }
         }
       }
@@ -431,7 +419,8 @@ function WorkspacePage() {
       const newNodePayload: CreateNodePayload = {
         type: 'text',
         title: `Generated from ${sourceNode.title}`,
-        content: content,
+        content: cleanContent, // Use cleaned content instead of raw content
+        content_type: 'text/plain', // Use plain text instead of markdown
         ui: {
           color: NODE_DEFAULT_COLOR,
           bbox: {
@@ -459,25 +448,55 @@ function WorkspacePage() {
         // Update edges in state to prevent ReactFlow state desync
         setEdges(edgeResponse.edges, edgeResponse.updated_at);
         
-        // Force ReactFlow to completely reset its internal state
-        // This fixes the sticky drag behavior
         setTimeout(() => {
-          // Force clear all ReactFlow internal drag states
-          const reactFlowWrapper = document.querySelector('.react-flow');
-          if (reactFlowWrapper) {
-            // Create and dispatch multiple events to ensure clean state
-            ['mouseup', 'mouseleave', 'touchend', 'pointerup', 'dragend'].forEach(eventType => {
-              const event = new Event(eventType, { bubbles: true, cancelable: true });
-              reactFlowWrapper.dispatchEvent(event);
-            });
-          }
-        }, 50);
+          selectNode(null);
+        }, 0);
         
       } catch (err) {
         console.error('Failed to create new node from generation:', err);
       }
     },
-    [project, addNodeFromServer, setEdges],
+    [project, addNodeFromServer, setEdges, selectNode],
+  );
+
+  const handleRunNode = useCallback(
+    async (nodeId: string) => {
+      if (!project) return;
+      try {
+        setLoading(true);
+        selectNode(nodeId);
+        const response = await runNode(project.project_id, nodeId);
+        
+        // For AI nodes, automatically create a new node to the right with the generated content
+        // Do NOT update the original AI node content - keep the original request
+        const sourceNode = selectNodeById(project, nodeId);
+        
+        if (
+          sourceNode &&
+          (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved') &&
+          response.content
+        ) {
+          // For AI nodes: ONLY create new node, do NOT update original content
+          await createNewNodeFromGeneration(sourceNode, response.content);
+        } else {
+          // Only update content for non-AI nodes
+          upsertNodeContent(response.nodeId, {
+            content: response.content ?? undefined,
+            content_type: response.contentType ?? undefined,
+          });
+        }
+        
+        const refreshedLogs = await fetchNodeLogs(project.project_id, response.nodeId);
+        setRuns(response.nodeId, refreshedLogs);
+        
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [project, selectNode, setLoading, upsertNodeContent, setRuns, setError, createNewNodeFromGeneration],
   );
 
   const handleRegenerateNode = useCallback(
@@ -488,15 +507,27 @@ function WorkspacePage() {
         selectNode(nodeId);
         const response = await rerunNode(project.project_id, nodeId, { clone: false });
         const targetNodeId = response.targetNodeId ?? response.nodeId;
-        upsertNodeContent(targetNodeId, {
-          content: response.content ?? undefined,
-          content_type: response.contentType ?? undefined,
-        });
+        
+        // Check if this is an AI node - don't update content for AI nodes
+        const sourceNode = selectNodeById(project, nodeId);
+        if (
+          sourceNode &&
+          (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved') &&
+          response.content
+        ) {
+          // For AI nodes: create new node with response, don't update original
+          await createNewNodeFromGeneration(sourceNode, response.content);
+        } else {
+          // For non-AI nodes: update content as usual
+          upsertNodeContent(targetNodeId, {
+            content: response.content ?? undefined,
+            content_type: response.contentType ?? undefined,
+          });
+        }
+        
         const refreshedLogs = await fetchNodeLogs(project.project_id, targetNodeId);
         setRuns(targetNodeId, refreshedLogs);
-        if (targetNodeId && targetNodeId !== nodeId) {
-          selectNode(targetNodeId);
-        }
+        
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setError(message);
@@ -504,14 +535,42 @@ function WorkspacePage() {
         setLoading(false);
       }
     },
-    [project, selectNode, setLoading, upsertNodeContent, setRuns, setError],
+    [project, selectNode, setLoading, upsertNodeContent, setRuns, setError, createNewNodeFromGeneration],
   );
 
   const handleDeleteNode = useCallback(
-    (nodeId: string) => {
-      removeNode(nodeId);
+    async (nodeId: string) => {
+      if (!project) return;
+      try {
+        setLoading(true);
+        console.log('Deleting node:', nodeId);
+        
+        // Clear any pending operations for this node to prevent update conflicts
+        if (pendingUiTimersRef.current.has(nodeId)) {
+          clearTimeout(pendingUiTimersRef.current.get(nodeId));
+          pendingUiTimersRef.current.delete(nodeId);
+        }
+        pendingUiRef.current.delete(nodeId);
+        
+        // Call API to delete node on server
+        const updatedProject = await deleteNode(project.project_id, nodeId);
+        
+        // Update local state by removing the node
+        removeNode(nodeId);
+        
+        // Update project timestamp
+        setProject(updatedProject);
+        
+        console.log('Node deleted successfully:', nodeId);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('Failed to delete node:', message);
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
     },
-    [removeNode],
+    [project, removeNode, setLoading, setError, setProject],
   );
 
   const handleUpdateNodeMeta = useCallback(
@@ -669,6 +728,52 @@ function WorkspacePage() {
     }
   }, [project, setLoading, clearProject, navigate, setError]);
 
+  const handleStartEditTitle = useCallback(() => {
+    if (!project) return;
+    setEditTitle(project.title || '');
+    setIsEditingTitle(true);
+  }, [project]);
+
+  const handleSaveTitle = useCallback(async () => {
+    if (!project || !editTitle.trim()) return;
+    try {
+      const updatedProject = await updateProjectMeta(project.project_id, { title: editTitle.trim() });
+      setProject(updatedProject);
+      setIsEditingTitle(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+    }
+  }, [project, editTitle, setProject, setError]);
+
+  const handleCancelEditTitle = useCallback(() => {
+    setIsEditingTitle(false);
+    setEditTitle('');
+  }, []);
+
+  const handleStartEditDescription = useCallback(() => {
+    if (!project) return;
+    setEditDescription(project.description || '');
+    setIsEditingDescription(true);
+  }, [project]);
+
+  const handleSaveDescription = useCallback(async () => {
+    if (!project) return;
+    try {
+      const updatedProject = await updateProjectMeta(project.project_id, { description: editDescription.trim() });
+      setProject(updatedProject);
+      setIsEditingDescription(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+    }
+  }, [project, editDescription, setProject, setError]);
+
+  const handleCancelEditDescription = useCallback(() => {
+    setIsEditingDescription(false);
+    setEditDescription('');
+  }, []);
+
   if (!projectId) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-900 text-slate-200">
@@ -765,8 +870,88 @@ function WorkspacePage() {
               <span className="text-xs uppercase tracking-wide text-slate-500">Workspace</span>
             </div>
             <div className="ml-4">
-              <h1 className="text-2xl font-semibold">{project?.title ?? 'Loading...'}</h1>
-              <p className="text-sm text-slate-400">{project?.description}</p>
+              {isEditingTitle ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveTitle();
+                      if (e.key === 'Escape') handleCancelEditTitle();
+                    }}
+                    className="text-2xl font-semibold bg-slate-700 border border-slate-600 rounded px-2 py-1 text-white"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSaveTitle}
+                    className="text-green-400 hover:text-green-300 p-1"
+                    title="Сохранить"
+                  >
+                    ✓
+                  </button>
+                  <button
+                    onClick={handleCancelEditTitle}
+                    className="text-red-400 hover:text-red-300 p-1"
+                    title="Отменить"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group">
+                  <h1 className="text-2xl font-semibold">{project?.title ?? 'Loading...'}</h1>
+                  <button
+                    onClick={handleStartEditTitle}
+                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-300 p-1 transition-opacity"
+                    title="Редактировать название"
+                  >
+                    ✏️
+                  </button>
+                </div>
+              )}
+              
+              {isEditingDescription ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    type="text"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveDescription();
+                      if (e.key === 'Escape') handleCancelEditDescription();
+                    }}
+                    className="text-sm bg-slate-700 border border-slate-600 rounded px-2 py-1 text-slate-300"
+                    placeholder="Добавить описание..."
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSaveDescription}
+                    className="text-green-400 hover:text-green-300 p-1"
+                    title="Сохранить"
+                  >
+                    ✓
+                  </button>
+                  <button
+                    onClick={handleCancelEditDescription}
+                    className="text-red-400 hover:text-red-300 p-1"
+                    title="Отменить"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group">
+                  <p className="text-sm text-slate-400">{project?.description || 'Нет описания'}</p>
+                  <button
+                    onClick={handleStartEditDescription}
+                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-300 p-1 transition-opacity"
+                    title="Редактировать описание"
+                  >
+                    ✏️
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-4">

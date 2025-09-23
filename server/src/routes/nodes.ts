@@ -2,7 +2,7 @@ import { Router } from 'express';
 import Ajv, { AnySchema, JSONSchemaType } from 'ajv';
 import { validateBody } from '../middleware/validateBody';
 import { ExecutorService } from '../services/executor';
-import { cloneNode, createProjectNode, getNodeRuns, updateNode, type NodeUpdatePatch } from '../db';
+import { cloneNode, createProjectNode, getNodeRuns, updateNode, deleteProjectNode, getProject, type NodeUpdatePatch } from '../db';
 import type { NodeConnections, NodeUI } from '../types';
 
 interface NodeRunRequest {
@@ -248,6 +248,23 @@ export function createNodesRouter(ajv: Ajv): Router {
       const body = req.body as NodeUpdateRequest;
       const node = updateNode(body.project_id, nodeId, body);
       res.json(node);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete('/:nodeId', validateBody<NodeRunRequest>(ajv, runSchema), async (req, res, next) => {
+    try {
+      const { project_id } = req.body as NodeRunRequest;
+      const { nodeId } = req.params;
+      
+      if (!project_id || !nodeId) {
+        return res.status(400).json({ message: 'Project ID and Node ID are required' });
+      }
+
+      // Delete the node and return updated project
+      const updatedProject = await deleteProjectNode(project_id, nodeId);
+      res.json(updatedProject);
     } catch (error) {
       next(error);
     }

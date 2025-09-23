@@ -39,24 +39,23 @@ interface NodePaletteProps {
 }
 
 const GROUPS: Array<{
-  key: 'basic' | 'agents';
+  key: 'basic' | 'agents' | 'personal_agents';
   title: string;
   collapsible: boolean;
 }> = [
   { key: 'basic', title: 'Базовые ноды', collapsible: false },
-  { key: 'agents', title: 'Агенты', collapsible: true },
+  { key: 'agents', title: 'Встроенные агенты', collapsible: true },
+  { key: 'personal_agents', title: 'Личные агенты', collapsible: true },
 ];
 
 function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollapse }: NodePaletteProps) {
   const [search, setSearch] = useState('');
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({ agents: true });
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [collapsedAgentGroups, setCollapsedAgentGroups] = useState<Record<AgentCategoryKey, boolean>>({
-    universal: false,
-    text_to_text: false,
-    voice_to_voice: true,
-    text_to_voice: true,
-    text_to_image: true,
-    image_to_image: true,
+    basic: false,
+    coding: true,
+    analysis: true,
+    creative: true,
   });
 
   const normalizedQuery = search.trim().toLowerCase();
@@ -71,17 +70,17 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
 
   const agentBuckets = useMemo(() => {
     const base: Record<AgentCategoryKey, NodePaletteItem[]> = {
-      universal: [],
-      text_to_text: [],
-      voice_to_voice: [],
-      text_to_voice: [],
-      text_to_image: [],
-      image_to_image: [],
+      basic: [],
+      coding: [],
+      analysis: [],
+      creative: [],
     };
     filteredItems.forEach((item) => {
-      if (item.category !== 'agents') return;
-      const key = item.agentCategory ?? 'universal';
-      base[key].push(item);
+      if (item.category !== 'agents' || (item.agentType ?? 'built_in') !== 'built_in') return;
+      const key = item.agentCategory ?? 'basic';
+      if (base[key]) {
+        base[key].push(item);
+      }
     });
     return base;
   }, [filteredItems]);
@@ -90,16 +89,36 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
     if (group.key === 'agents') {
       return {
         ...group,
-        items: filteredItems.filter((item) => (item.category ?? 'basic') === 'agents'),
+        items: filteredItems.filter((item) => 
+          (item.category ?? 'basic') === 'agents' && 
+          (item.agentType ?? 'built_in') === 'built_in'
+        ),
+      };
+    }
+    if (group.key === 'personal_agents') {
+      return {
+        ...group,
+        items: filteredItems.filter((item) => 
+          (item.category ?? 'basic') === 'agents' && 
+          (item.agentType ?? 'built_in') === 'personal'
+        ),
       };
     }
     const items = filteredItems.filter((item) => (item.category ?? 'basic') === group.key);
     return { ...group, items };
-  }).filter((group) => group.items.length > 0);
+  }).filter((group) => group.items.length > 0 || group.key === 'personal_agents');
 
   const handleDragStart = (event: DragEvent<HTMLElement>, item: NodePaletteItem) => {
+    console.log('Drag start for item:', item.slug);
+    
+    // Set the data transfer information
     event.dataTransfer.setData('application/reactflow-node', item.slug);
-    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.effectAllowed = 'copy';
+    
+    // Also set as text for better browser compatibility
+    event.dataTransfer.setData('text/plain', item.slug);
+    
+    console.log('DataTransfer set with slug:', item.slug);
   };
 
   const handleClick = (item: NodePaletteItem) => {
@@ -268,15 +287,25 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
                               <span>{subCollapsed ? '▸' : '▾'}</span>
                             </button>
                             {!subCollapsed && (
-                              <div className="space-y-2 bg-slate-900/80 px-3 pb-3 pt-2">
+                              <div className="grid grid-cols-1 gap-2 bg-slate-900/80 px-3 pb-3 pt-2">
                                 {agentBuckets[key].map((item) => renderItem(item))}
                               </div>
                             )}
                           </div>
                         );
                       })
+                  ) : group.key === 'personal_agents' && group.items.length === 0 ? (
+                    <div className="px-3 py-4 text-center text-sm text-slate-400">
+                      <div className="mb-2 text-slate-500">👤</div>
+                      <div>Личные агенты отсутствуют</div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        Создавайте собственных агентов для персонализированных задач
+                      </div>
+                    </div>
                   ) : (
-                    group.items.map((item) => renderItem(item))
+                    <div className="grid grid-cols-1 gap-2">
+                      {group.items.map((item) => renderItem(item))}
+                    </div>
                   )}
                 </div>
               )}
@@ -308,15 +337,14 @@ function renderPaletteItem(
   item: NodePaletteItem,
   disabled = false,
   handleClick?: (item: NodePaletteItem) => void,
-  handleDragStart?: (event: DragEvent<HTMLDivElement>, item: NodePaletteItem) => void,
+  handleDragStart?: (event: DragEvent<HTMLElement>, item: NodePaletteItem) => void,
 ) {
   const onClick = handleClick ?? (() => {});
   const onDrag = handleDragStart ?? (() => {});
   return (
-    <div
+    <button
       key={item.slug}
-      role="button"
-      tabIndex={disabled ? -1 : 0}
+      type="button"
       draggable={!disabled}
       onDragStart={(event) => {
         if (disabled) return;
@@ -326,7 +354,7 @@ function renderPaletteItem(
         if (disabled) return;
         onClick(item);
       }}
-      onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+      onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           if (!disabled) {
@@ -334,22 +362,21 @@ function renderPaletteItem(
           }
         }
       }}
-      className={`flex cursor-move flex-col gap-2 rounded p-3 transition ${
+      className={`flex cursor-move items-start gap-3 rounded-lg p-3 transition h-20 w-full ${
         disabled ? 'pointer-events-none opacity-40' : ''
       }`}
       style={{
         border: `1px solid ${getNodeTypeColor(item.template.type)}40`,
         backgroundColor: `${getNodeTypeColor(item.template.type)}10`,
       }}
+      tabIndex={disabled ? -1 : 0}
+      disabled={disabled}
     >
-      <div className="flex items-center gap-2">
-        <span className="text-lg">{item.icon}</span>
-        <div>
-          <p className="font-semibold text-white">{item.title}</p>
-          <p className="text-xs opacity-60">{item.slug}</p>
-        </div>
+      <div className="flex-1 min-w-0 flex flex-col justify-center h-full text-left">
+        <p className="font-semibold text-white text-sm truncate leading-tight mb-1">{item.title}</p>
+        <p className="text-xs opacity-70 line-clamp-2 overflow-hidden text-left leading-tight">{item.description}</p>
       </div>
-      <p className="text-xs opacity-80">{item.description}</p>
-    </div>
+      <span className="text-xl flex-shrink-0 mt-1">{item.icon}</span>
+    </button>
   );
 }

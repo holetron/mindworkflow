@@ -106,6 +106,24 @@ export class ExecutorService {
             logs: aiResult.logs,
           };
         }
+        case 'ai_improved': {
+          // Handle ai_improved nodes similar to ai nodes
+          const aiConfig = (node.config?.ai ?? {}) as Record<string, unknown>;
+          const schemaRef = 'TEXT_RESPONSE'; // Use simple text response for ai_improved
+          const aiResult = await this.aiService.run({
+            projectId,
+            node,
+            previousNodes,
+            nextNodes: nextMetadata,
+            schemaRef,
+            settings: (project.settings ?? {}) as Record<string, unknown>,
+          });
+          return {
+            content: aiResult.output,
+            contentType: aiResult.contentType,
+            logs: aiResult.logs,
+          };
+        }
         case 'parser': {
           const htmlSource = previousNodes[previousNodes.length - 1]?.content ?? '';
           const parserConfig = (node.config.parser ?? {}) as Record<string, unknown>;
@@ -189,10 +207,13 @@ export class ExecutorService {
       const outputHash = hashContent(outcome.result.content ?? null);
 
       withTransaction(() => {
-        updateNodeContent(projectId, nodeId, {
-          content: outcome.result.content ?? null,
-          content_type: outcome.result.contentType ?? null,
-        });
+        // Only update content for non-AI nodes to preserve prompts
+        if (node.type !== 'ai' && node.type !== 'ai_improved') {
+          updateNodeContent(projectId, nodeId, {
+            content: outcome.result.content ?? null,
+            content_type: outcome.result.contentType ?? null,
+          });
+        }
 
         storeRun({
           run_id: runId,

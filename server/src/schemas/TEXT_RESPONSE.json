@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TEXT_RESPONSE",
+  "description": "Simple text response schema for AI agents",
+  "type": "object",
+  "properties": {
+    "response": {
+      "type": "string",
+      "description": "The text response from the AI agent"
+    }
+  },
+  "required": ["response"],
+  "additionalProperties": false
+}

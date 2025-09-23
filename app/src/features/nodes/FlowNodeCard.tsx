@@ -32,6 +32,12 @@ import {
 } from '../../constants/nodeDefaults';
 import { SettingsIcon } from '../../ui/icons/SettingsIcon';
 import { NodeSettingsModal } from '../../ui/NodeSettingsModal';
+import type { AgentRoutingConfig } from '../routing/agentRouting';
+import { DEFAULT_ROUTING_CONFIGS } from '../routing/agentRouting';
+import { AgentRoutingDisplay } from '../routing/AgentRoutingDisplay';
+import { AgentRoutingEditor } from '../routing/AgentRoutingEditor';
+import { AgentLogs } from '../logs/AgentLogs';
+import { AgentLogsModal } from '../logs/AgentLogsModal';
 
 // Screen width constants for HTML preview
 const SCREEN_WIDTHS = [
@@ -92,6 +98,7 @@ export interface AiProviderOption {
 
 export interface FlowNodeCardData {
   node: FlowNode;
+  projectId?: string;
   onRun: (nodeId: string) => void;
   onRegenerate: (nodeId: string) => void;
   onDelete: (nodeId: string) => void;
@@ -644,7 +651,9 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   const [fileUrlInput, setFileUrlInput] = useState('');
   const [fileDialogMode, setFileDialogMode] = useState<'url' | 'upload'>('url');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [activeAiTab, setActiveAiTab] = useState<'settings' | 'fields' | 'routing' | 'provider' | 'model' | ''>('settings');
+  const [activeAiTab, setActiveAiTab] = useState<'settings' | 'fields' | 'routing' | 'logs' | 'provider' | 'model' | 'ai_config' | ''>('');
+  const [showRoutingEditor, setShowRoutingEditor] = useState(false);
+  const [showLogsModal, setShowLogsModal] = useState(false);
   
   // Color state for immediate UI updates
   const [currentColor, setCurrentColor] = useState(node.ui?.color ?? DEFAULT_COLOR);
@@ -676,6 +685,17 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   const isAiNode = node.type === 'ai' || node.type === 'ai_improved';
   const isImprovedAiNode = node.type === 'ai_improved' || node.meta?.ui_mode === 'improved';
   const typeIcon = TYPE_ICONS[node.type] || '❓';
+
+  const nodeMinHeight = useMemo(() => {
+    if (collapsed) {
+      // For improved AI nodes, the collapsed state still shows the control panel
+      if (isImprovedAiNode) return 150; 
+      return 110;
+    }
+    // For the new AI node, we need more vertical space for the controls
+    if (isImprovedAiNode) return 280;
+    return NODE_MIN_HEIGHT;
+  }, [collapsed, isImprovedAiNode]);
 
   // AI node specific state
   const selectedProvider = useMemo(() => {
@@ -861,7 +881,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
       const bboxHeight = bbox.y2 - bbox.y1;
       // For collapsed nodes, allow smaller height than minimum
       if (collapsed) {
-        return Math.max(110, bboxHeight); // Minimum for collapsed: header + footer
+        return Math.max(nodeMinHeight, bboxHeight);
       }
       return normalizeNodeHeight(bboxHeight, node.type);
     }
@@ -873,11 +893,45 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
       collapsed
     );
     return contentBasedHeight;
-  }, [reactFlowHeight, node.ui?.bbox, node.type, node.content, isAiNode, collapsed]);
+  }, [reactFlowHeight, node.ui?.bbox, node.type, node.content, isAiNode, collapsed, nodeMinHeight]);
 
-  // Remove auto-resize logic - manual resizing only
+  useEffect(() => {
+    if (isResizing || !nodeRef.current) return;
 
-  // Remove ResizeObserver - manual resizing only
+    // When AI tab changes or node is collapsed/expanded, recalculate height
+    const requiredHeight = nodeRef.current.scrollHeight;
+    const currentRfNode = reactFlow.getNode(node.node_id);
+    const currentHeight = typeof currentRfNode?.style?.height === 'number' ? currentRfNode.style.height : nodeHeight;
+
+    // Only expand, don't shrink automatically unless it's a collapse action
+    if (requiredHeight > currentHeight || collapsed) {
+      const newHeight = normalizeNodeHeight(requiredHeight, node.type);
+
+      if (Math.abs(newHeight - currentHeight) > 1) {
+        reactFlow.setNodes((nodes) =>
+          nodes.map((n) =>
+            n.id === node.node_id
+              ? {
+                  ...n,
+                  style: {
+                    ...n.style,
+                    height: newHeight,
+                  },
+                }
+              : n
+          )
+        );
+        
+        const currentBbox = node.ui?.bbox || { x1: 0, y1: 0, x2: nodeWidth, y2: currentHeight };
+        onChangeUi?.(node.node_id, {
+          bbox: {
+            ...currentBbox,
+            y2: currentBbox.y1 + newHeight,
+          },
+        });
+      }
+    }
+  }, [activeAiTab, collapsed, isResizing, node.node_id, reactFlow, onChangeUi, node.type, nodeWidth, nodeHeight, node.ui?.bbox]);
 
   // Resize handlers - simplified for fixed dimensions
   const handleResizeStart = useCallback((e: PointerEvent) => {
@@ -906,7 +960,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
       
       // Calculate new dimensions with constraints
       const newWidth = Math.max(NODE_MIN_WIDTH, Math.min(NODE_MAX_WIDTH, resizeStartPos.current.width + deltaX));
-      const newHeight = Math.max(NODE_MIN_HEIGHT, Math.min(NODE_MAX_HEIGHT, resizeStartPos.current.height + deltaY));
+      const newHeight = Math.max(nodeMinHeight, Math.min(NODE_MAX_HEIGHT, resizeStartPos.current.height + deltaY));
       
       // Update React Flow node directly (no DOM manipulation)
       reactFlow.setNodes((nodes) => 
@@ -934,7 +988,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
       const deltaX = finalEvent.clientX - resizeStartPos.current.x;
       const deltaY = finalEvent.clientY - resizeStartPos.current.y;
       const finalWidth = Math.max(NODE_MIN_WIDTH, Math.min(NODE_MAX_WIDTH, resizeStartPos.current.width + deltaX));
-      const finalHeight = Math.max(NODE_MIN_HEIGHT, Math.min(NODE_MAX_HEIGHT, resizeStartPos.current.height + deltaY));
+      const finalHeight = Math.max(nodeMinHeight, Math.min(NODE_MAX_HEIGHT, resizeStartPos.current.height + deltaY));
       
       // Save to bbox
       const currentBbox = node.ui?.bbox || { x1: 0, y1: 0, x2: nodeWidth, y2: nodeHeight };
@@ -963,7 +1017,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
     document.addEventListener('pointerup', handleResizeEnd);
     document.addEventListener('pointercancel', handleResizeEnd);
     
-  }, [nodeWidth, nodeHeight, node.node_id, node.ui?.bbox, onChangeUi, updateNodeInternals, reactFlow, collapsed]);
+  }, [nodeWidth, nodeHeight, node.node_id, node.ui?.bbox, onChangeUi, updateNodeInternals, reactFlow, collapsed, nodeMinHeight]);
 
   // Prevent default drag behavior when resizing
   const handleResizePointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
@@ -1043,14 +1097,14 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
         width: '100%', // Return to 100% for React Flow compatibility
         height: '100%', // Return to 100% for React Flow compatibility
         minWidth: `${NODE_MIN_WIDTH}px`,
-        minHeight: collapsed ? `110px` : `${NODE_MIN_HEIGHT}px`, // Fixed collapsed height
+        minHeight: `${nodeMinHeight}px`,
         maxWidth: `${NODE_MAX_WIDTH}px`,
         maxHeight: `${NODE_MAX_HEIGHT}px`,
         backdropFilter: 'blur(10px)',
         boxShadow: selected 
           ? `0 0 0 2px ${baseColor}, 0 8px 24px ${baseColor}30`
           : `0 4px 12px ${baseColor}20`,
-        transition: isResizing ? 'none' : 'box-shadow 0.2s ease, transform 0.1s ease',
+        transition: isResizing ? 'none' : 'box-shadow 0.2s ease, transform 0.1s ease, height 0.2s ease-out',
         transform: dragging ? 'scale(1.02)' : 'scale(1)',
         display: 'flex',
         flexDirection: 'column',
@@ -1122,24 +1176,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
         </div>
 
         <div className="flow-node__toolbar">
-          {/* Delete button - moved to right upper corner */}
-          <button
-            type="button"
-            className="flow-node__toolbar-button text-red-400 hover:text-red-300"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (window.confirm('Удалить эту ноду?')) {
-                onDelete(node.node_id);
-              }
-            }}
-            title="Удалить ноду"
-            disabled={disabled}
-          >
-            🗑️
-          </button>
-
-          {/* Collapse/Expand button - hidden only for data and parser nodes */}
+          {/* Collapse/Expand button */}
           {!(node.type === 'data' || node.type === 'parser') && (
             <button
               type="button"
@@ -1151,10 +1188,37 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
               }}
               title={collapsed ? "Развернуть" : "Свернуть"}
               disabled={disabled}
+              style={{ 
+                width: '28px', 
+                height: '28px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                fontSize: '14px' 
+              }}
             >
-              {collapsed ? '🔼' : '🔽'}
+              {collapsed ? '➕' : '➖'}
             </button>
           )}
+
+          {/* Color picker button */}
+          <button
+            type="button"
+            className="flow-node__toolbar-button"
+            onClick={handleColorButtonClick}
+            title="Изменить цвет"
+            disabled={disabled}
+            style={{ 
+              width: '28px', 
+              height: '28px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              fontSize: '14px' 
+            }}
+          >
+            🎨
+          </button>
 
           {/* Settings button */}
           <button
@@ -1167,52 +1231,42 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
             }}
             title="Настройки ноды"
             disabled={disabled}
+            style={{ 
+              width: '28px', 
+              height: '28px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              fontSize: '14px' 
+            }}
           >
-            <SettingsIcon />
+            ⚙️
           </button>
 
-          {/* Color picker button */}
+          {/* Delete button */}
           <button
             type="button"
-            className="flow-node__toolbar-button"
-            onClick={handleColorButtonClick}
-            title="Изменить цвет"
-            disabled={disabled}
-          >
-            🎨
-          </button>
-
-          {/* File attachment button */}
-          <button
-            type="button"
-            className="flow-node__toolbar-button"
+            className="flow-node__toolbar-button text-red-400 hover:text-red-300"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              openFileDialog();
+              if (window.confirm('Удалить эту ноду?')) {
+                onDelete(node.node_id);
+              }
             }}
-            title="Прикрепить файлы"
+            title="Удалить ноду"
             disabled={disabled}
+            style={{ 
+              width: '28px', 
+              height: '28px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              fontSize: '14px' 
+            }}
           >
-            📎
+            🗑️
           </button>
-
-          {/* Run button for AI nodes */}
-          {isAiNode && (
-            <button
-              type="button"
-              className="flow-node__toolbar-button text-green-400 hover:text-green-300"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onRun(node.node_id);
-              }}
-              title="Запустить ноду"
-              disabled={disabled}
-            >
-              ▶️
-            </button>
-          )}
         </div>
       </div>
 
@@ -1235,208 +1289,119 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
       )}
 
       {/* Content Area */}
-      {!collapsed ? (
-        <div 
-          ref={contentRef} 
-          className="flow-node__content nodrag"
-          style={{ 
-            padding: node.type === 'image' ? '0' : '16px', 
-            paddingBottom: node.type === 'image' ? '0' : '8px', // Less padding at bottom since footer provides separation
-            display: 'flex', 
-            flexDirection: 'column',
-            height: '100%'
-          }}
-        >
-          {isAiNode && !isImprovedAiNode && (
-            <div className="space-y-4" style={{ flexShrink: 0 }}>
-              {/* Traditional AI Content */}
-              <div>
-                {activeAiTab === 'settings' && (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-xs text-white/70 block mb-1">Провайдер</label>
-                      <select
-                        value={String(node.ai?.provider || '')}
-                        onChange={(e) => handleProviderChange(e.target.value)}
-                        disabled={disabled}
-                        className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm nodrag"
-                        data-nodrag="true"
-                      >
-                        {providers.map(p => (
-                          <option key={p.id} value={p.id} disabled={!p.available}>
-                            {p.name} {!p.available && `(${p.reason || 'Недоступен'})`}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {selectedProvider && (
-                      <div>
-                        <label className="text-xs text-white/70 block mb-1">Модель</label>
-                        <select
-                          value={String(node.ai?.model || selectedProvider.defaultModel)}
-                          onChange={(e) => handleModelChange(e.target.value)}
-                          disabled={disabled}
-                          className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm nodrag"
-                          data-nodrag="true"
-                        >
-                          {selectedProvider.models.map(m => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                    <div>
-                      <label className="text-xs text-white/70 block mb-1">Системный промпт</label>
-                      <textarea
-                        value={systemPromptValue}
-                        onChange={(e) => handleSystemPromptChange(e.target.value)}
-                        placeholder="Например: Ты — полезный ассистент."
-                        rows={3}
-                        disabled={disabled}
-                        className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm resize-y nodrag"
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
-                        draggable={false}
-                        data-nodrag="true"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {activeAiTab === 'fields' && (
-                  <div className="p-4 text-center text-white/50 text-sm">
-                    Настройка полей временно отключена
-                  </div>
-                )}
-
-                {activeAiTab === 'routing' && (
-                  <div className="p-4 text-center text-white/50 text-sm">
-                    Настройка маршрутизации временно отключена
-                  </div>
-                )}
-              </div>
-              
-              {/* AI Tabs - positioned above footer */}
-              <div className="absolute bottom-12 left-0 right-0 flex justify-center z-10">
-                <div className="flex bg-black/40 rounded-lg p-1 backdrop-blur-sm border border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setActiveAiTab('settings')}
-                    className={`px-3 py-1 text-xs rounded transition ${
-                      activeAiTab === 'settings' 
-                        ? 'bg-white/20 text-white' 
-                        : 'text-white/60 hover:text-white/80'
-                    }`}
-                    disabled={disabled}
-                  >
-                    ⚙️ Настройки
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveAiTab('fields')}
-                    className={`px-3 py-1 text-xs rounded transition ${
-                      activeAiTab === 'fields' 
-                        ? 'bg-white/20 text-white' 
-                        : 'text-white/60 hover:text-white/80'
-                    }`}
-                    disabled={disabled}
-                  >
-                    📝 Поля
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveAiTab('routing')}
-                    className={`px-3 py-1 text-xs rounded transition ${
-                      activeAiTab === 'routing' 
-                        ? 'bg-white/20 text-white' 
-                        : 'text-white/60 hover:text-white/80'
-                    }`}
-                    disabled={disabled}
-                  >
-                    🔀 Маршрутизация
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Improved AI Agent Layout */}
-          {isImprovedAiNode && (
-            <div className="space-y-3" style={{ flexShrink: 0 }}>
-              {/* User Prompt - сверху без подписей */}
-              <textarea
-                value={contentValue}
-                onChange={(e) => handleContentChange(e.target.value)}
-                placeholder="Введите ваш промпт для агента..."
-                disabled={disabled}
-                className="w-full p-3 bg-black/20 border border-white/10 rounded text-sm resize-none nodrag"
-                onMouseDown={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
-                draggable={false}
-                data-nodrag="true"
-                rows={4}
-                style={{ 
-                  minHeight: '80px',
-                  resize: 'none',
-                  fontSize: '13px',
-                  lineHeight: '1.4'
-                }}
-              />
-              
-              {/* Control Panel */}
-              <div className="flex gap-2 items-center">
-                {/* Agent Settings Button */}
-                <button
-                  type="button"
-                  onClick={() => setActiveAiTab(activeAiTab === 'settings' ? '' : 'settings')}
-                  className={`px-3 py-2 text-xs rounded border transition flex items-center gap-2 ${
-                    activeAiTab === 'settings'
-                      ? 'bg-blue-600/20 border-blue-500/50 text-blue-300'
-                      : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white'
-                  }`}
+      <div 
+        ref={contentRef} 
+        className="flow-node__content nodrag"
+        style={{ 
+          padding: isImprovedAiNode ? '16px' : (node.type === 'image' ? '0' : '16px'), 
+          paddingTop: isImprovedAiNode && collapsed ? '0' : '16px',
+          paddingBottom: node.type === 'image' ? '0' : '8px', // Less padding at bottom since footer provides separation
+          display: 'flex', 
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+          transition: 'padding 0.2s ease-out'
+        }}
+      >
+        {isImprovedAiNode ? (
+          <>
+            {/* Main Input Area - resizable content area */}
+            {!collapsed && (
+              <div className="flex-1 min-h-0">
+                <textarea
+                  value={contentValue}
+                  onChange={(e) => handleContentChange(e.target.value)}
+                  placeholder="Введите ваш промпт для агента..."
                   disabled={disabled}
-                >
-                  ⚙️ Настройки агента
-                  <span className="text-xs opacity-60">
-                    {activeAiTab === 'settings' ? '▴' : '▾'}
-                  </span>
-                </button>
-
-                {/* Provider/Model Display Buttons */}
+                  className="w-full h-full p-3 bg-black/20 border border-white/10 rounded text-sm resize-none nodrag"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  draggable={false}
+                  data-nodrag="true"
+                  style={{ 
+                    minHeight: '80px',
+                    resize: 'none',
+                    fontSize: '13px',
+                    lineHeight: '1.4'
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* Control Panel with Separators */}
+            <div 
+              className="mt-2 border-t border-b border-white/10"
+              style={{ 
+                backgroundColor: `${baseColor}10`,
+                flexShrink: 0,
+                margin: '8px -12px',
+                padding: '8px 12px'
+              }}
+            >
+              <div className="flex gap-2 items-center justify-between">
+                {/* Left Side - Function Buttons (no text labels) */}
                 <div className="flex gap-1">
+                  {/* Agent Settings Button */}
                   <button
                     type="button"
-                    onClick={() => setActiveAiTab(activeAiTab === 'provider' ? '' : 'provider')}
-                    className={`px-2 py-2 text-xs rounded border transition ${
-                      activeAiTab === 'provider'
-                        ? 'bg-green-600/20 border-green-500/50 text-green-300'
-                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30'
+                    onClick={() => setActiveAiTab(activeAiTab === 'settings' ? '' : 'settings')}
+                    className={`w-7 h-7 rounded border transition flex items-center justify-center ${
+                      activeAiTab === 'settings'
+                        ? 'bg-blue-600/30 border-blue-500/50 text-blue-300'
+                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white'
                     }`}
-                    title="Выбор провайдера"
+                    title="Настройки агента"
                     disabled={disabled}
                   >
-                    {selectedProvider?.name || 'Провайдер'} {activeAiTab === 'provider' ? '▴' : '▾'}
+                    ⚙️
                   </button>
-                  
+
+                  {/* AI Configuration Button */}
                   <button
                     type="button"
-                    onClick={() => setActiveAiTab(activeAiTab === 'model' ? '' : 'model')}
-                    className={`px-2 py-2 text-xs rounded border transition ${
-                      activeAiTab === 'model'
-                        ? 'bg-purple-600/20 border-purple-500/50 text-purple-300'
-                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30'
+                    onClick={() => setActiveAiTab(activeAiTab === 'ai_config' ? '' : 'ai_config')}
+                    className={`w-7 h-7 rounded border transition flex items-center justify-center ${
+                      activeAiTab === 'ai_config'
+                        ? 'bg-purple-600/30 border-purple-500/50 text-purple-300'
+                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white'
                     }`}
-                    title="Выбор модели"
+                    title="Настройки ИИ"
                     disabled={disabled}
                   >
-                    {String(node.ai?.model || selectedProvider?.defaultModel || 'Модель')} {activeAiTab === 'model' ? '▴' : '▾'}
+                    🧠
+                  </button>
+
+                  {/* Routing Configuration Button */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveAiTab(activeAiTab === 'routing' ? '' : 'routing')}
+                    className={`w-7 h-7 rounded border transition flex items-center justify-center ${
+                      activeAiTab === 'routing'
+                        ? 'bg-green-600/30 border-green-500/50 text-green-300'
+                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white'
+                    }`}
+                    title="Настройки роутинга"
+                    disabled={disabled}
+                  >
+                    🔀
+                  </button>
+
+                  {/* Logs Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowLogsModal(true)}
+                    className="w-7 h-7 rounded border transition flex items-center justify-center bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white"
+                    title="Просмотр логов"
+                    disabled={disabled}
+                  >
+                    📝
                   </button>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-1 ml-auto">
+                {/* Right Side - Action Buttons */}
+                <div className="flex gap-1">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1444,11 +1409,11 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                       e.stopPropagation();
                       onRegenerate(node.node_id);
                     }}
-                    className="px-3 py-2 text-xs rounded border border-orange-500/50 bg-orange-600/20 text-orange-300 hover:bg-orange-600/30 transition"
+                    className="px-3 py-1.5 text-xs rounded border border-orange-500/50 bg-orange-600/20 text-orange-300 hover:bg-orange-600/30 transition"
                     title="Перегенерировать ответ"
                     disabled={disabled}
                   >
-                    🔄 Перегенерация
+                    🔄
                   </button>
                   
                   <button
@@ -1458,40 +1423,48 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                       e.stopPropagation();
                       onRun(node.node_id);
                     }}
-                    className="px-3 py-2 text-xs rounded border border-green-500/50 bg-green-600/20 text-green-300 hover:bg-green-600/30 transition"
+                    className="px-3 py-1.5 text-xs rounded border border-green-500/50 bg-green-600/20 text-green-300 hover:bg-green-600/30 transition"
                     title="Запустить генерацию"
                     disabled={disabled}
                   >
-                    ▶️ Генерация
+                    ▶️
                   </button>
                 </div>
               </div>
+            </div>
 
-              {/* Expandable Settings Panels */}
-              {activeAiTab === 'settings' && (
-                <div className="bg-black/20 border border-white/10 rounded p-3 space-y-3">
-                  <div>
-                    <label className="text-xs text-white/70 block mb-2">Системный промпт</label>
-                    <textarea
-                      value={systemPromptValue}
-                      onChange={(e) => handleSystemPromptChange(e.target.value)}
-                      placeholder="Например: Ты — полезный ассистент."
-                      rows={4}
-                      disabled={disabled}
-                      className="w-full p-2 bg-black/30 border border-white/10 rounded text-sm resize-y nodrag"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      draggable={false}
-                      data-nodrag="true"
-                    />
-                  </div>
+            {/* Expandable Settings Panels */}
+            {activeAiTab === 'settings' && (
+              <div className="mt-2 bg-black/20 border border-white/10 rounded p-3 space-y-3" style={{ flexShrink: 0 }}>
+                <div>
+                  <label className="text-xs text-white/70 block mb-2">Системный промпт</label>
+                  <textarea
+                    value={systemPromptValue}
+                    onChange={(e) => handleSystemPromptChange(e.target.value)}
+                    placeholder="Например: Ты — полезный ассистент."
+                    disabled={disabled}
+                    className="w-full p-3 bg-black/20 border border-white/10 rounded text-sm resize-none nodrag"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    draggable={false}
+                    data-nodrag="true"
+                    rows={4}
+                    style={{ 
+                      minHeight: '80px',
+                      resize: 'none',
+                      fontSize: '13px',
+                      lineHeight: '1.4'
+                    }}
+                  />
                 </div>
-              )}
+              </div>
+            )}
 
-              {activeAiTab === 'provider' && (
-                <div className="bg-black/20 border border-white/10 rounded p-3">
-                  <label className="text-xs text-white/70 block mb-2">Выберите провайдера</label>
+            {activeAiTab === 'ai_config' && (
+              <div className="mt-2 bg-black/20 border border-white/10 rounded p-3 space-y-3" style={{ flexShrink: 0 }}>
+                <div>
+                  <label className="text-xs text-white/70 block mb-2">Провайдер</label>
                   <select
                     value={String(node.ai?.provider || '')}
                     onChange={(e) => handleProviderChange(e.target.value)}
@@ -1506,35 +1479,68 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                     ))}
                   </select>
                 </div>
-              )}
-
-              {activeAiTab === 'model' && selectedProvider && (
-                <div className="bg-black/20 border border-white/10 rounded p-3">
-                  <label className="text-xs text-white/70 block mb-2">Выберите модель</label>
-                  <select
-                    value={String(node.ai?.model || selectedProvider.defaultModel)}
-                    onChange={(e) => handleModelChange(e.target.value)}
+                {selectedProvider && (
+                  <div>
+                    <label className="text-xs text-white/70 block mb-2">Модель</label>
+                    <select
+                      value={String(node.ai?.model || selectedProvider.defaultModel)}
+                      onChange={(e) => handleModelChange(e.target.value)}
+                      disabled={disabled}
+                      className="w-full p-2 bg-black/30 border border-white/10 rounded text-sm nodrag"
+                      data-nodrag="true"
+                    >
+                      {selectedProvider.models.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="text-xs text-white/70 block mb-2">Температура</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={Number(node.ai?.temperature) || 0.7}
+                    onChange={(e) => {
+                      const temp = parseFloat(e.target.value) || 0.7;
+                      const newAiConfig = { ...node.ai, temperature: temp };
+                      onChangeAi?.(node.node_id, newAiConfig);
+                    }}
                     disabled={disabled}
                     className="w-full p-2 bg-black/30 border border-white/10 rounded text-sm nodrag"
                     data-nodrag="true"
-                  >
-                    {selectedProvider.models.map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
+                  />
+                  <div className="text-xs text-white/50 mt-1">От 0 (строго) до 2 (креативно)</div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
+            {activeAiTab === 'routing' && (
+              <div className="mt-2 bg-black/20 border border-white/10 rounded p-3 space-y-3" style={{ flexShrink: 0 }}>
+                <div className="text-xs text-white/70">
+                  <div className="mb-2">Настройки роутинга выходов:</div>
+                  <div className="text-white/50 text-[10px]">
+                    Здесь можно настроить типы входящих и исходящих данных, 
+                    количество портов ввода/вывода и правила обработки.
+                  </div>
+                </div>
+                {/* Placeholder for routing configuration */}
+                <div className="p-2 bg-black/20 border border-white/5 rounded text-xs text-white/50 text-center">
+                  Конфигурация роутинга будет добавлена в следующих версиях
+                </div>
+              </div>
+            )}
+          </>
+        ) : !collapsed ? (
           <div style={{ 
             flex: 1, 
             display: 'flex', 
             flexDirection: 'column',
             minHeight: 0 
           }}>
-            {/* Don't render content area for improved AI nodes - they handle their own content */}
-            {isImprovedAiNode ? null : node.type === 'html' ? (
+            {node.type === 'html' ? (
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }} data-node-id={node.node_id}>
                 {/* Content Area */}
                 <div className="w-full bg-white/5 border border-white/10 rounded flex-1 mb-2 overflow-hidden">
@@ -2183,126 +2189,8 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
               />
             )}
           </div>
-        </div>
-      ) : (
-        <div 
-          className="flow-node__content--collapsed"
-          style={{ 
-            padding: '8px 16px',
-            flex: 0,
-            backgroundColor: `${baseColor}10`,
-            borderTop: `1px solid ${baseColor}20`,
-            borderBottom: `1px solid ${baseColor}20`,
-          }}
-        >
-          {/* Compact info when collapsed */}
-          <div className="flex items-center justify-between text-xs text-white/70">
-            <div className="flex items-center gap-2">
-              {/* Content preview - different for each node type */}
-              {(() => {
-                if (node.type === 'image') {
-                  const imageUrl = node.meta?.image_url as string | undefined;
-                  const imageFile = node.meta?.image_file as string | undefined;
-                  if (imageUrl || imageFile) {
-                    return (
-                      <span className="text-blue-300">
-                        🖼️ {imageFile || 'По ссылке'}
-                      </span>
-                    );
-                  }
-                  return <span className="text-white/40">Нет изображения</span>;
-                }
-                
-                if (node.type === 'video') {
-                  const videoUrl = node.meta?.video_url as string | undefined;
-                  const videoFile = node.meta?.video_file as string | undefined;
-                  if (videoUrl || videoFile) {
-                    return (
-                      <span className="text-purple-300">
-                        🎬 {videoFile || 'По ссылке'}
-                      </span>
-                    );
-                  }
-                  return <span className="text-white/40">Нет видео</span>;
-                }
-                
-                if (node.type === 'file') {
-                  const attachments = (node.meta?.attachments as string[]) || [];
-                  const fileName = node.meta?.file_name as string | undefined;
-                  const totalFiles = attachments.length + (fileName ? 1 : 0);
-                  if (totalFiles > 0) {
-                    return (
-                      <span className="text-green-300">
-                        📁 {totalFiles} файл{totalFiles > 1 ? 'ов' : ''}
-                      </span>
-                    );
-                  }
-                  return <span className="text-white/40">Нет файлов</span>;
-                }
-                
-                if (node.type === 'folder') {
-                  const items = (node.meta?.folder_items as string[]) || [];
-                  return (
-                    <span className="text-yellow-300">
-                      📂 {items.length} элемент{items.length !== 1 ? 'ов' : ''}
-                    </span>
-                  );
-                }
-                
-                if (node.type === 'html') {
-                  const htmlUrl = node.meta?.htmlUrl;
-                  if (htmlUrl) {
-                    try {
-                      const domain = new URL(htmlUrl as string).hostname;
-                      return (
-                        <span className="text-cyan-300">
-                          🌐 {domain}
-                        </span>
-                      );
-                    } catch {
-                      return <span className="text-cyan-300">🌐 HTML</span>;
-                    }
-                  }
-                  return <span className="text-white/40">Нет URL</span>;
-                }
-                
-                // Default content preview for other types
-                return (
-                  <span className="max-w-32 truncate">
-                    {node.content ? `"${node.content.substring(0, 40)}..."` : 'Нет содержимого'}
-                  </span>
-                );
-              })()}
-            </div>
-            <div className="flex items-center gap-3">
-              {/* AI model indicator */}
-              {isAiNode && selectedProvider && (
-                <span className="text-blue-300 text-xs">
-                  🤖 {selectedProvider.name}
-                </span>
-              )}
-              {/* Character count or specific info */}
-              {(() => {
-                if (node.type === 'image' || node.type === 'video') {
-                  const fileSize = node.meta?.file_size;
-                  if (fileSize && typeof fileSize === 'number') {
-                    return (
-                      <span className="text-white/50">
-                        {(fileSize / 1024 / 1024).toFixed(1)} MB
-                      </span>
-                    );
-                  }
-                }
-                return (
-                  <span className="text-white/50">
-                    {(node.content || '').length} сим.
-                  </span>
-                );
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
+        ) : null}
+      </div>
 
       {/* Footer */}
       <div 
@@ -2314,29 +2202,34 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
         }}
       >
         <div className="flex justify-between items-center w-full px-3 py-2">
-          {/* Show different info based on collapsed state */}
+          {/* Show different info based on node type and collapsed state */}
           {collapsed ? (
             <>
               <span className="text-xs text-white/70">
                 {node.type.toUpperCase()}
               </span>
-              <span className="text-xs text-green-400/80">
-                Готов
+              <span className="text-xs text-white/50">
+                {(() => {
+                  if (node.type === 'image') return 'Изображение';
+                  if (node.type === 'file') return 'Файл';
+                  return `${(node.content || '').length} симв.`;
+                })()}
               </span>
             </>
           ) : (
             <>
               <span className="text-xs text-white/70">
-                Символов: {(node.content || '').length.toLocaleString()}
+                {(() => {
+                  if (node.type === 'image') return 'Размер: —'; // Placeholder for image weight
+                  if (node.type === 'file') return 'Размер: —'; // Placeholder for file weight
+                  return `Символов: ${(node.content || '').length.toLocaleString()}`;
+                })()}
               </span>
               {isAiNode && selectedProvider && (
                 <span className="text-xs text-white/60">
                   {selectedProvider.name}
                 </span>
               )}
-              <span className="text-xs text-green-400/80">
-                Готов
-              </span>
             </>
           )}
         </div>
@@ -2409,9 +2302,6 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
         <NodeSettingsModal
           node={node}
           onClose={() => setShowSettingsModal(false)}
-          onRunNode={onRun}
-          onRegenerateNode={onRegenerate}
-          onDeleteNode={onDelete}
           onUpdateNodeMeta={onChangeMeta}
           loading={disabled}
         />
@@ -2532,6 +2422,27 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
             )}
           </div>
         </div>
+      )}
+
+      {/* Agent Routing Editor */}
+      {showRoutingEditor && (node.type === 'ai_improved' || node.type === 'ai') && (
+        <AgentRoutingEditor
+          config={(node.ai?.routing as AgentRoutingConfig) || DEFAULT_ROUTING_CONFIGS.universal}
+          onChange={(newConfig) => {
+            const newAiConfig = { ...node.ai, routing: newConfig };
+            onChangeAi?.(node.node_id, newAiConfig);
+          }}
+          onClose={() => setShowRoutingEditor(false)}
+        />
+      )}
+
+      {/* Agent Logs Modal */}
+      {showLogsModal && (node.type === 'ai_improved' || node.type === 'ai') && (
+        <AgentLogsModal
+          nodeId={node.node_id}
+          projectId={data.projectId || ''}
+          onClose={() => setShowLogsModal(false)}
+        />
       )}
     </div>
   );

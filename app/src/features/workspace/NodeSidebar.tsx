@@ -173,31 +173,24 @@ function NodeSidebar({
           return (
             <li key={node.node_id}>
               <div
-                className="relative rounded-lg overflow-hidden cursor-move"
+                className="relative rounded-lg overflow-hidden cursor-move h-16"
                 draggable
                 onDragStart={(e) => handleDragStart(e, node)}
                 style={{
-                  backgroundColor: 'transparent',
+                  backgroundColor: `${nodeColor}10`,
                   border: `1px solid ${nodeColor}40`,
-                  backdropFilter: 'blur(10px)',
                   boxShadow: isSelected 
                     ? `0 0 0 1px ${nodeColor}, 0 4px 12px ${nodeColor}20`
                     : `0 2px 6px rgba(0,0,0,0.1)`,
                 }}
               >
                 <div
-                  className="flex items-center justify-between p-3 transition"
-                  style={{
-                    backgroundColor: 'transparent',
-                    borderBottom: (connections.incoming.length > 0 || connections.outgoing.length > 0) && isExpanded 
-                      ? `1px solid ${nodeColor}40` 
-                      : 'none',
-                  }}
+                  className="flex items-center justify-between p-3 h-full transition"
                 >
                   <button
                     type="button"
                     onClick={() => onSelectNode(node.node_id)}
-                    className="flex items-center gap-3 flex-1 text-left bg-transparent hover:bg-transparent p-0 border-0"
+                    className="flex items-center gap-3 flex-1 text-left bg-transparent hover:bg-transparent p-0 border-0 h-full min-w-0"
                     style={{ 
                       backgroundColor: 'transparent',
                       backgroundImage: 'none',
@@ -205,7 +198,7 @@ function NodeSidebar({
                     }}
                   >
                     <div 
-                      className="flex items-center justify-center w-8 h-8 rounded text-sm"
+                      className="flex items-center justify-center w-8 h-8 rounded text-sm flex-shrink-0"
                       style={{ 
                         backgroundColor: 'transparent',
                         color: 'white'
@@ -213,9 +206,9 @@ function NodeSidebar({
                     >
                       {icon}
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-white">{node.title}</p>
-                      <p className="text-[11px] text-slate-400">{node.node_id}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{node.title}</p>
+                      <p className="text-[11px] text-slate-400 truncate">{node.node_id}</p>
                     </div>
                   </button>
                   
@@ -223,7 +216,7 @@ function NodeSidebar({
                     <button
                       type="button"
                       onClick={() => toggleNodeExpanded(node.node_id)}
-                      className="ml-2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-700/30 rounded transition text-xs bg-transparent border-0 p-0"
+                      className="ml-2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-700/30 rounded transition text-xs bg-transparent border-0 p-0 flex-shrink-0"
                       style={{ 
                         backgroundColor: 'transparent',
                         backgroundImage: 'none',
