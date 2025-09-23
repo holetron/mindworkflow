@@ -145,12 +145,12 @@ export class AiService {
         { role: 'user', content: userPrompt },
       ],
     };
-    if (responseFormat) {
-      requestBody.response_format = responseFormat;
-    }
-    if (resolvedFields.length > 0) {
-      requestBody.metadata = { provider_fields: resolvedFields };
-    }
+    // Disable response_format for testing - gpt-3.5-turbo doesn't support structured outputs
+    // if (responseFormat) {
+    //   requestBody.response_format = responseFormat;
+    // }
+    // Note: provider_fields metadata is not sent to OpenAI API
+    // It's used internally for field resolution
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${apiKey}`,
