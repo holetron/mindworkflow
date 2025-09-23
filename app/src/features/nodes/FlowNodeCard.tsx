@@ -12,8 +12,8 @@ import {
   type MouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import MarkdownIt from 'markdown-it';
-import { Handle, Position, useStore, useUpdateNodeInternals, type NodeProps } from 'reactflow';
+import React from 'react';
+import { Handle, Position, useStore, useUpdateNodeInternals, useReactFlow, type NodeProps } from 'reactflow';
 import type { FlowNode, NodeUI } from '../../state/api';
 import type { InputPortKind } from '../../data/inputPortTypes';
 import { INPUT_PORT_TYPES, findInputPortMeta } from '../../data/inputPortTypes';
@@ -26,9 +26,56 @@ import {
   NODE_MAX_WIDTH,
   NODE_MIN_HEIGHT,
   NODE_MIN_WIDTH,
+  normalizeNodeHeight,
+  normalizeNodeWidth,
+  calculateContentBasedHeight,
 } from '../../constants/nodeDefaults';
 import { SettingsIcon } from '../../ui/icons/SettingsIcon';
 import { NodeSettingsModal } from '../../ui/NodeSettingsModal';
+
+// Screen width constants for HTML preview
+const SCREEN_WIDTHS = [
+  { id: 'mobile', name: 'Mobile', width: '375px' },
+  { id: 'tablet', name: 'Tablet', width: '768px' },
+  { id: 'laptop', name: 'Laptop', width: '1024px' },
+  { id: 'desktop', name: 'Desktop', width: '1440px' },
+  { id: 'wide', name: 'Wide', width: '1920px' }
+];
+
+// Collapsible section component
+function CollapsibleSection({ title, icon, defaultExpanded, disabled, children }: {
+  title: string;
+  icon: string;
+  defaultExpanded: boolean;
+  disabled: boolean;
+  children: React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  return (
+    <div className="border border-white/10 rounded bg-black/5">
+      <button
+        type="button"
+        className="w-full flex items-center justify-between p-3 text-left hover:bg-white/5 transition-colors"
+        onClick={() => !disabled && setExpanded(!expanded)}
+        disabled={disabled}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm">{icon}</span>
+          <span className="text-sm font-medium text-white/80">{title}</span>
+        </div>
+        <span className="text-white/60 text-xs">
+          {expanded ? '▴' : '▾'}
+        </span>
+      </button>
+      {expanded && (
+        <div className="p-3 pt-0 border-t border-white/5">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export interface AiProviderOption {
   id: string;
@@ -53,6 +100,8 @@ export interface FlowNodeCardData {
   onChangeTitle: (nodeId: string, title: string) => void;
   onChangeAi?: (nodeId: string, ai: Record<string, unknown>, options?: { replace?: boolean }) => void;
   onChangeUi?: (nodeId: string, patch: Partial<NodeUI>) => void;
+  onOpenSettings?: (nodeId: string) => void;
+  onOpenConnections?: (nodeId: string) => void;
   providers?: AiProviderOption[];
   sources?: Array<{ node_id: string; title: string; type: string }>;
   disabled?: boolean;
@@ -71,28 +120,14 @@ const TYPE_ICONS: Record<string, string> = {
 };
 
 const COLOR_PALETTE = [
-  '#ef4444', '#f97316', '#facc15', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
-  '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#ec4899', '#fb7185', '#fda4af', '#84cc16',
+  '#ef4444', '#f97316', '#f59e0b', '#eab308', 
+  '#22c55e', '#10b981', '#14b8a6', '#06b6d4', 
+  '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', 
+  '#ec4899', '#f43f5e', '#84cc16', '#6b7280',
 ];
 
 const DEFAULT_COLOR = NODE_DEFAULT_COLOR;
 const DEFAULT_MODEL = 'gpt-4.1-mini';
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-
-interface ResizeConstraints {
-  minWidth: number;
-  minHeight: number;
-  maxWidth: number;
-  maxHeight: number;
-}
-
-const RESIZE_CONSTRAINTS: ResizeConstraints = {
-  minWidth: NODE_MIN_WIDTH,
-  minHeight: NODE_MIN_HEIGHT,
-  maxWidth: NODE_MAX_WIDTH,
-  maxHeight: NODE_MAX_HEIGHT,
-};
 
 const FALLBACK_PROVIDERS: AiProviderOption[] = [
   {
@@ -106,1393 +141,1394 @@ const FALLBACK_PROVIDERS: AiProviderOption[] = [
   },
 ];
 
-interface ProviderFieldValuePersisted {
-  value?: string;
-  source_node_id?: string | null;
+// Collapsible Section Component
+interface CollapsibleSectionProps {
+  title: string;
+  icon: string;
+  defaultExpanded: boolean;
+  disabled: boolean;
+  children: React.ReactNode;
 }
 
-interface ProviderFieldState {
-  value: string;
-  sourceNodeId: string | null;
+// Field Configuration for Node Display
+interface NodeFieldConfig {
+  id: string;
+  label: string;
+  type: 'text' | 'textarea' | 'select' | 'checkbox' | 'number' | 'range';
+  visible: boolean;
+  order: number;
+  placeholder?: string;
+  options?: string[]; // for select type
+  min?: number; // for number/range
+  max?: number; // for number/range
+  step?: number; // for number/range
 }
 
-function parseProviderFieldRecord(value: unknown): Record<string, ProviderFieldValuePersisted> {
-  if (!value || typeof value !== 'object') return {};
-  const record: Record<string, ProviderFieldValuePersisted> = {};
-  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-    if (!entry || typeof entry !== 'object') continue;
-    const typed = entry as Record<string, unknown>;
-    const field: ProviderFieldValuePersisted = {
-      value:
-        typeof typed.value === 'string'
-          ? typed.value
-          : typeof typed.value === 'number'
-            ? String(typed.value)
-            : undefined,
-      source_node_id: typeof typed.source_node_id === 'string' ? typed.source_node_id : null,
+// Routing Configuration
+interface NodeRoutingConfig {
+  inputPorts: Array<{
+    id: string;
+    label: string;
+    type: string;
+    required: boolean;
+    multiple: boolean;
+  }>;
+  outputPorts: Array<{
+    id: string;
+    label: string;
+    type: string;
+    condition?: string;
+  }>;
+  routingRules: Array<{
+    id: string;
+    condition: string;
+    outputPort: string;
+    description: string;
+  }>;
+}
+
+interface FieldConfiguratorProps {
+  nodeId: string;
+  nodeType: string;
+  currentFields: NodeFieldConfig[];
+  onFieldsChange: (fields: NodeFieldConfig[]) => void;
+  disabled: boolean;
+}
+
+function FieldConfigurator({ nodeId, nodeType, currentFields, onFieldsChange, disabled }: FieldConfiguratorProps) {
+  const [fields, setFields] = useState<NodeFieldConfig[]>(currentFields.length > 0 ? currentFields : getDefaultFields(nodeType));
+
+  // Default fields based on node type
+  function getDefaultFields(type: string): NodeFieldConfig[] {
+    const commonFields = [
+      { id: 'title', label: 'Заголовок', type: 'text' as const, visible: true, order: 0 },
+      { id: 'content', label: 'Содержимое', type: 'textarea' as const, visible: true, order: 1 }
+    ];
+
+    if (type === 'ai') {
+      return [
+        { id: 'htmlUrl', label: 'URL', type: 'text', visible: true, order: 0 },
+        { id: 'screenWidth', label: 'Ширина экрана', type: 'select', visible: true, order: 1 }
+      ];
+    }
+    return commonFields;
+  }
+
+  const handleFieldToggle = (fieldId: string) => {
+    const updatedFields = fields.map(field => 
+      field.id === fieldId ? { ...field, visible: !field.visible } : field
+    );
+    setFields(updatedFields);
+    onFieldsChange(updatedFields);
+  };
+
+  const handleFieldOrderChange = (fieldId: string, direction: 'up' | 'down') => {
+    const fieldIndex = fields.findIndex(f => f.id === fieldId);
+    if (fieldIndex === -1) return;
+
+    const newFields = [...fields];
+    const targetIndex = direction === 'up' ? fieldIndex - 1 : fieldIndex + 1;
+    
+    if (targetIndex >= 0 && targetIndex < newFields.length) {
+      // Swap fields
+      [newFields[fieldIndex], newFields[targetIndex]] = [newFields[targetIndex], newFields[fieldIndex]];
+      // Update order values
+      newFields.forEach((field, index) => {
+        field.order = index;
+      });
+      setFields(newFields);
+      onFieldsChange(newFields);
+    }
+  };
+
+  const addCustomField = () => {
+    const newField: NodeFieldConfig = {
+      id: `custom_${Date.now()}`,
+      label: 'Новое поле',
+      type: 'text',
+      visible: true,
+      order: fields.length,
+      placeholder: 'Введите значение...'
     };
-    record[key] = field;
-  }
-  return record;
-}
+    const updatedFields = [...fields, newField];
+    setFields(updatedFields);
+    onFieldsChange(updatedFields);
+  };
 
-function buildInitialFieldState(
-  defs: IntegrationFieldConfig[],
-  stored: Record<string, ProviderFieldValuePersisted>,
-): Map<string, ProviderFieldState> {
-  const map = new Map<string, ProviderFieldState>();
-  defs.forEach((field, index) => {
-    const storedValue = stored[field.key];
-    map.set(field.key, {
-      value:
-        storedValue && typeof storedValue.value === 'string'
-          ? storedValue.value
-          : typeof field.default_value === 'string'
-            ? field.default_value
-            : '',
-      sourceNodeId:
-        storedValue && typeof storedValue.source_node_id === 'string'
-          ? storedValue.source_node_id
-          : null,
-    });
-  });
-  return map;
-}
+  const removeField = (fieldId: string) => {
+    const updatedFields = fields.filter(f => f.id !== fieldId);
+    setFields(updatedFields);
+    onFieldsChange(updatedFields);
+  };
 
-function serializeFieldState(map: Map<string, ProviderFieldState>): Record<string, ProviderFieldValuePersisted> {
-  const record: Record<string, ProviderFieldValuePersisted> = {};
-  for (const [key, value] of map.entries()) {
-    record[key] = {
-      value: value.value,
-      source_node_id: value.sourceNodeId ?? undefined,
-    };
-  }
-  return record;
-}
+  const updateFieldLabel = (fieldId: string, label: string) => {
+    const updatedFields = fields.map(field => 
+      field.id === fieldId ? { ...field, label } : field
+    );
+    setFields(updatedFields);
+    onFieldsChange(updatedFields);
+  };
 
-function fieldStateMapsEqual(
-  a: Map<string, ProviderFieldState>,
-  b: Map<string, ProviderFieldState>,
-): boolean {
-  if (a.size !== b.size) return false;
-  for (const [key, value] of a.entries()) {
-    const other = b.get(key);
-    if (!other) return false;
-    if (other.value !== value.value) return false;
-    if ((other.sourceNodeId ?? null) !== (value.sourceNodeId ?? null)) return false;
-  }
-  return true;
-}
-
-export const NODE_DIMENSIONS = Object.freeze({
-  minWidth: NODE_MIN_WIDTH,
-  minHeight: NODE_MIN_HEIGHT,
-  maxWidth: NODE_MAX_WIDTH,
-  maxHeight: NODE_MAX_HEIGHT,
-  defaultWidth: NODE_DEFAULT_WIDTH,
-  defaultHeight: NODE_DEFAULT_HEIGHT,
-});
-
-const HEADER_HEIGHT = 44;
-const MIN_TITLE_WIDTH = 160;
-
-const markdown = new MarkdownIt({ linkify: true, breaks: true });
-markdown.renderer.rules.image = (tokens, idx, options, env, self) => {
-  const token = tokens[idx];
-  const src = token.attrGet('src') ?? '';
-  const isFullWidth = src.includes('#full-width');
-  if (isFullWidth) {
-    token.attrSet('src', src.replace('#full-width', ''));
-  }
-  const html = self.renderToken(tokens, idx, options);
-  if (isFullWidth) {
-    return `<div style="width:100%">${html}</div>`;
-  }
-  return html;
-};
-
-interface TooltipButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  tooltip: string;
-  colorClass?: string;
-}
-
-const TooltipButton = forwardRef<HTMLButtonElement, TooltipButtonProps>(
-  ({ tooltip, className = '', colorClass = '', disabled, style, children, onPointerDown, ...props }, ref) => {
-    const [visible, setVisible] = useState(false);
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const start = () => {
-      if (disabled) return;
-      timerRef.current = setTimeout(() => setVisible(true), 600);
-    };
-
-    const stop = () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      setVisible(false);
-    };
-
-    return (
-      <div className="relative inline-flex">
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-white/60">
+          Настройте, какие поля отображать в слайдере ноды
+        </div>
         <button
           type="button"
-          {...props}
-          ref={ref}
+          className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded hover:bg-blue-500/30 transition-colors"
+          onClick={addCustomField}
           disabled={disabled}
-          onMouseEnter={start}
-          onMouseLeave={stop}
-          onFocus={start}
-          onBlur={stop}
-          onPointerDown={(event) => {
-            onPointerDown?.(event);
-            event.stopPropagation();
-          }}
-          className={`flex h-7 w-7 items-center justify-center rounded border border-transparent text-xs transition ${
-            disabled ? 'cursor-not-allowed opacity-40' : colorClass
-          } ${className}`.trim()}
-          style={style}
         >
-          {children}
+          + Поле
         </button>
-        <span
-          className="pointer-events-none absolute right-0 top-0 z-20 -translate-y-full translate-x-1 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-[10px] text-slate-100 shadow-lg transition-opacity"
-          style={{ opacity: visible ? 1 : 0 }}
-        >
-          {tooltip}
-        </span>
       </div>
-    );
-  },
-);
-TooltipButton.displayName = 'TooltipButton';
 
+      <div className="space-y-2 max-h-48 overflow-y-auto">
+        {fields.map((field, index) => (
+          <div key={field.id} className="flex items-center gap-2 p-2 bg-black/10 rounded border border-white/5">
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                className="text-xs text-white/40 hover:text-white/60 disabled:opacity-30"
+                onClick={() => handleFieldOrderChange(field.id, 'up')}
+                disabled={disabled || index === 0}
+              >
+                ▲
+              </button>
+              <button
+                type="button"
+                className="text-xs text-white/40 hover:text-white/60 disabled:opacity-30"
+                onClick={() => handleFieldOrderChange(field.id, 'down')}
+                disabled={disabled || index === fields.length - 1}
+              >
+                ▼
+              </button>
+            </div>
+
+            <label className="flex items-center gap-2 flex-1">
+              <input
+                type="checkbox"
+                checked={field.visible}
+                onChange={() => handleFieldToggle(field.id)}
+                disabled={disabled}
+                className="w-4 h-4"
+              />
+              <input
+                type="text"
+                value={field.label}
+                onChange={(e) => updateFieldLabel(field.id, e.target.value)}
+                disabled={disabled}
+                className="flex-1 bg-transparent text-xs text-white/80 border-none outline-none"
+              />
+            </label>
+
+            <span className="text-xs text-white/40 px-2 py-1 bg-black/20 rounded">
+              {field.type}
+            </span>
+
+            {field.id.startsWith('custom_') && (
+              <button
+                type="button"
+                className="text-xs text-red-400 hover:text-red-300 p-1"
+                onClick={() => removeField(field.id)}
+                disabled={disabled}
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="text-xs text-white/50 p-2 bg-black/5 rounded">
+        Видимые поля будут отображаться в слайдере в указанном порядке
+      </div>
+    </div>
+  );
+}
+
+// Routing Configuration Component - temporarily disabled to fix hooks issue
+interface RoutingConfiguratorProps {
+  nodeId: string;
+  nodeType: string;
+  currentRouting: NodeRoutingConfig;
+  availableNodes: Array<{ node_id: string; title: string; type: string }>;
+  onRoutingChange: (routing: NodeRoutingConfig) => void;
+  disabled: boolean;
+}
+
+function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes, onRoutingChange, disabled }: RoutingConfiguratorProps) {
+  const [routing, setRouting] = useState<NodeRoutingConfig>(currentRouting.inputPorts.length > 0 ? currentRouting : getDefaultRouting(nodeType));
+
+  function getDefaultRouting(type: string): NodeRoutingConfig {
+    const baseRouting = {
+      inputPorts: [
+        { id: 'main_input', label: 'Основной вход', type: 'any', required: false, multiple: false }
+      ],
+      outputPorts: [
+        { id: 'main_output', label: 'Основной выход', type: 'any' }
+      ],
+      routingRules: []
+    };
+
+    if (type === 'ai') {
+      return {
+        inputPorts: [
+          { id: 'prompt_input', label: 'Промпт', type: 'text', required: true, multiple: false },
+          { id: 'context_input', label: 'Контекст', type: 'any', required: false, multiple: true }
+        ],
+        outputPorts: [
+          { id: 'success_output', label: 'Успешный результат', type: 'text' },
+          { id: 'error_output', label: 'Ошибка', type: 'error' }
+        ],
+        routingRules: [
+          { id: 'success_rule', condition: 'success', outputPort: 'success_output', description: 'При успешном выполнении' },
+          { id: 'error_rule', condition: 'error', outputPort: 'error_output', description: 'При ошибке' }
+        ]
+      };
+    }
+
+    return baseRouting;
+  }
+
+  const addInputPort = () => {
+    const newPort = {
+      id: `input_${Date.now()}`,
+      label: 'Новый вход',
+      type: 'any',
+      required: false,
+      multiple: false
+    };
+    const updatedRouting = {
+      ...routing,
+      inputPorts: [...routing.inputPorts, newPort]
+    };
+    setRouting(updatedRouting);
+    onRoutingChange(updatedRouting);
+  };
+
+  const addOutputPort = () => {
+    const newPort = {
+      id: `output_${Date.now()}`,
+      label: 'Новый выход',
+      type: 'any'
+    };
+    const updatedRouting = {
+      ...routing,
+      outputPorts: [...routing.outputPorts, newPort]
+    };
+    setRouting(updatedRouting);
+    onRoutingChange(updatedRouting);
+  };
+
+  const removeInputPort = (portId: string) => {
+    const updatedRouting = {
+      ...routing,
+      inputPorts: routing.inputPorts.filter(p => p.id !== portId)
+    };
+    setRouting(updatedRouting);
+    onRoutingChange(updatedRouting);
+  };
+
+  const removeOutputPort = (portId: string) => {
+    const updatedRouting = {
+      ...routing,
+      outputPorts: routing.outputPorts.filter(p => p.id !== portId),
+      routingRules: routing.routingRules.filter(r => r.outputPort !== portId)
+    };
+    setRouting(updatedRouting);
+    onRoutingChange(updatedRouting);
+  };
+
+  const updateInputPort = (portId: string, updates: Partial<typeof routing.inputPorts[0]>) => {
+    const updatedRouting = {
+      ...routing,
+      inputPorts: routing.inputPorts.map(port => 
+        port.id === portId ? { ...port, ...updates } : port
+      )
+    };
+    setRouting(updatedRouting);
+    onRoutingChange(updatedRouting);
+  };
+
+  const updateOutputPort = (portId: string, updates: Partial<typeof routing.outputPorts[0]>) => {
+    const updatedRouting = {
+      ...routing,
+      outputPorts: routing.outputPorts.map(port => 
+        port.id === portId ? { ...port, ...updates } : port
+      )
+    };
+    setRouting(updatedRouting);
+    onRoutingChange(updatedRouting);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Input Ports */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-medium text-white/70">Входные порты</h4>
+          <button
+            type="button"
+            className="text-xs px-2 py-1 bg-green-500/20 text-green-300 rounded hover:bg-green-500/30 transition-colors"
+            onClick={addInputPort}
+            disabled={disabled}
+          >
+            + Вход
+          </button>
+        </div>
+        <div className="space-y-2 max-h-32 overflow-y-auto">
+          {routing.inputPorts.map((port) => (
+            <div key={port.id} className="flex items-center gap-2 p-2 bg-black/10 rounded border border-white/5">
+              <input
+                type="text"
+                value={port.label}
+                onChange={(e) => updateInputPort(port.id, { label: e.target.value })}
+                disabled={disabled}
+                className="flex-1 bg-transparent text-xs text-white/80 border-none outline-none"
+                placeholder="Название порта"
+              />
+              <select
+                value={port.type}
+                onChange={(e) => updateInputPort(port.id, { type: e.target.value })}
+                disabled={disabled}
+                className="text-xs bg-black/20 text-white/70 border border-white/10 rounded px-1 py-0.5"
+              >
+                <option value="any">Любой</option>
+                <option value="text">Текст</option>
+                <option value="number">Число</option>
+                <option value="json">JSON</option>
+                <option value="image">Изображение</option>
+                <option value="file">Файл</option>
+              </select>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={port.required}
+                  onChange={(e) => updateInputPort(port.id, { required: e.target.checked })}
+                  disabled={disabled}
+                  className="w-3 h-3"
+                />
+                <span className="text-xs text-white/60">Обяз.</span>
+              </label>
+              <button
+                type="button"
+                className="text-xs text-red-400 hover:text-red-300 p-1"
+                onClick={() => removeInputPort(port.id)}
+                disabled={disabled}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Output Ports */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-medium text-white/70">Выходные порты</h4>
+          <button
+            type="button"
+            className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded hover:bg-blue-500/30 transition-colors"
+            onClick={addOutputPort}
+            disabled={disabled}
+          >
+            + Выход
+          </button>
+        </div>
+        <div className="space-y-2 max-h-32 overflow-y-auto">
+          {routing.outputPorts.map((port) => (
+            <div key={port.id} className="flex items-center gap-2 p-2 bg-black/10 rounded border border-white/5">
+              <input
+                type="text"
+                value={port.label}
+                onChange={(e) => updateOutputPort(port.id, { label: e.target.value })}
+                disabled={disabled}
+                className="flex-1 bg-transparent text-xs text-white/80 border-none outline-none"
+                placeholder="Название порта"
+              />
+              <select
+                value={port.type}
+                onChange={(e) => updateOutputPort(port.id, { type: e.target.value })}
+                disabled={disabled}
+                className="text-xs bg-black/20 text-white/70 border border-white/10 rounded px-1 py-0.5"
+              >
+                <option value="any">Любой</option>
+                <option value="text">Текст</option>
+                <option value="number">Число</option>
+                <option value="json">JSON</option>
+                <option value="image">Изображение</option>
+                <option value="file">Файл</option>
+                <option value="error">Ошибка</option>
+              </select>
+              <button
+                type="button"
+                className="text-xs text-red-400 hover:text-red-300 p-1"
+                onClick={() => removeOutputPort(port.id)}
+                disabled={disabled}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Connection Status */}
+      <div className="p-2 bg-black/5 rounded border border-white/5">
+        <div className="text-xs text-white/60 mb-1">Доступные подключения:</div>
+        <div className="text-xs text-white/50">
+          {availableNodes.length > 0 ? (
+            `${availableNodes.length} нод доступно для соединения`
+          ) : (
+            'Нет доступных нод для соединения'
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Enhanced FlowNodeCard with restored functionality
 function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>) {
-  const {
-    node,
-    onRun,
-    onRegenerate,
-    onDelete,
-    onChangeMeta,
-    onChangeContent,
-    onChangeTitle,
-    onChangeAi,
+  const { 
+    node, 
+    onRun, 
+    onRegenerate, 
+    onDelete, 
+    onChangeMeta, 
+    onChangeContent, 
+    onChangeTitle, 
+    onChangeAi, 
     onChangeUi,
-    providers,
+    onOpenSettings,
+    onOpenConnections,
+    providers = FALLBACK_PROVIDERS,
     sources = [],
-    disabled,
+    disabled = false
   } = data;
 
-  const isTextNode = node.type === 'text';
-  const isAiNode = node.type === 'ai';
-  const persistedMeta = (node.meta ?? {}) as { ui_collapsed?: unknown };
-  const initialCollapsed =
-    typeof persistedMeta.ui_collapsed === 'boolean' ? (persistedMeta.ui_collapsed as boolean) : false;
-
-  const [collapsed, setCollapsed] = useState(initialCollapsed);
+  // State management
+  const [collapsed, setCollapsed] = useState(() => {
+    // Auto-collapse data nodes by default
+    return node.type === 'data' || node.type === 'parser';
+  });
   const [colorOpen, setColorOpen] = useState(false);
-  const [agentSettingsOpen, setAgentSettingsOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-
-  const [titleDraft, setTitleDraft] = useState(node.title);
   const [editingTitle, setEditingTitle] = useState(false);
-
-  const [textDraft, setTextDraft] = useState(node.content ?? '');
-  const [editingText, setEditingText] = useState(false);
-
-  const [promptDraft, setPromptDraft] = useState<string>(
-    typeof node.ai?.user_prompt_template === 'string' ? String(node.ai.user_prompt_template) : '',
-  );
-  const [systemPromptDraft, setSystemPromptDraft] = useState(
-    typeof node.ai?.system_prompt === 'string' ? node.ai.system_prompt : '',
-  );
-  const [outputSchemaDraft, setOutputSchemaDraft] = useState(
-    typeof node.ai?.output_schema_ref === 'string' ? node.ai.output_schema_ref : '',
-  );
-  const [temperatureDraft, setTemperatureDraft] = useState(
-    typeof node.ai?.temperature === 'number' || typeof node.ai?.temperature === 'string'
-      ? String(node.ai.temperature ?? '')
-      : '',
-  );
-  const [activeAiTab, setActiveAiTab] = useState<'template' | 'variables'>('template');
-  const updateNodeInternals = useUpdateNodeInternals();
-  const inputPorts = useMemo(() => normalizeInputPorts(node.meta?.input_ports), [node.meta?.input_ports]);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const sizeRef = useRef<{ width: number; height: number } | null>(null);
-  const resizeStateRef = useRef<{ active: boolean; originX: number; originY: number; width: number; height: number }>({
-    active: false,
-    originX: 0,
-    originY: 0,
-    width: 0,
-    height: 0,
-  });
+  const [titleValue, setTitleValue] = useState(node.title);
   const [isResizing, setIsResizing] = useState(false);
-  const rafRef = useRef<number | null>(null);
-  const textSaveTimerRef = useRef<number | null>(null);
-  const autoSizeCommitTimerRef = useRef<number | null>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [activeAiTab, setActiveAiTab] = useState<'settings' | 'fields' | 'routing'>('settings');
+  
+  // Text content states for controlled components
+  const [contentValue, setContentValue] = useState(node.content || '');
+  const [systemPromptValue, setSystemPromptValue] = useState(String(node.ai?.system_prompt || ''));
+  
+  // HTML node specific states
+  const [htmlUrl, setHtmlUrl] = useState<string>((node.meta?.htmlUrl as string) || 'https://example.com');
+  const [screenWidth, setScreenWidth] = useState<string>((node.meta?.screenWidth as string) || 'desktop');
 
-  const providerOptions = useMemo(() => {
-    if (Array.isArray(providers) && providers.length > 0) {
-      return providers;
-    }
-    return FALLBACK_PROVIDERS;
-  }, [providers]);
+  // Refs for DOM manipulation
+  const nodeRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const updateNodeInternals = useUpdateNodeInternals();
+  const reactFlow = useReactFlow();
+  const resizeStartPos = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
-  const connectionNodeId = useStore((state) => state.connectionNodeId);
-  const connectionHandleType = useStore((state) => state.connectionHandleType);
-
-  const highlightTargetHandle = connectionHandleType === 'source' && connectionNodeId !== node.node_id;
-  const highlightSourceHandle = connectionHandleType === 'target' && connectionNodeId !== node.node_id;
-
-  const incomingChips = useMemo(() => {
-    if (!sources || sources.length === 0) return [] as Array<{ id: string; label: string; tone: 'in' }>;
-    return sources.slice(0, 4).map((source) => ({
-      id: source.node_id,
-      label: source.title,
-      tone: 'in' as const,
-    }));
-  }, [sources]);
-
-  const outgoingChips = useMemo(() => {
-    const outgoing = (node.connections?.outgoing ?? []).slice(0, 4);
-    return outgoing.map((connection) => ({
-      id: connection.edge_id,
-      label: connection.routing && connection.routing.length > 0 ? connection.routing : connection.to,
-      tone: 'out' as const,
-    }));
-  }, [node.connections?.outgoing]);
-
-  const initialWidth = useMemo(() => {
-    const bbox = node.ui?.bbox;
-    const raw = bbox ? bbox.x2 - bbox.x1 : NODE_DIMENSIONS.defaultWidth;
-    return clamp(raw || NODE_DIMENSIONS.defaultWidth, RESIZE_CONSTRAINTS.minWidth, RESIZE_CONSTRAINTS.maxWidth);
-  }, [node.ui?.bbox]);
-
-  const initialHeight = useMemo(() => {
-    const bbox = node.ui?.bbox;
-    const raw = bbox ? bbox.y2 - bbox.y1 : NODE_DIMENSIONS.defaultHeight;
-    return clamp(raw || NODE_DIMENSIONS.defaultHeight, RESIZE_CONSTRAINTS.minHeight, RESIZE_CONSTRAINTS.maxHeight);
-  }, [node.ui?.bbox]);
-
-  const [size, setSize] = useState<{ width: number; height: number }>({
-    width: initialWidth,
-    height: initialHeight,
-  });
-
-  useEffect(() => {
-    setSize((prev) => {
-      if (prev.width === initialWidth && prev.height === initialHeight) {
-        return prev;
-      }
-      return { width: initialWidth, height: initialHeight };
-    });
-  }, [initialWidth, initialHeight]);
-
-  useEffect(() => {
-    sizeRef.current = size;
-  }, [size]);
-
-  useEffect(() => {
-    if (!onChangeUi) return;
-    if (dragging || isResizing) return;
-
-    const bbox = node.ui?.bbox;
-    const baseX = Number.isFinite(bbox?.x1) ? (bbox?.x1 as number) : 0;
-    const baseY = Number.isFinite(bbox?.y1) ? (bbox?.y1 as number) : 0;
-    const storedWidth = bbox
-      ? clamp(bbox.x2 - bbox.x1, RESIZE_CONSTRAINTS.minWidth, RESIZE_CONSTRAINTS.maxWidth)
-      : NODE_DIMENSIONS.defaultWidth;
-    const storedHeight = bbox
-      ? clamp(bbox.y2 - bbox.y1, RESIZE_CONSTRAINTS.minHeight, RESIZE_CONSTRAINTS.maxHeight)
-      : NODE_DIMENSIONS.defaultHeight;
-
-    const nextWidth = clamp(size.width, RESIZE_CONSTRAINTS.minWidth, RESIZE_CONSTRAINTS.maxWidth);
-    const nextHeight = clamp(size.height, RESIZE_CONSTRAINTS.minHeight, RESIZE_CONSTRAINTS.maxHeight);
-
-    if (Math.abs(storedWidth - nextWidth) < 1 && Math.abs(storedHeight - nextHeight) < 1) {
-      return;
-    }
-
-    if (autoSizeCommitTimerRef.current) {
-      window.clearTimeout(autoSizeCommitTimerRef.current);
-    }
-
-    autoSizeCommitTimerRef.current = window.setTimeout(() => {
-      onChangeUi(node.node_id, {
-        bbox: {
-          x1: baseX,
-          y1: baseY,
-          x2: baseX + nextWidth,
-          y2: baseY + nextHeight,
-        },
-      });
-      autoSizeCommitTimerRef.current = null;
-    }, 160);
-  }, [onChangeUi, node.node_id, node.ui?.bbox, size.width, size.height, dragging, isResizing]);
-
-  useEffect(() => () => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-    }
-    if (textSaveTimerRef.current) {
-      window.clearTimeout(textSaveTimerRef.current);
-    }
-    if (autoSizeCommitTimerRef.current) {
-      window.clearTimeout(autoSizeCommitTimerRef.current);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!editingText) {
-      if (textSaveTimerRef.current) {
-        window.clearTimeout(textSaveTimerRef.current);
-        textSaveTimerRef.current = null;
-      }
-      return;
-    }
-
-    if (textDraft === (node.content ?? '')) {
-      return;
-    }
-
-    if (textSaveTimerRef.current) {
-      window.clearTimeout(textSaveTimerRef.current);
-    }
-
-    textSaveTimerRef.current = window.setTimeout(() => {
-      onChangeContent(node.node_id, textDraft);
-    }, 400);
-
-    return () => {
-      if (textSaveTimerRef.current) {
-        window.clearTimeout(textSaveTimerRef.current);
-        textSaveTimerRef.current = null;
-      }
-    };
-  }, [editingText, textDraft, node.content, node.node_id, onChangeContent]);
-
-  const providerId = useMemo(() => {
-    if (typeof node.ai?.provider === 'string' && node.ai.provider.trim().length > 0) {
-      return node.ai.provider;
-    }
-    if (typeof (node.meta as { provider?: unknown })?.provider === 'string') {
-      return (node.meta as { provider: string }).provider;
-    }
-    return providerOptions[0]?.id ?? 'stub';
-  }, [node.ai?.provider, node.meta, providerOptions]);
-
-  const provider = useMemo(() => {
-    if (providerOptions.length === 0) return FALLBACK_PROVIDERS[0];
-    return providerOptions.find((item) => item.id === providerId) ?? providerOptions[0];
-  }, [providerId, providerOptions]);
-
-  const providerFieldDefs = useMemo(() => provider?.inputFields ?? [], [provider]);
-  const storedProviderFieldRecord = useMemo(
-    () => parseProviderFieldRecord((node.ai as Record<string, unknown> | undefined)?.provider_fields),
-    [node.ai],
-  );
-  const [fieldStates, setFieldStates] = useState<Map<string, ProviderFieldState>>(() =>
-    buildInitialFieldState(providerFieldDefs, storedProviderFieldRecord),
-  );
-
-  useEffect(() => {
-    setFieldStates((prev) => {
-      const next = buildInitialFieldState(providerFieldDefs, storedProviderFieldRecord);
-      return fieldStateMapsEqual(prev, next) ? prev : next;
-    });
-  }, [providerFieldDefs, storedProviderFieldRecord, node.node_id]);
-
-  const rawModelId = useMemo(() => {
-    if (typeof node.ai?.model === 'string' && node.ai.model.trim().length > 0) {
-      return node.ai.model.trim();
-    }
-    if (typeof (node.meta as { model?: unknown })?.model === 'string') {
-      return (node.meta as { model: string }).model;
-    }
-    return provider?.defaultModel ?? DEFAULT_MODEL;
-  }, [node.ai?.model, node.meta, provider]);
-
-  const availableModels = useMemo(() => {
-    if (!provider) return [DEFAULT_MODEL];
-    const models = provider.models.length > 0 ? provider.models : [provider.defaultModel];
-    return models;
-  }, [provider]);
-
-  const modelId = useMemo(() => {
-    if (availableModels.includes(rawModelId)) {
-      return rawModelId;
-    }
-    return availableModels[0] ?? rawModelId;
-  }, [availableModels, rawModelId]);
-
-  const aiActionsDisabled = disabled || (isAiNode && !provider.available);
-
-  const commitProviderFields = useCallback(
-    (next?: Map<string, ProviderFieldState>) => {
-      if (!onChangeAi) return;
-      const source = next ?? fieldStates;
-      onChangeAi(node.node_id, { provider_fields: serializeFieldState(source) });
-    },
-    [fieldStates, node.node_id, onChangeAi],
-  );
-
-  const handleFieldValueChange = useCallback((key: string, value: string) => {
-    setFieldStates((prev) => {
-      const next = new Map(prev);
-      const current = next.get(key) ?? { value: '', sourceNodeId: null };
-      next.set(key, { ...current, value });
-      return next;
-    });
-  }, []);
-
-  const handleFieldBlur = useCallback(() => {
-    commitProviderFields();
-  }, [commitProviderFields]);
-
-  const handleFieldSourceChange = useCallback(
-    (key: string, sourceNodeId: string | null) => {
-      let nextState: Map<string, ProviderFieldState> | null = null;
-      setFieldStates((prev) => {
-        const next = new Map(prev);
-        const current = next.get(key) ?? { value: '', sourceNodeId: null };
-        next.set(key, { ...current, sourceNodeId });
-        nextState = next;
-        return next;
-      });
-      if (nextState) {
-        commitProviderFields(nextState);
-      }
-    },
-    [commitProviderFields],
-  );
-
-  const handleProviderSelect = useCallback(
-    (nextProviderId: string) => {
-      const nextProvider = providerOptions.find((item) => item.id === nextProviderId) ?? providerOptions[0];
-      if (!nextProvider) return;
-      onChangeMeta(node.node_id, { provider: nextProvider.id, model: nextProvider.defaultModel });
-      onChangeAi?.(node.node_id, { provider: nextProvider.id, model: nextProvider.defaultModel });
-
-      const existingRecord = serializeFieldState(fieldStates);
-      const nextStates = buildInitialFieldState(nextProvider.inputFields ?? [], existingRecord);
-      setFieldStates(nextStates);
-      commitProviderFields(nextStates);
-    },
-    [commitProviderFields, fieldStates, node.node_id, onChangeAi, onChangeMeta, providerOptions],
-  );
-
-  const handleModelSelect = useCallback(
-    (nextModelId: string) => {
-      onChangeMeta(node.node_id, { model: nextModelId });
-      onChangeAi?.(node.node_id, { model: nextModelId });
-    },
-    [node.node_id, onChangeAi, onChangeMeta],
-  );
-
-  const startResize = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (disabled) return;
-      event.stopPropagation();
-      event.preventDefault();
-
-      const currentSize = sizeRef.current ?? { width: size.width, height: size.height };
-      resizeStateRef.current = {
-        active: true,
-        originX: event.clientX,
-        originY: event.clientY,
-        width: currentSize.width,
-        height: currentSize.height,
-      };
-      setIsResizing(true);
-
-      const handleMove = (moveEvent: PointerEvent) => {
-        const base = resizeStateRef.current;
-        const deltaX = moveEvent.clientX - base.originX;
-        const deltaY = moveEvent.clientY - base.originY;
-        const nextWidth = clamp(
-          base.width + deltaX,
-          RESIZE_CONSTRAINTS.minWidth,
-          RESIZE_CONSTRAINTS.maxWidth,
-        );
-        const nextHeight = clamp(
-          base.height + deltaY,
-          RESIZE_CONSTRAINTS.minHeight,
-          RESIZE_CONSTRAINTS.maxHeight,
-        );
-
-        if (rafRef.current) {
-          cancelAnimationFrame(rafRef.current);
-        }
-        rafRef.current = requestAnimationFrame(() => {
-          setSize((prev) => {
-            if (prev.width === nextWidth && prev.height === nextHeight) return prev;
-            return { width: nextWidth, height: nextHeight };
-          });
-        });
-      };
-
-      const finishResize = () => {
-        document.removeEventListener('pointermove', handleMove);
-        document.removeEventListener('pointerup', finishResize);
-        document.removeEventListener('pointercancel', finishResize);
-        resizeStateRef.current.active = false;
-        setIsResizing(false);
-
-        if (rafRef.current) {
-          cancelAnimationFrame(rafRef.current);
-          rafRef.current = null;
-        }
-
-        const nextSize = sizeRef.current ?? size;
-        const baseX = node.ui?.bbox?.x1 ?? 0;
-        const baseY = node.ui?.bbox?.y1 ?? 0;
-        onChangeUi?.(node.node_id, {
-          bbox: {
-            x1: baseX,
-            y1: baseY,
-            x2: baseX + clamp(nextSize.width, RESIZE_CONSTRAINTS.minWidth, RESIZE_CONSTRAINTS.maxWidth),
-            y2: baseY + clamp(nextSize.height, RESIZE_CONSTRAINTS.minHeight, RESIZE_CONSTRAINTS.maxHeight),
-          },
-        });
-        updateNodeInternals(node.node_id);
-      };
-
-      document.addEventListener('pointermove', handleMove);
-      document.addEventListener('pointerup', finishResize, { once: true });
-      document.addEventListener('pointercancel', finishResize, { once: true });
-    },
-    [disabled, node.node_id, node.ui?.bbox, onChangeUi, size, updateNodeInternals],
-  );
-
-  const colorButtonRef = useRef<HTMLButtonElement | null>(null);
-  const colorPopoverRef = useRef<HTMLDivElement | null>(null);
-
+  // Node properties
   const baseColor = node.ui?.color ?? DEFAULT_COLOR;
-  const colorTokens = useMemo(() => buildColorTokens(baseColor), [baseColor]);
+  const isAiNode = node.type === 'ai';
+  const typeIcon = TYPE_ICONS[node.type] || '❓';
 
-  const renderedMarkdown = useMemo(() => markdown.render(textDraft || ''), [textDraft]);
+  // AI node specific state
+  const selectedProvider = useMemo(() => {
+    if (!isAiNode || !node.ai?.provider) return null;
+    return providers.find(p => p.id === String(node.ai?.provider)) || null;
+  }, [isAiNode, node.ai?.provider, providers]);
 
-  useEffect(() => {
-    updateNodeInternals(node.node_id);
-  }, [collapsed, agentSettingsOpen, size.width, size.height, node.node_id, updateNodeInternals]);
+  // Color change handler
+  const handleColorChange = useCallback(
+    (color: string) => {
+      onChangeUi?.(node.node_id, { color });
+      setColorOpen(false);
+    },
+    [onChangeUi, node.node_id],
+  );
 
-  useEffect(() => {
-    setCollapsed(initialCollapsed);
-  }, [initialCollapsed]);
-
-  useEffect(() => {
-    setTitleDraft(node.title);
-    setEditingTitle(false);
-    setTextDraft(node.content ?? '');
-    setEditingText(false);
-    setPromptDraft(
-      typeof node.ai?.user_prompt_template === 'string' ? String(node.ai.user_prompt_template) : '',
-    );
-    setSystemPromptDraft(
-      typeof node.ai?.system_prompt === 'string' ? node.ai.system_prompt : '',
-    );
-    setOutputSchemaDraft(
-      typeof node.ai?.output_schema_ref === 'string' ? node.ai.output_schema_ref : '',
-    );
-    setTemperatureDraft(
-      typeof node.ai?.temperature === 'number' || typeof node.ai?.temperature === 'string'
-        ? String(node.ai.temperature ?? '')
-        : '',
-    );
-    setActiveAiTab('template');
-  }, [node.title, node.content, node.node_id, node.ai]);
-
-  useEffect(() => {
-    if (!colorOpen) return;
-    const handler = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (
-        colorPopoverRef.current &&
-        !colorPopoverRef.current.contains(target as Node) &&
-        colorButtonRef.current &&
-        !colorButtonRef.current.contains(target as Node)
-      ) {
-        setColorOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+  const handleColorButtonClick = useCallback((e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setColorOpen(!colorOpen);
   }, [colorOpen]);
 
+  const handleColorPickerClick = useCallback((e: MouseEvent<HTMLButtonElement>, color: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleColorChange(color);
+  }, [handleColorChange]);
 
-  const handleRun = useCallback(() => {
-    if (disabled) return;
-    onRun(node.node_id);
-  }, [disabled, onRun, node.node_id]);
+  // Title editing handlers
+  const handleTitleEdit = useCallback((e?: MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setEditingTitle(true);
+    setTitleValue(node.title);
+  }, [node.title]);
 
-  const handleRegenerate = useCallback(() => {
-    if (disabled) return;
-    onRegenerate(node.node_id);
-  }, [disabled, onRegenerate, node.node_id]);
+  const handleTitleSubmit = useCallback(() => {
+    onChangeTitle(node.node_id, titleValue.trim());
+    setEditingTitle(false);
+  }, [onChangeTitle, node.node_id, titleValue]);
 
-  const commitAiField = useCallback(
-    (key: string, raw: string) => {
-      if (!onChangeAi) return;
-      let value: unknown = raw;
-      if (key === 'temperature') {
-        const trimmed = raw.trim();
-        if (trimmed.length === 0) {
-          value = undefined;
-        } else {
-          const numeric = Number(trimmed);
-          value = Number.isFinite(numeric) ? numeric : trimmed;
-        }
-      }
-      onChangeAi(node.node_id, { [key]: value });
-    },
-    [node.node_id, onChangeAi],
-  );
-
-  const commitText = useCallback(() => {
-    const current = typeof node.content === 'string' ? node.content : '';
-    if (textSaveTimerRef.current) {
-      window.clearTimeout(textSaveTimerRef.current);
-      textSaveTimerRef.current = null;
-    }
-    if (current !== textDraft) {
-      onChangeContent(node.node_id, textDraft);
-    }
-    setEditingText(false);
-  }, [node.content, node.node_id, onChangeContent, textDraft]);
-
-  const handleToggleCollapse = useCallback(
-    (event?: MouseEvent<HTMLButtonElement>) => {
-      event?.stopPropagation();
-      if (disabled) return;
-      setCollapsed((prev) => {
-        const next = !prev;
-        onChangeMeta(node.node_id, { ui_collapsed: next });
-        return next;
-      });
-    },
-    [disabled, node.node_id, onChangeMeta],
-  );
-
-  const handleDelete = useCallback(
-    (event?: MouseEvent<HTMLButtonElement>) => {
-      event?.stopPropagation();
-      const confirmed = window.confirm('Удалить эту ноду?');
-      if (confirmed) {
-        onDelete(node.node_id);
-      }
-    },
-    [onDelete, node.node_id],
-  );
-
-  const handleTitleBlur = useCallback(
-    (event: FocusEvent<HTMLInputElement>) => {
-      event.stopPropagation();
-      const next = titleDraft.trim();
+  const handleTitleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
+    e.stopPropagation(); // Prevent React Flow from handling the event
+    if (e.key === 'Enter') {
+      handleTitleSubmit();
+    } else if (e.key === 'Escape') {
+      setTitleValue(node.title);
       setEditingTitle(false);
-      if (next.length === 0 || next === node.title) {
-        setTitleDraft(node.title);
-        return;
+    }
+  }, [handleTitleSubmit, node.title]);
+
+  const handleTitleInputBlur = useCallback((e: FocusEvent<HTMLInputElement>) => {
+    // Small delay to allow for potential click events to fire first
+    setTimeout(() => {
+      handleTitleSubmit();
+    }, 100);
+  }, [handleTitleSubmit]);
+
+  const handleTitleInputClick = useCallback((e: MouseEvent<HTMLInputElement>) => {
+    e.stopPropagation(); // Prevent node dragging when clicking inside input
+  }, []);
+
+  // Sync state with node changes
+  useEffect(() => {
+    setTitleValue(node.title);
+  }, [node.title]);
+
+  useEffect(() => {
+    setContentValue(node.content || '');
+  }, [node.content]);
+
+  useEffect(() => {
+    setSystemPromptValue(String(node.ai?.system_prompt || ''));
+  }, [node.ai?.system_prompt]);
+
+  // Focus title input when editing starts
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [editingTitle]);
+
+  // HTML node handlers
+  const handleHtmlUrlChange = useCallback((url: string) => {
+    setHtmlUrl(url);
+    onChangeMeta(node.node_id, { htmlUrl: url });
+  }, [onChangeMeta, node.node_id]);
+
+  const handleScreenWidthChange = useCallback((width: string) => {
+    setScreenWidth(width);
+    onChangeMeta(node.node_id, { screenWidth: width });
+  }, [onChangeMeta, node.node_id]);
+
+  // Get node dimensions from React Flow state
+  const currentReactFlowNode = reactFlow.getNode(node.node_id);
+  const reactFlowWidth = currentReactFlowNode?.style?.width;
+  const reactFlowHeight = currentReactFlowNode?.style?.height;
+
+  const nodeWidth = useMemo(() => {
+    // Use React Flow width if available, otherwise calculate from bbox
+    if (reactFlowWidth && typeof reactFlowWidth === 'number' && reactFlowWidth > 0) {
+      return reactFlowWidth;
+    }
+    
+    const bbox = node.ui?.bbox;
+    if (bbox) {
+      const bboxWidth = bbox.x2 - bbox.x1;
+      return normalizeNodeWidth(bboxWidth);
+    }
+    return NODE_DEFAULT_WIDTH;
+  }, [reactFlowWidth, node.ui?.bbox]);
+
+  const nodeHeight = useMemo(() => {
+    // Use React Flow height if available, otherwise calculate from bbox
+    if (reactFlowHeight && typeof reactFlowHeight === 'number' && reactFlowHeight > 0) {
+      return reactFlowHeight;
+    }
+    
+    const bbox = node.ui?.bbox;
+    if (bbox) {
+      const bboxHeight = bbox.y2 - bbox.y1;
+      // For collapsed nodes, allow smaller height than minimum
+      if (collapsed) {
+        return Math.max(110, bboxHeight); // Minimum for collapsed: header + footer
       }
-      onChangeTitle(node.node_id, next);
-    },
-    [node.node_id, node.title, onChangeTitle, titleDraft],
-  );
+      return normalizeNodeHeight(bboxHeight, node.type);
+    }
+    
+    // Calculate height based on content for new nodes
+    const contentBasedHeight = calculateContentBasedHeight(
+      node.content, 
+      isAiNode && !collapsed, 
+      collapsed
+    );
+    return contentBasedHeight;
+  }, [reactFlowHeight, node.ui?.bbox, node.type, node.content, isAiNode, collapsed]);
 
-  const handleTitleKey = useCallback(
-    (event: KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        event.currentTarget.blur();
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setTitleDraft(node.title);
-        setEditingTitle(false);
-      }
-    },
-    [node.title],
-  );
+  // Remove auto-resize logic - manual resizing only
 
-  const handlePromptBlur = useCallback(() => {
-    commitAiField('user_prompt_template', promptDraft);
-  }, [commitAiField, promptDraft]);
+  // Remove ResizeObserver - manual resizing only
 
-  const handleSystemPromptBlur = useCallback(() => {
-    commitAiField('system_prompt', systemPromptDraft);
-  }, [commitAiField, systemPromptDraft]);
+  // Resize handlers - simplified for fixed dimensions
+  const handleResizeStart = useCallback((e: PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Don't allow resize for collapsed nodes
+    if (collapsed) return;
+    
+    setIsResizing(true);
+    
+    // Store initial state
+    resizeStartPos.current = {
+      x: e.clientX,
+      y: e.clientY,
+      width: nodeWidth,
+      height: nodeHeight
+    };
 
-  const handleOutputSchemaBlur = useCallback(() => {
-    commitAiField('output_schema_ref', outputSchemaDraft);
-  }, [commitAiField, outputSchemaDraft]);
+    // Create temporary resize handlers
+    const handleResizeMove = (moveEvent: PointerEvent) => {
+      if (!resizeStartPos.current) return;
+      
+      const deltaX = moveEvent.clientX - resizeStartPos.current.x;
+      const deltaY = moveEvent.clientY - resizeStartPos.current.y;
+      
+      // Calculate new dimensions with constraints
+      const newWidth = Math.max(NODE_MIN_WIDTH, Math.min(NODE_MAX_WIDTH, resizeStartPos.current.width + deltaX));
+      const newHeight = Math.max(NODE_MIN_HEIGHT, Math.min(NODE_MAX_HEIGHT, resizeStartPos.current.height + deltaY));
+      
+      // Update React Flow node directly (no DOM manipulation)
+      reactFlow.setNodes((nodes) => 
+        nodes.map((n) => 
+          n.id === node.node_id 
+            ? { 
+                ...n, 
+                style: { 
+                  ...n.style, 
+                  width: newWidth, 
+                  height: newHeight 
+                } 
+              }
+            : n
+        )
+      );
+    };
 
-  const handleTemperatureBlur = useCallback(() => {
-    commitAiField('temperature', temperatureDraft);
-  }, [commitAiField, temperatureDraft]);
+    const handleResizeEnd = (finalEvent: PointerEvent) => {
+      if (!resizeStartPos.current) return;
+      
+      setIsResizing(false);
+      
+      // Calculate final dimensions
+      const deltaX = finalEvent.clientX - resizeStartPos.current.x;
+      const deltaY = finalEvent.clientY - resizeStartPos.current.y;
+      const finalWidth = Math.max(NODE_MIN_WIDTH, Math.min(NODE_MAX_WIDTH, resizeStartPos.current.width + deltaX));
+      const finalHeight = Math.max(NODE_MIN_HEIGHT, Math.min(NODE_MAX_HEIGHT, resizeStartPos.current.height + deltaY));
+      
+      // Save to bbox
+      const currentBbox = node.ui?.bbox || { x1: 0, y1: 0, x2: nodeWidth, y2: nodeHeight };
+      onChangeUi?.(node.node_id, {
+        bbox: {
+          x1: currentBbox.x1,
+          y1: currentBbox.y1,
+          x2: currentBbox.x1 + finalWidth,
+          y2: currentBbox.y1 + finalHeight
+        }
+      });
+      
+      // Clean up event listeners
+      document.removeEventListener('pointermove', handleResizeMove);
+      document.removeEventListener('pointerup', handleResizeEnd);
+      document.removeEventListener('pointercancel', handleResizeEnd);
+      
+      // Update internals after resize
+      setTimeout(() => {
+        updateNodeInternals(node.node_id);
+      }, 50);
+    };
 
-  const charCount = isAiNode ? promptDraft.length : textDraft.length;
+    // Add event listeners
+    document.addEventListener('pointermove', handleResizeMove);
+    document.addEventListener('pointerup', handleResizeEnd);
+    document.addEventListener('pointercancel', handleResizeEnd);
+    
+  }, [nodeWidth, nodeHeight, node.node_id, node.ui?.bbox, onChangeUi, updateNodeInternals, reactFlow, collapsed]);
 
-  const rootClassName = [
-    'flow-node group relative flex min-h-0 flex-col rounded-xl border text-left text-xs text-white/80 shadow transition',
-    selected ? 'border-primary/80 shadow-xl shadow-primary/30' : 'border-slate-600/80',
-    dragging ? 'flow-node--dragging' : '',
-    isResizing ? 'flow-node--resizing' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  // Prevent default drag behavior when resizing
+  const handleResizePointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Set pointer capture to ensure we get all events
+    e.currentTarget.setPointerCapture(e.pointerId);
+    
+    // Convert React event to native event and call our handler
+    const nativeEvent = e.nativeEvent;
+    handleResizeStart(nativeEvent);
+  }, [handleResizeStart]);
+
+  // AI provider change handler
+  const handleProviderChange = useCallback((providerId: string) => {
+    const provider = providers.find(p => p.id === providerId);
+    if (!provider) return;
+
+    onChangeAi?.(node.node_id, {
+      provider: providerId,
+      model: provider.defaultModel,
+    });
+  }, [onChangeAi, node.node_id, providers]);
+
+  // AI model change handler
+  const handleModelChange = useCallback((model: string) => {
+    onChangeAi?.(node.node_id, { model });
+  }, [onChangeAi, node.node_id]);
+
+  // Content change handler with debouncing
+  const handleContentChange = useCallback((content: string) => {
+    setContentValue(content); // Immediately update local state
+    onChangeContent(node.node_id, content);
+  }, [onChangeContent, node.node_id]);
+
+  // System prompt change handler
+  const handleSystemPromptChange = useCallback((systemPrompt: string) => {
+    setSystemPromptValue(systemPrompt); // Immediately update local state
+    onChangeAi?.(node.node_id, { system_prompt: systemPrompt });
+  }, [onChangeAi, node.node_id]);
+
+  // Field configuration handler
+  const handleFieldsChange = useCallback((fields: NodeFieldConfig[]) => {
+    onChangeMeta(node.node_id, { displayFields: fields });
+  }, [onChangeMeta, node.node_id]);
+
+  // Get current display fields from node meta
+  const currentDisplayFields = useMemo(() => {
+    const metaFields = node.meta?.displayFields as NodeFieldConfig[] | undefined;
+    return metaFields || [];
+  }, [node.meta?.displayFields]);
+
+  // Routing configuration handler
+  const handleRoutingChange = useCallback((routing: NodeRoutingConfig) => {
+    onChangeMeta(node.node_id, { routingConfig: routing });
+  }, [onChangeMeta, node.node_id]);
+
+  // Get current routing configuration from node meta
+  const currentRoutingConfig = useMemo(() => {
+    const metaRouting = node.meta?.routingConfig as NodeRoutingConfig | undefined;
+    return metaRouting || { inputPorts: [], outputPorts: [], routingRules: [] };
+  }, [node.meta?.routingConfig]);
+
+  
 
   return (
     <div
-      ref={containerRef}
-      className={rootClassName}
+      ref={nodeRef}
+      className={`flow-node flow-node__card ${selected ? 'flow-node--selected' : ''} ${dragging ? 'flow-node--dragging' : ''} ${isResizing ? 'flow-node--resizing' : ''}`}
       style={{
-        background: colorTokens.card,
-        borderColor: colorTokens.border,
-        width: size.width,
-        minWidth: RESIZE_CONSTRAINTS.minWidth,
-        maxWidth: RESIZE_CONSTRAINTS.maxWidth,
-        minHeight: collapsed ? HEADER_HEIGHT + 16 : RESIZE_CONSTRAINTS.minHeight,
-        maxHeight: collapsed ? HEADER_HEIGHT + 16 : RESIZE_CONSTRAINTS.maxHeight,
-        height: collapsed ? undefined : size.height,
+        backgroundColor: `${baseColor}15`,
+        border: `2px solid ${baseColor}`,
+        borderRadius: '8px',
         overflow: 'hidden',
-        transition:
-          dragging || isResizing
-            ? 'box-shadow 80ms linear, border-color 80ms linear'
-            : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), width 180ms ease, height 180ms ease, box-shadow 180ms ease, border-color 180ms ease',
-        cursor: isResizing ? 'nwse-resize' : dragging ? 'grabbing' : undefined,
+        position: 'relative',
+        width: '100%', // Return to 100% for React Flow compatibility
+        height: '100%', // Return to 100% for React Flow compatibility
+        minWidth: `${NODE_MIN_WIDTH}px`,
+        minHeight: collapsed ? `110px` : `${NODE_MIN_HEIGHT}px`, // Fixed collapsed height
+        maxWidth: `${NODE_MAX_WIDTH}px`,
+        maxHeight: `${NODE_MAX_HEIGHT}px`,
+        backdropFilter: 'blur(10px)',
+        boxShadow: selected 
+          ? `0 0 0 2px ${baseColor}, 0 8px 24px ${baseColor}30`
+          : `0 4px 12px ${baseColor}20`,
+        transition: isResizing ? 'none' : 'box-shadow 0.2s ease, transform 0.1s ease',
+        transform: dragging ? 'scale(1.02)' : 'scale(1)',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      <Handle
-        type="target"
-        position={Position.Left}
-        className={`flow-node__handle flow-node__handle--target${highlightTargetHandle ? ' flow-node__handle--highlight' : ''}`}
-        style={{ top: HEADER_HEIGHT / 2 }}
-        onPointerDown={(event) => event.stopPropagation()}
-        isConnectable={!disabled}
-      />
-
-      {inputPorts.length > 0 && (
-        <div
-          className="pointer-events-none absolute -left-32 flex max-w-[150px] flex-col gap-1 text-[10px] font-medium text-white/80"
-          style={{ top: HEADER_HEIGHT / 2 - 12 }}
-        >
-          {inputPorts.map((port) => {
-            const meta = findInputPortMeta(port.kind);
-            const countLabel = meta.allowMultiple && port.maxItems > 1 ? `×${port.maxItems}` : undefined;
-            return (
-              <span
-                key={port.id}
-                className="flex items-center gap-1 rounded-full border border-white/20 bg-black/40 px-2 py-0.5 shadow"
-                style={{ borderColor: `${meta.color}40`, backgroundColor: `${meta.color}20` }}
-              >
-                <span>{meta.icon}</span>
-                <span className="truncate">{port.title}</span>
-                {!port.required && <span className="text-white/60">(opt)</span>}
-                {countLabel && <span className="text-white/70">{countLabel}</span>}
-              </span>
-            );
-          })}
-        </div>
-      )}
-
-      <header
+      {/* Header with identity and toolbar */}
+      <div 
         className="flow-node__header"
-        style={{ backgroundColor: colorTokens.header, borderColor: colorTokens.border }}
+        style={{
+          backgroundColor: `${baseColor}25`,
+          borderBottom: `1px solid ${baseColor}40`,
+          borderRadius: '8px 8px 0 0',
+        }}
       >
-        <div className="flow-node__identity flow-node__drag-handle">
-          <span
+        <div className="flow-node__identity">
+          <div 
             className="flow-node__type-icon"
-            style={{ background: colorTokens.accent, boxShadow: `0 0 0 4px ${colorTokens.accent}26` }}
+            style={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              boxShadow: `0 2px 4px ${baseColor}30`
+            }}
           >
-            {TYPE_ICONS[node.type] ?? '⚙️'}
-          </span>
+            {typeIcon}
+          </div>
           <div className="flow-node__identity-text">
             {editingTitle ? (
               <input
-                type="text"
-                value={titleDraft}
-                autoFocus
-                onChange={(event) => setTitleDraft(event.target.value)}
-                onBlur={(event) => {
-                  event.stopPropagation();
-                  handleTitleBlur(event);
+                ref={titleInputRef}
+                className="flow-node__title-input"
+                value={titleValue}
+                onChange={(e) => setTitleValue(e.target.value)}
+                onBlur={handleTitleInputBlur}
+                onKeyDown={handleTitleKeyDown}
+                onClick={handleTitleInputClick}
+                maxLength={50}
+                style={{
+                  backgroundColor: `${baseColor}20`,
+                  border: `1px solid ${baseColor}`,
                 }}
-                onKeyDown={(event) => {
-                  event.stopPropagation();
-                  handleTitleKey(event);
-                }}
-                onPointerDown={(event) => event.stopPropagation()}
-                className="flow-node__title-input nodrag"
               />
             ) : (
               <button
                 type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setEditingTitle(true);
-                }}
-                onPointerDown={(event) => event.stopPropagation()}
                 className="flow-node__title-button"
+                onClick={handleTitleEdit}
+                disabled={disabled}
+                style={{
+                  backgroundColor: selected ? `${baseColor}30` : `${baseColor}20`,
+                }}
               >
                 {node.title}
               </button>
             )}
             <div className="flow-node__meta-row">
-              <span className="flow-node__meta-pill">{node.type}</span>
-              <span className="flow-node__meta-id">{node.node_id}</span>
+              <span 
+                className="flow-node__meta-pill"
+                style={{ backgroundColor: `${baseColor}30` }}
+              >
+                {node.type}
+              </span>
+              <span className="flow-node__meta-id">{node.node_id.slice(-8)}</span>
+              {(node.meta?.attachments && Array.isArray(node.meta.attachments)) ? (
+                <span className="text-blue-300" title="Есть прикрепленные файлы">
+                  📎 {String((node.meta.attachments as string[]).length)}
+                </span>
+              ) : null}
             </div>
           </div>
         </div>
+
         <div className="flow-node__toolbar">
-          <TooltipButton
-            ref={colorButtonRef}
-            tooltip="Изменить цвет"
-            aria-label="Изменить цвет"
-            onClick={(event) => {
-              event.stopPropagation();
-              setColorOpen((prev) => !prev);
-            }}
+          {/* Collapse/Expand button - hidden only for data and parser nodes */}
+          {!(node.type === 'data' || node.type === 'parser') && (
+            <button
+              type="button"
+              className="flow-node__toolbar-button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setCollapsed(!collapsed);
+              }}
+              title={collapsed ? "Развернуть" : "Свернуть"}
+              disabled={disabled}
+            >
+              {collapsed ? '🔼' : '🔽'}
+            </button>
+          )}
+
+          {/* Settings button */}
+          <button
+            type="button"
             className="flow-node__toolbar-button"
-            style={{ backgroundColor: baseColor }}
-            colorClass=""
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowSettingsModal(true);
+            }}
+            title="Настройки ноды"
+            disabled={disabled}
+          >
+            <SettingsIcon />
+          </button>
+
+          {/* Color picker button */}
+          <button
+            type="button"
+            className="flow-node__toolbar-button"
+            onClick={handleColorButtonClick}
+            title="Изменить цвет"
+            disabled={disabled}
           >
             🎨
-          </TooltipButton>
-          <TooltipButton
-            tooltip="Настройки"
-            aria-label="Открыть настройки ноды"
-            onClick={(event) => {
-              event.stopPropagation();
-              setSettingsOpen(true);
+          </button>
+
+          {/* File attachment button */}
+          <button
+            type="button"
+            className="flow-node__toolbar-button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.multiple = true;
+              input.onchange = (event) => {
+                const files = (event.target as HTMLInputElement).files;
+                if (files) {
+                  const fileNames = Array.from(files).map(f => f.name);
+                  const currentAttachments = node.meta?.attachments as string[] || [];
+                  onChangeMeta(node.node_id, { 
+                    attachments: [...currentAttachments, ...fileNames] 
+                  });
+                  console.log('Files attached:', fileNames);
+                }
+              };
+              input.click();
             }}
-            className="flow-node__toolbar-button"
-            style={{ backgroundColor: '#6366f1' }}
+            title="Прикрепить файлы"
+            disabled={disabled}
           >
-            <SettingsIcon className="h-4 w-4" />
-          </TooltipButton>
-          <TooltipButton
-            tooltip={collapsed ? 'Развернуть' : 'Свернуть'}
-            aria-label={collapsed ? 'Развернуть ноду' : 'Свернуть ноду'}
-            onClick={(event) => handleToggleCollapse(event)}
-            className="flow-node__toolbar-button"
-            style={{ backgroundColor: '#2563eb' }}
-          >
-            {collapsed ? '▴' : '▾'}
-          </TooltipButton>
-          <TooltipButton
-            tooltip="Удалить"
-            aria-label="Удалить ноду"
-            onClick={(event) => handleDelete(event)}
-            className="flow-node__toolbar-button flow-node__toolbar-button--danger"
-            style={{ backgroundColor: '#dc2626' }}
-          >
-            ✕
-          </TooltipButton>
-        </div>
-      </header>
+            📎
+          </button>
 
-      {(incomingChips.length > 0 || outgoingChips.length > 0) && (
-        <div className="flow-node__connections">
-          {incomingChips.map((chip) => (
-            <span key={`in-${chip.id}`} className="flow-node__chip flow-node__chip--incoming">
-              <span className="flow-node__chip-dot" />
-              {chip.label}
-            </span>
-          ))}
-          {outgoingChips.map((chip) => (
-            <span key={`out-${chip.id}`} className="flow-node__chip flow-node__chip--outgoing">
-              {chip.label}
-              <span className="flow-node__chip-arrow">→</span>
-            </span>
-          ))}
-        </div>
-      )}
+          {/* Run button for AI nodes */}
+          {isAiNode && (
+            <button
+              type="button"
+              className="flow-node__toolbar-button text-green-400 hover:text-green-300"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRun(node.node_id);
+              }}
+              title="Запустить ноду"
+              disabled={disabled}
+            >
+              ▶️
+            </button>
+          )}
 
+          {/* Delete button */}
+          <button
+            type="button"
+            className="flow-node__toolbar-button text-red-400 hover:text-red-300"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (window.confirm('Удалить эту ноду?')) {
+                onDelete(node.node_id);
+              }
+            }}
+            title="Удалить ноду"
+            disabled={disabled}
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+
+      {/* Color Palette */}
       {colorOpen && (
-        <div
-          ref={colorPopoverRef}
-          className="absolute right-6 top-[60px] z-40 rounded-3xl border border-white/15 bg-slate-950/95 px-4 py-4 shadow-2xl"
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          <div className="grid grid-cols-8 gap-2 justify-items-center">
+        <div className="absolute z-20 top-16 right-4 p-3 bg-slate-900 rounded-lg border border-slate-700 shadow-lg">
+          <div className="grid grid-cols-4 gap-2">
             {COLOR_PALETTE.map((color) => (
               <button
                 key={color}
                 type="button"
                 className="h-6 w-6 rounded-full border border-white/20 transition hover:scale-110"
-                style={{
-                  backgroundColor: color,
-                  borderColor: color === baseColor ? '#ffffff' : 'transparent',
-                }}
-                onClick={() => {
-                  onChangeUi?.(node.node_id, { color });
-                  setColorOpen(false);
-                }}
-                onPointerDown={(event) => event.stopPropagation()}
+                style={{ backgroundColor: color }}
+                onClick={(e) => handleColorPickerClick(e, color)}
+                title={`Change to ${color}`}
               />
             ))}
           </div>
         </div>
       )}
 
-      {settingsOpen && (
-        <NodeSettingsModal
-          node={node}
-          onClose={() => setSettingsOpen(false)}
-          onSave={(updatedNode) => {
-            onChangeContent(node.node_id, updatedNode.content ?? '');
-            if (updatedNode.ai) {
-              onChangeAi?.(node.node_id, updatedNode.ai);
-            }
-            setSettingsOpen(false);
+      {/* Content Area */}
+      {!collapsed ? (
+        <div 
+          ref={contentRef} 
+          className="flow-node__content"
+          style={{ 
+            padding: '16px', 
+            paddingBottom: '8px', // Less padding at bottom since footer provides separation
+            display: 'flex', 
+            flexDirection: 'column',
+            height: '100%'
           }}
-        />
-      )}
-
-      {!collapsed && (
-        <div className="flow-node__body">
+        >
           {isAiNode && (
-            <section className="flex flex-col gap-3">
-              <textarea
-                className="nodrag min-h-[160px] w-full resize-none rounded-lg bg-black/10 p-3 text-sm leading-relaxed text-white/90 focus:outline-none focus:ring-2 focus:ring-primary/60"
-                value={promptDraft}
-                onChange={(event) => setPromptDraft(event.target.value)}
-                onBlur={handlePromptBlur}
-                onPointerDown={(event) => event.stopPropagation()}
-                onKeyDown={(event) => event.stopPropagation()}
-              />
-              <div className="flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-black/20 text-white transition hover:bg-primary/40 disabled:opacity-40"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setAgentSettingsOpen((prev) => !prev);
-                  }}
-                  disabled={disabled}
-                  title={agentSettingsOpen ? 'Скрыть настройки' : 'Показать настройки'}
-                >
-                  ⚙
-                </button>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/30 text-white transition hover:bg-amber-500/50 disabled:opacity-40"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleRegenerate();
-                  }}
-                  disabled={aiActionsDisabled}
-                >
-                  ↻
-                </button>
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/40 text-white transition hover:bg-emerald-500/60 disabled:opacity-40"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleRun();
-                  }}
-                  disabled={aiActionsDisabled}
-                >
-                  ⚡
-                </button>
+            <div className="space-y-4" style={{ flexShrink: 0 }}>
+              {/* AI Content */}
+              <div>
+                {activeAiTab === 'settings' && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-white/70 block mb-1">Провайдер</label>
+                      <select
+                        value={String(node.ai?.provider || '')}
+                        onChange={(e) => handleProviderChange(e.target.value)}
+                        disabled={disabled}
+                        className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm"
+                      >
+                        {providers.map(p => (
+                          <option key={p.id} value={p.id} disabled={!p.available}>
+                            {p.name} {!p.available && `(${p.reason || 'Недоступен'})`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {selectedProvider && (
+                      <div>
+                        <label className="text-xs text-white/70 block mb-1">Модель</label>
+                        <select
+                          value={String(node.ai?.model || selectedProvider.defaultModel)}
+                          onChange={(e) => handleModelChange(e.target.value)}
+                          disabled={disabled}
+                          className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm"
+                        >
+                          {selectedProvider.models.map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-xs text-white/70 block mb-1">Системный промпт</label>
+                      <textarea
+                        value={systemPromptValue}
+                        onChange={(e) => handleSystemPromptChange(e.target.value)}
+                        placeholder="Например: Ты — полезный ассистент."
+                        rows={3}
+                        disabled={disabled}
+                        className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm resize-y"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {activeAiTab === 'fields' && (
+                  <div className="p-4 text-center text-white/50 text-sm">
+                    Настройка полей временно отключена
+                  </div>
+                )}
+
+                {activeAiTab === 'routing' && (
+                  <div className="p-4 text-center text-white/50 text-sm">
+                    Настройка маршрутизации временно отключена
+                  </div>
+                )}
+              </div>
+              
+              {/* AI Tabs - positioned above footer */}
+              <div className="absolute bottom-12 left-0 right-0 flex justify-center z-10">
+                <div className="flex bg-black/40 rounded-lg p-1 backdrop-blur-sm border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setActiveAiTab('settings')}
+                    className={`px-3 py-1 text-xs rounded transition ${
+                      activeAiTab === 'settings' 
+                        ? 'bg-white/20 text-white' 
+                        : 'text-white/60 hover:text-white/80'
+                    }`}
+                    disabled={disabled}
+                  >
+                    ⚙️ Настройки
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveAiTab('fields')}
+                    className={`px-3 py-1 text-xs rounded transition ${
+                      activeAiTab === 'fields' 
+                        ? 'bg-white/20 text-white' 
+                        : 'text-white/60 hover:text-white/80'
+                    }`}
+                    disabled={disabled}
+                  >
+                    📝 Поля
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveAiTab('routing')}
+                    className={`px-3 py-1 text-xs rounded transition ${
+                      activeAiTab === 'routing' 
+                        ? 'bg-white/20 text-white' 
+                        : 'text-white/60 hover:text-white/80'
+                    }`}
+                    disabled={disabled}
+                  >
+                    🔀 Маршрутизация
+                  </button>
+                </div>
               </div>
             </div>
-            <section className="rounded-lg border border-white/15 bg-black/20 p-3 text-[11px] text-white/85">
-              <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <span className="text-[10px] uppercase tracking-wide text-white/50">Поставщик</span>
-                  <div className="mt-1 text-sm font-semibold text-white">{provider.name}</div>
-                  {provider.description && (
-                    <p className="text-[10px] text-white/50">{provider.description}</p>
-                  )}
-                </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] ${
-                    provider.available ? 'bg-emerald-500/20 text-emerald-200' : 'bg-amber-500/20 text-amber-200'
-                  }`}
-                >
-                  {provider.available ? 'активен' : 'нет ключа'}
-                </span>
-              </header>
+          )}
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-xs text-slate-300">
-                  Выбор поставщика
-                  <select
-                    value={provider.id}
-                    onChange={(event) => handleProviderSelect(event.target.value)}
-                    className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100 focus:border-primary focus:outline-none"
-                  >
-                    {providerOptions.map((option) => (
-                      <option key={option.id} value={option.id} disabled={!option.available}>
-                        {option.name}
-                        {!option.available ? ' · нет ключа' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-slate-300">
-                  Модель
-                  <select
-                    value={modelId}
-                    onChange={(event) => handleModelSelect(event.target.value)}
-                    className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100 focus:border-primary focus:outline-none"
-                  >
-                    {availableModels.map((model) => {
-                      const label = model === provider.defaultModel ? `${model} · по умолчанию` : model;
-                      return (
-                        <option key={`${provider.id}-${model}`} value={model}>
-                          {label}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </label>
-              </div>
-              {providerFieldDefs.length > 0 && (
-                <div className="mt-4 space-y-3">
-                  {providerFieldDefs.map((field) => {
-                    const state = fieldStates.get(field.key) ?? { value: '', sourceNodeId: null };
-                    const manualInputDisabled = Boolean(state.sourceNodeId);
-                    return (
-                      <div key={String(field.id ?? field.key)} className="rounded border border-white/10 bg-black/30 p-3">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <h4 className="text-sm font-semibold text-white">{field.label}</h4>
-                            {field.description && (
-                              <p className="text-[10px] text-white/60">{field.description}</p>
-                            )}
-                          </div>
-                          <label className="flex flex-col gap-1 text-xs text-slate-300 min-w-[160px]">
-                            Источник
-                            <select
-                              value={state.sourceNodeId ?? ''}
-                              onChange={(event) =>
-                                handleFieldSourceChange(
-                                  field.key,
-                                  event.target.value ? event.target.value : null,
-                                )
-                              }
-                              className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100 focus:border-primary focus:outline-none"
-                              disabled={sources.length === 0}
-                            >
-                              <option value="">Ручной ввод</option>
-                              {sources.map((sourceNode) => (
-                                <option key={sourceNode.node_id} value={sourceNode.node_id}>
-                                  {sourceNode.title}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        </div>
-                        <div className="mt-3 space-y-1">
-                          {field.type === 'textarea' ? (
-                            <textarea
-                              className="nodrag min-h-[80px] w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-primary focus:outline-none"
-                              value={state.value}
-                              onChange={(event) => handleFieldValueChange(field.key, event.target.value)}
-                              onBlur={handleFieldBlur}
-                              disabled={manualInputDisabled}
-                              placeholder={field.placeholder ?? 'Введите значение'}
-                            />
-                          ) : (
-                            <input
-                              type="text"
-                              className="nodrag w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-primary focus:outline-none"
-                              value={state.value}
-                              onChange={(event) => handleFieldValueChange(field.key, event.target.value)}
-                              onBlur={handleFieldBlur}
-                              disabled={manualInputDisabled}
-                              placeholder={field.placeholder ?? 'Введите значение'}
-                            />
-                          )}
-                          {manualInputDisabled && state.sourceNodeId && (
-                            <p className="text-[10px] text-slate-400">
-                              Значение будет взято из ноды «
-                              {sources.find((item) => item.node_id === state.sourceNodeId)?.title ??
-                                state.sourceNodeId}
-                              ».
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {!provider.available && (
-                <p className="mt-3 text-[10px] text-amber-300">
-                  Настройте интеграцию «{provider.name}» на главной странице, чтобы запускать этот агент.
-                </p>
-              )}
-            </section>
-              {agentSettingsOpen && (
-                <section className="rounded-lg border border-white/15 bg-black/25 p-3 text-[11px] text-white/85">
-                  <header className="mb-3 flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-wide text-white/60">Дополнительные настройки</span>
-                    <span className="rounded-full bg-black/20 px-2 py-0.5 text-[10px] text-white/50">{provider.name}</span>
-                  </header>
-
-                  <div className="flex items-center gap-2 rounded-full bg-black/30 p-1 text-[10px]">
-                    <button
-                      type="button"
-                      className={`flex-1 rounded-full px-3 py-1 font-semibold transition ${
-                        activeAiTab === 'template'
-                          ? 'bg-primary/50 text-white'
-                          : 'text-white/60 hover:text-white/90'
-                      }`}
-                      onClick={() => setActiveAiTab('template')}
-                    >
-                      Шаблон ответа
-                    </button>
-                    <button
-                      type="button"
-                      className={`flex-1 rounded-full px-3 py-1 font-semibold transition ${
-                        activeAiTab === 'variables'
-                          ? 'bg-primary/50 text-white'
-                          : 'text-white/60 hover:text-white/90'
-                      }`}
-                      onClick={() => setActiveAiTab('variables')}
-                    >
-                      Переменные
-                    </button>
-                  </div>
-                  {activeAiTab === 'template' ? (
-                    <div className="mt-3 space-y-3">
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[10px] uppercase tracking-wide text-white/50">Системный промпт</span>
-                        <textarea
-                          className="nodrag min-h-[80px] w-full rounded bg-black/20 p-2 text-xs leading-relaxed text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
-                          value={systemPromptDraft}
-                          onChange={(event) => setSystemPromptDraft(event.target.value)}
-                          onBlur={handleSystemPromptBlur}
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[10px] uppercase tracking-wide text-white/50">Схема ответа</span>
-                        <input
-                          type="text"
-                          className="nodrag w-full rounded bg-black/20 px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
-                          value={outputSchemaDraft}
-                          onChange={(event) => setOutputSchemaDraft(event.target.value)}
-                          onBlur={handleOutputSchemaBlur}
-                          placeholder="PLAN_SCHEMA"
-                        />
-                      </label>
-                    </div>
+          <div style={{ 
+            flex: 1, 
+            display: 'flex', 
+            flexDirection: 'column',
+            minHeight: 0 
+          }}>
+            {node.type === 'html' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }} data-node-id={node.id}>
+                {/* Website Preview */}
+                <div className="w-full bg-white/5 border border-white/10 rounded flex-1 mb-3 overflow-hidden">
+                  {htmlUrl ? (
+                    <iframe
+                      src={htmlUrl}
+                      className="w-full h-full border-0"
+                      style={{ 
+                        width: SCREEN_WIDTHS.find(sw => sw.id === screenWidth)?.width || '100%',
+                        minHeight: '200px',
+                        transformOrigin: 'top left'
+                      }}
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+                      loading="lazy"
+                      title="Website Preview"
+                    />
                   ) : (
-                    <div className="mt-3 space-y-3">
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[10px] uppercase tracking-wide text-white/50">temperature</span>
-                        <input
-                          type="number"
-                          step="0.1"
-                          className="nodrag w-full rounded bg-black/20 px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
-                          value={temperatureDraft}
-                          onChange={(event) => setTemperatureDraft(event.target.value)}
-                          onBlur={handleTemperatureBlur}
-                          placeholder="0.7"
-                        />
-                      </label>
+                    <div className="w-full h-full flex items-center justify-center text-white/50 text-sm">
+                      Введите URL для предпросмотра сайта
                     </div>
                   )}
-                </section>
+                </div>
+                
+                {/* HTML Controls - in one row at bottom */}
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <label className="text-xs text-white/70 block mb-1">URL</label>
+                    <input
+                      type="url"
+                      value={htmlUrl}
+                      onChange={(e) => handleHtmlUrlChange(e.target.value)}
+                      placeholder="https://example.com"
+                      className="w-full p-1.5 bg-black/20 border border-white/10 rounded text-xs text-white"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          // Force iframe reload on Enter
+                          const iframe = e.currentTarget.closest('.flex')?.previousElementSibling?.querySelector('iframe') as HTMLIFrameElement;
+                          if (iframe && htmlUrl) {
+                            iframe.src = htmlUrl;
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="w-32">
+                    <label className="text-xs text-white/70 block mb-1">Экран</label>
+                    <select
+                      value={screenWidth}
+                      onChange={(e) => handleScreenWidthChange(e.target.value)}
+                      className="w-full p-1.5 bg-black/20 border border-white/10 rounded text-xs text-white"
+                    >
+                      {SCREEN_WIDTHS.map(sw => (
+                        <option key={sw.id} value={sw.id}>
+                          {sw.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => {
+                      // Force iframe reload
+                      const iframe = document.querySelector(`[data-node-id="${node.id}"] iframe`) as HTMLIFrameElement;
+                      if (iframe && htmlUrl) {
+                        iframe.src = htmlUrl + '?t=' + Date.now(); // Add timestamp to force reload
+                      }
+                    }}
+                    className="p-1.5 bg-black/20 border border-white/10 rounded text-white/70 hover:text-white hover:bg-black/30 transition-colors"
+                    title="Обновить страницу"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8 2.5a5.5 5.5 0 0 1 4.596 2.463l1.154-1.154a.5.5 0 0 1 .85.353v3.5a.5.5 0 0 1-.5.5h-3.5a.5.5 0 0 1-.353-.854l1.12-1.12A4.5 4.5 0 1 0 8 12.5a.5.5 0 0 1 0 1A5.5 5.5 0 1 1 8 2.5z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // Regular textarea for other node types
+              <textarea
+                value={contentValue}
+                onChange={(e) => handleContentChange(e.target.value)}
+                placeholder="Введите содержимое..."
+                disabled={disabled}
+                className="w-full bg-transparent border-none outline-none text-white/90 resize-none"
+                style={{ 
+                  height: '100%',
+                  minHeight: '80px',
+                  overflow: 'auto',
+                  resize: 'none',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(148, 163, 184, 0.5) transparent',
+                  wordWrap: 'break-word',
+                  whiteSpace: 'pre-wrap',
+                  fontSize: '13px',
+                  lineHeight: '1.4'
+                }}
+              />
+            )}
+          </div>
+        </div>
+      ) : (
+        <div 
+          className="flow-node__content--collapsed"
+          style={{ 
+            padding: '8px 16px',
+            flex: 0,
+            backgroundColor: `${baseColor}10`,
+            borderTop: `1px solid ${baseColor}20`,
+            borderBottom: `1px solid ${baseColor}20`,
+          }}
+        >
+          {/* Compact info when collapsed */}
+          <div className="flex items-center justify-between text-xs text-white/70">
+            <div className="flex items-center gap-2">
+              {/* Content preview */}
+              <span className="max-w-32 truncate">
+                {node.content ? `"${node.content.substring(0, 40)}..."` : 'Нет содержимого'}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* AI model indicator */}
+              {isAiNode && selectedProvider && (
+                <span className="text-blue-300 text-xs">
+                  🤖 {selectedProvider.name}
+                </span>
               )}
-            </section>
-          )}
-          {isTextNode && (
-            <section className="flex flex-col gap-2">
-              {editingText ? (
-                <textarea
-                  className="nodrag h-56 w-full resize-none rounded-lg border border-white/15 bg-black/15 p-3 text-sm leading-relaxed text-white/90 focus:border-primary focus:outline-none"
-                  value={textDraft}
-                  onChange={(event) => setTextDraft(event.target.value)}
-                  onBlur={commitText}
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => {
-                    event.stopPropagation();
-                    if (event.key === 'Escape') {
-                      event.preventDefault();
-                      setTextDraft(node.content ?? '');
-                      setEditingText(false);
-                    }
-                    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-                      event.preventDefault();
-                      commitText();
-                    }
-                  }}
-                  autoFocus
-                />
-              ) : (
-                <div
-                  className="nodrag min-h-[160px] whitespace-pre-wrap rounded-lg bg-black/10 p-3 text-sm leading-relaxed text-white/85"
-                  onDoubleClick={(event) => {
-                    event.stopPropagation();
-                    if (!collapsed) setEditingText(true);
-                  }}
-                  role="textbox"
-                  tabIndex={0}
-                  onKeyDown={(event) => {
-                    event.stopPropagation();
-                    if (!collapsed && event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-                      event.preventDefault();
-                      setEditingText(true);
-                    }
-                  }}
-                  onPointerDown={(event) => event.stopPropagation()}
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      renderedMarkdown.length > 0
-                        ? renderedMarkdown
-                        : '<p class=\"text-white/50\">Пустой текст</p>',
-                  }}
-                />
-              )}
-            </section>
-          )}
-
-          {!isTextNode && !isAiNode && node.content && (
-            <section className="rounded-lg bg-black/10 p-3 text-sm leading-relaxed">
-              {node.content_type?.includes('json') ? (
-                <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-[11px] text-slate-100">
-                  {node.content}
-                </pre>
-              ) : node.content_type?.includes('image') ? (
-                <img src={node.content} alt={node.title} className="max-h-48 w-full object-contain" />
-              ) : (
-                <p className="whitespace-pre-wrap text-[11px] leading-relaxed text-slate-100">{node.content}</p>
-              )}
-            </section>
-          )}
+              {/* Character count */}
+              <span className="text-white/50">
+                {(node.content || '').length} сим.
+              </span>
+            </div>
+          </div>
         </div>
       )}
 
-      {!collapsed && (
-        <footer
-          className="flex items-center justify-between gap-3 rounded-b-xl border-t px-3 py-2 text-[10px] text-white/70"
-          style={{ borderColor: colorTokens.border, background: shadeColor(baseColor, 0.2) }}
-        >
-          <div className="flex items-center gap-2 text-white/70">
-            <span>{node.node_id}</span>
-            <span className="text-white/40">•</span>
-            <span>{charCount} символов</span>
-            {isAiNode && (
-              <>
-                <span className="text-white/40">•</span>
-                <span>{provider.name}</span>
-                <span className="text-white/40">•</span>
-                <span>{modelId}</span>
-              </>
-            )}
-          </div>
-        </footer>
-      )}
+      {/* Footer */}
+      <div 
+        className="flow-node__footer"
+        style={{
+          backgroundColor: `${baseColor}20`,
+          borderTop: `1px solid ${baseColor}30`,
+          flexShrink: 0,
+        }}
+      >
+        <div className="flex justify-between items-center w-full px-3 py-2">
+          {/* Show different info based on collapsed state */}
+          {collapsed ? (
+            <>
+              <span className="text-xs text-white/70">
+                {node.type.toUpperCase()}
+              </span>
+              <span className="text-xs text-green-400/80">
+                Готов
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-xs text-white/70">
+                Символов: {(node.content || '').length.toLocaleString()}
+              </span>
+              {isAiNode && selectedProvider && (
+                <span className="text-xs text-white/60">
+                  {selectedProvider.name}
+                </span>
+              )}
+              <span className="text-xs text-green-400/80">
+                Готов
+              </span>
+            </>
+          )}
+        </div>
+      </div>
 
+      {/* Connection Handles - Fixed at header bottom */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="flow-node__handle flow-node__handle--target"
+        style={{ 
+          background: '#3b82f6',
+          border: '2px solid #fff',
+          width: 14,
+          height: 14,
+          top: '60px', // Fixed position at header bottom
+          left: -7,
+          zIndex: 10,
+        }}
+      />
       <Handle
         type="source"
         position={Position.Right}
-        className={`flow-node__handle flow-node__handle--source${highlightSourceHandle ? ' flow-node__handle--highlight' : ''}`}
-        style={{ top: HEADER_HEIGHT / 2 }}
-        onPointerDown={(event) => event.stopPropagation()}
-        isConnectable={!disabled}
+        className="flow-node__handle flow-node__handle--source"
+        style={{ 
+          background: '#10b981',
+          border: '2px solid #fff',
+          width: 14,
+          height: 14,
+          top: '60px', // Fixed position at header bottom
+          right: -7,
+          zIndex: 10,
+        }}
       />
-      {!collapsed && !disabled && <div className="flow-node__resize-handle" onPointerDown={startResize} />}
+
+      {/* Resize Handle - hide for collapsed nodes */}
+      {!collapsed && (
+        <div 
+          className="flow-node__resize-handle nodrag nopan" 
+          onPointerDown={handleResizePointerDown}
+          style={{
+            position: 'absolute',
+            bottom: '0px',
+            right: '0px',
+            width: '16px',
+            height: '16px',
+            cursor: 'nwse-resize',
+            backgroundColor: isResizing ? 'rgba(59, 130, 246, 0.9)' : 'rgba(148, 163, 184, 0.8)',
+            borderRadius: '2px 0 2px 0',
+            zIndex: 20,
+            opacity: selected || isResizing ? 1 : 0.7,
+            transition: isResizing ? 'none' : 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+            color: 'white',
+            userSelect: 'none',
+            touchAction: 'none',
+            pointerEvents: 'auto',
+          }}
+          title="Изменить размер (тащите для увеличения/уменьшения)"
+        >
+          ⟲
+        </div>
+      )}
+      
+      {/* Node Settings Modal */}
+      {showSettingsModal && (
+        <NodeSettingsModal
+          node={node}
+          onClose={() => setShowSettingsModal(false)}
+          onRunNode={onRun}
+          onRegenerateNode={onRegenerate}
+          onDeleteNode={onDelete}
+          onUpdateNodeMeta={onChangeMeta}
+          loading={disabled}
+        />
+      )}
     </div>
   );
-}
-
-function normalizeInputPorts(raw: unknown): Array<{ id: string; kind: InputPortKind; title: string; required: boolean; maxItems: number }> {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .map((item, index) => {
-      if (!item || typeof item !== 'object') {
-        return createDefaultPort(`port-${index}`);
-      }
-      const value = item as Record<string, unknown>;
-      const kind = isInputPortKind(value.kind) ? value.kind : 'text';
-      const meta = findInputPortMeta(kind);
-      const title = typeof value.title === 'string' && value.title.trim().length > 0 ? value.title.trim() : meta.label;
-      const required = Boolean(value.required);
-      const maxItems = meta.allowMultiple
-        ? Math.max(1, Math.floor(Number(value.max_items) || 1))
-        : 1;
-      return {
-        id: typeof value.id === 'string' && value.id.length > 0 ? value.id : generatePortId(`${kind}-${index}`),
-        kind,
-        title,
-        required,
-        maxItems,
-      };
-    })
-    .filter(Boolean);
-}
-
-function createDefaultPort(seed: string) {
-  const meta = findInputPortMeta('text');
-  return {
-    id: generatePortId(seed),
-    kind: 'text' as InputPortKind,
-    title: meta.label,
-    required: false,
-    maxItems: 1,
-  };
-}
-
-function buildColorTokens(hex: string) {
-  const card = shadeColor(hex, 0.18);
-  const header = shadeColor(hex, -0.28);
-  const border = shadeColor(hex, -0.36);
-  const accent = shadeColor(hex, -0.12);
-  const muted = shadeColor(hex, 0.38);
-  return { card, header, border, accent, muted };
-}
-
-function shadeColor(hex: string, amount: number): string {
-  const { r, g, b } = hexToRgb(hex);
-  const target = amount < 0 ? 0 : 255;
-  const p = Math.abs(amount);
-  const R = Math.round((target - r) * p) + r;
-  const G = Math.round((target - g) * p) + g;
-  const B = Math.round((target - b) * p) + b;
-  return toHex(R, G, B);
-}
-
-function hexToRgb(hex: string) {
-  let value = hex.replace('#', '');
-  if (value.length === 3) {
-    value = value
-      .split('')
-      .map((char) => char + char)
-      .join('');
-  }
-  const intValue = Number.parseInt(value, 16);
-  return {
-    r: (intValue >> 16) & 255,
-    g: (intValue >> 8) & 255,
-    b: intValue & 255,
-  };
-}
-
-function toHex(r: number, g: number, b: number) {
-  return `#${[r, g, b]
-    .map((component) => {
-      const clamped = Math.min(255, Math.max(0, component));
-      const hex = clamped.toString(16);
-      return hex.length === 1 ? `0${hex}` : hex;
-    })
-    .join('')}`;
-}
-
-let portIdCounter = 0;
-function generatePortId(seed: string): string {
-  portIdCounter += 1;
-  return `${seed}-${Date.now()}-${portIdCounter}`;
-}
-
-function isInputPortKind(value: unknown): value is InputPortKind {
-  return INPUT_PORT_TYPES.some((item) => item.kind === value);
 }
 
 export default memo(FlowNodeCard);

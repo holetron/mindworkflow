@@ -124,6 +124,7 @@ const allowedNodeTypes = new Set([
   'image_gen',
   'audio_gen',
   'video_gen',
+  'html',
 ]);
 
 export function createProjectsRouter(ajv: Ajv): Router {

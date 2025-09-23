@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProviderPanel from '../features/integrations/ProviderPanel';
+import ErrorBoundary, { IntegrationErrorFallback } from '../ui/ErrorBoundary';
 import {
   cloneProject,
   fetchProjectList,
@@ -179,7 +180,9 @@ function ProjectDashboard() {
         </div>
       </main>
       <aside className="hidden w-96 flex-shrink-0 border-l border-slate-900/80 bg-slate-950/70 p-6 lg:block">
-        <ProviderPanel projects={projects} />
+        <ErrorBoundary fallback={IntegrationErrorFallback}>
+          <ProviderPanel />
+        </ErrorBoundary>
       </aside>
     </div>
   );

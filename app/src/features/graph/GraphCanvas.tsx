@@ -10,6 +10,7 @@ import {
 import ReactFlow, {
   Background,
   Controls,
+  ControlButton,
   MarkerType,
   ReactFlowProvider,
   addEdge,
@@ -24,18 +25,17 @@ import ReactFlow, {
 } from 'reactflow';
 import type { ProjectFlow, FlowNode, NodeUI } from '../../state/api';
 import FlowNodeCard, {
-  NODE_DIMENSIONS,
   type AiProviderOption,
   type FlowNodeCardData,
 } from '../nodes/FlowNodeCard';
 import {
-  NODE_DEFAULT_COLOR,
-  NODE_DEFAULT_HEIGHT,
   NODE_DEFAULT_WIDTH,
-  NODE_MAX_HEIGHT,
-  NODE_MAX_WIDTH,
-  NODE_MIN_HEIGHT,
+  NODE_DEFAULT_HEIGHT,
   NODE_MIN_WIDTH,
+  NODE_MIN_HEIGHT,
+  NODE_MAX_WIDTH,
+  NODE_MAX_HEIGHT,
+  NODE_DEFAULT_COLOR,
 } from '../../constants/nodeDefaults';
 import { SmartBezierEdge, SmartConnectionLine } from './EdgeRenderer';
 
@@ -71,6 +71,7 @@ interface BuildGraphArgs {
   selectedNodeId: string | null;
   providerOptions: AiProviderOption[];
   loading: boolean;
+  isLocked: boolean;
   draggingId: string | null;
   onRunNode: GraphCanvasProps['onRunNode'];
   onRegenerateNode: GraphCanvasProps['onRegenerateNode'];
@@ -140,6 +141,7 @@ function GraphCanvasInner({
       providerOptions,
       loading,
       isLocked,
+      draggingId: null,
       onRunNode,
       onRegenerateNode,
       onDeleteNode,
@@ -226,6 +228,7 @@ function GraphCanvasInner({
     (connection: Connection) => {
       if (!connection.source || !connection.target) return;
       setEdges((prev) => {
+        if (!connection.target || !connection.source) return prev;
         const exists = prev.some((edge) => edge.source === connection.source && edge.target === connection.target);
         if (exists) return prev;
         const newEdge: Edge = {
@@ -273,8 +276,8 @@ function GraphCanvasInner({
     (_event: ReactMouseEvent, node: Node<FlowNodeCardData>) => {
       const x1 = node.position.x;
       const y1 = node.position.y;
-      const width = Math.max(NODE_MIN_WIDTH, node.measured?.width ?? NODE_DEFAULT_WIDTH);
-      const height = Math.max(NODE_MIN_HEIGHT, node.measured?.height ?? NODE_DEFAULT_HEIGHT);
+      const width = Math.max(NODE_MIN_WIDTH, NODE_DEFAULT_WIDTH);
+      const height = Math.max(NODE_MIN_HEIGHT, NODE_DEFAULT_HEIGHT);
       onChangeNodeUi(node.id, {
         bbox: {
           x1,
@@ -325,11 +328,8 @@ function GraphCanvasInner({
         onSelectionChange={handleSelectionChange}
         onNodeDragStart={handleNodeDragStart}
         onNodeDragStop={handleNodeDragStop}
-        nodeDragHandle=".flow-node__drag-handle"
-        selectionOnDrag
         panOnScroll
         panOnDrag
-        zoomAnimation
         zoomOnDoubleClick={false}
         nodesDraggable={!isLocked}
         multiSelectionKeyCode="Shift"
@@ -342,11 +342,6 @@ function GraphCanvasInner({
         className="bg-slate-900"
       >
         <Background color="#1e293b" gap={24} />
-        <Controls position="bottom-right" showInteractive={false}>
-          <ControlButton onClick={() => setIsLocked((prev) => !prev)} title={isLocked ? 'Unlock' : 'Lock'}>
-            {isLocked ? '🔒' : '🔓'}
-          </ControlButton>
-        </Controls>
       </ReactFlow>
       {(!project || project.nodes.length === 0) && !loading && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-slate-400">
@@ -431,10 +426,10 @@ function buildGraphElements({
       style: {
         width,
         height,
-        minWidth: NODE_DIMENSIONS.minWidth,
-        minHeight: NODE_DIMENSIONS.minHeight,
-        maxWidth: NODE_DIMENSIONS.maxWidth,
-        maxHeight: NODE_DIMENSIONS.maxHeight,
+        minWidth: NODE_MIN_WIDTH,
+        minHeight: NODE_MIN_HEIGHT,
+        maxWidth: NODE_MAX_WIDTH,
+        maxHeight: NODE_MAX_HEIGHT,
         border: `1px solid ${node.ui?.color ?? NODE_DEFAULT_COLOR}`,
         backgroundColor: '#1e293b',
       },

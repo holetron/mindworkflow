@@ -16,21 +16,24 @@
     "ajv-formats": "^3.0.1",
     "better-sqlite3": "^9.6.0",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "express": "^4.19.2",
     "mime-types": "^2.1.35",
     "morgan": "^1.10.0",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.6",
     "@types/better-sqlite3": "^7.6.8",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/adm-zip": "^0.5.6",
     "@types/mime-types": "^2.1.4",
     "@types/morgan": "^1.9.6",
     "@types/node": "^20.11.30",
     "@types/uuid": "^9.0.7",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@types/knex": "^0.16.1"
   }
 }

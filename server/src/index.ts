@@ -8,6 +8,7 @@ import addFormats from 'ajv-formats';
 import { createProjectsRouter } from './routes/projects';
 import { createNodesRouter } from './routes/nodes';
 import { createValidateRouter } from './routes/validate';
+import { createIntegrationsRouter } from './routes/integrations';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -22,11 +23,13 @@ app.use(express.json({ limit: '20mb' }));
 app.use(morgan('dev'));
 
 const projectsRouter = createProjectsRouter(ajv);
+const integrationsRouter = createIntegrationsRouter(ajv);
 
 app.use('/api/project', projectsRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/node', createNodesRouter(ajv));
 app.use('/api/validate', createValidateRouter(ajv));
+app.use('/api/integrations', integrationsRouter);
 
 registerStaticClient(app);
 

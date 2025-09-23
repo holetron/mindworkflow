@@ -21,7 +21,11 @@ function NodeSidebar({ project, selectedNodeId, onSelectNode }: NodeSidebarProps
   const nodes = project?.nodes ?? [];
 
   const sortedNodes = useMemo(
-    () => [...nodes].sort((a, b) => a.title.localeCompare(b.title, 'ru')),
+    () => [...nodes].sort((a, b) => {
+      const titleA = a.title || '';
+      const titleB = b.title || '';
+      return titleA.localeCompare(titleB, 'ru');
+    }),
     [nodes],
   );
 

@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import GraphCanvas from '../features/graph/GraphCanvas';
-import NodeEditor from '../features/workspace/NodeEditor';
-import JsonViewer from '../ui/JsonViewer';
 import NodeSidebar from '../features/workspace/NodeSidebar';
 import NodePalette from '../features/workspace/NodePalette';
 import { NODE_PALETTE } from '../data/nodePalette';
@@ -61,8 +59,6 @@ const SIDEBAR_MIN_WIDTH = 220;
 const SIDEBAR_MAX_WIDTH = 400;
 const PALETTE_MIN_WIDTH = 220;
 const PALETTE_MAX_WIDTH = 420;
-const INSPECTOR_MIN_HEIGHT = 240;
-const INSPECTOR_MAX_HEIGHT = 560;
 
 function WorkspacePage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -88,14 +84,12 @@ function WorkspacePage() {
   const [validation, setValidation] = useState<ValidationState>({ status: 'idle' });
   const [sidebarWidth, setSidebarWidth] = useState(260);
   const [paletteWidth, setPaletteWidth] = useState(280);
-  const [inspectorHeight, setInspectorHeight] = useState(320);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const pendingUiRef = useRef<Map<string, NodeUI>>(new Map());
   const pendingUiTimersRef = useRef<Map<string, number>>(new Map());
 
   const selectedNode = useMemo(() => selectNodeById(project, selectedNodeId), [project, selectedNodeId]);
-  const [showAiContext, setShowAiContext] = useState(false);
   const previousNodes = useMemo(
     () => (selectedNode ? findPreviousNodes(project, selectedNode.node_id) : []),
     [project, selectedNode],
@@ -253,6 +247,21 @@ function WorkspacePage() {
         setError(null);
         const response = await createNode(project.project_id, payload);
         addNodeFromServer(response.node, response.project_updated_at);
+
+        // Auto-connect AI generation nodes to the selected node
+        if ((template.type === 'ai' || slug.includes('agent')) && selectedNodeId) {
+          try {
+            const edgeResponse = await createEdge(project.project_id, {
+              from: selectedNodeId,
+              to: response.node.node_id,
+              label: 'auto-connected',
+            });
+            setEdges(edgeResponse.edges, edgeResponse.updated_at);
+          } catch (edgeErr) {
+            console.warn('Failed to auto-connect nodes:', edgeErr);
+            // Don't throw here, node creation was successful
+          }
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setError(message);
@@ -260,7 +269,7 @@ function WorkspacePage() {
         setLoading(false);
       }
     },
-    [project, setLoading, setError, addNodeFromServer],
+    [project, selectedNodeId, setLoading, setError, addNodeFromServer, setEdges],
   );
 
   const handlePaletteCreate = useCallback(
@@ -304,6 +313,13 @@ function WorkspacePage() {
           content: response.content ?? undefined,
           content_type: response.contentType ?? undefined,
         });
+        
+        // For AI nodes, automatically create a new node to the right with the generated content
+        const sourceNode = selectNodeById(project, nodeId);
+        if (sourceNode && sourceNode.type === 'ai' && response.content) {
+          await createNewNodeFromGeneration(sourceNode, response.content);
+        }
+        
         const refreshedLogs = await fetchNodeLogs(project.project_id, response.nodeId);
         setRuns(response.nodeId, refreshedLogs);
       } catch (err) {
@@ -314,6 +330,62 @@ function WorkspacePage() {
       }
     },
     [project, selectNode, setLoading, upsertNodeContent, setRuns, setError],
+  );
+
+  // Helper function to create a new node from AI generation
+  const createNewNodeFromGeneration = useCallback(
+    async (sourceNode: any, content: string) => {
+      if (!project) return;
+
+      // Calculate position for new node (to the right with 20px spacing)
+      const sourcePos = sourceNode.ui?.bbox || DEFAULT_NODE_BBOX;
+      const newX = sourcePos.x2 + 20;
+      const newY = sourcePos.y1;
+
+      // Check for overlapping nodes and adjust position if needed
+      const allNodes = project.nodes || [];
+      let adjustedY = newY;
+      
+      for (const node of allNodes) {
+        const nodeBbox = node.ui?.bbox || DEFAULT_NODE_BBOX;
+        // Check if there's overlap in X range and adjust Y if needed
+        if (newX < nodeBbox.x2 + 20 && newX + NODE_DEFAULT_WIDTH > nodeBbox.x1 - 20) {
+          if (adjustedY < nodeBbox.y2 + 20 && adjustedY + NODE_DEFAULT_HEIGHT > nodeBbox.y1 - 20) {
+            adjustedY = nodeBbox.y2 + 20; // Move below the overlapping node
+          }
+        }
+      }
+
+      // Create new node with generated content
+      const newNodePayload: CreateNodePayload = {
+        type: 'text',
+        title: `Generated from ${sourceNode.title}`,
+        content: content,
+        ui: {
+          color: NODE_DEFAULT_COLOR,
+          bbox: {
+            x1: newX,
+            y1: adjustedY,
+            x2: newX + NODE_DEFAULT_WIDTH,
+            y2: adjustedY + NODE_DEFAULT_HEIGHT,
+          },
+        },
+      };
+
+      try {
+        const newNode = await createNode(project.project_id, newNodePayload);
+        addNodeFromServer(newNode.node, newNode.project_updated_at);
+        
+        // Create edge connection from source to new node
+        await createEdge(project.project_id, {
+          from: sourceNode.node_id,
+          to: newNode.node.node_id,
+        });
+      } catch (err) {
+        console.error('Failed to create new node from generation:', err);
+      }
+    },
+    [project, addNodeFromServer],
   );
 
   const handleRegenerateNode = useCallback(
@@ -497,10 +569,6 @@ function WorkspacePage() {
     }
   }, [project, setLoading, clearProject, navigate, setError]);
 
-  const selectedRuns: RunLog[] | undefined = selectedNode
-    ? runs[selectedNode.node_id]
-    : undefined;
-
   if (!projectId) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-900 text-slate-200">
@@ -569,15 +637,19 @@ function WorkspacePage() {
             <p className="text-sm text-slate-400">{project?.description}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={handleSaveWorkspace} disabled={!project || isSaving}>
+            <button 
+              onClick={handleSaveWorkspace} 
+              disabled={!project || isSaving}
+              className="h-9 w-24 rounded bg-blue-600 px-4 text-sm text-white transition hover:bg-blue-500 disabled:opacity-50"
+            >
               {isSaving ? 'Сохраняю…' : 'Сохранить'}
             </button>
             <button
               onClick={handleDeleteWorkspace}
-              className="rounded bg-rose-600 px-3 py-1 text-sm text-white transition hover:bg-rose-500 disabled:opacity-50"
+              className="h-9 w-24 rounded bg-rose-600 px-4 text-sm text-white transition hover:bg-rose-500 disabled:opacity-50"
               disabled={!project || loading}
             >
-              Delete workspace
+              Удалить
             </button>
           </div>
         </header>
@@ -598,7 +670,6 @@ function WorkspacePage() {
           className="flex-1 overflow-hidden rounded-lg bg-slate-800 shadow" 
           style={{ 
             minHeight: '500px', 
-            height: 'calc(100% - 320px)', 
             position: 'relative',
             display: 'flex', 
             flexDirection: 'column'
@@ -622,79 +693,6 @@ function WorkspacePage() {
               providerOptions={providerOptions}
               loading={loading}
             />
-          </div>
-          <ResizeHandle orientation="horizontal" ariaLabel="Изменить высоту меню" onResize={(delta) => setInspectorHeight((prev) => clamp(prev - delta, INSPECTOR_MIN_HEIGHT, INSPECTOR_MAX_HEIGHT))} />
-          <div
-            className="grid gap-4 overflow-hidden lg:grid-cols-[minmax(0,320px),1fr]"
-            style={{
-              height: inspectorHeight,
-              minHeight: INSPECTOR_MIN_HEIGHT,
-              maxHeight: INSPECTOR_MAX_HEIGHT,
-            }}
-          >
-            <section className="flex h-full flex-col overflow-hidden rounded-lg bg-slate-800 p-4 shadow">
-              <button
-                type="button"
-                className="mb-3 flex w-full items-center justify-between rounded bg-slate-900/60 px-3 py-2 text-left text-lg font-semibold text-slate-200"
-                onClick={() => setShowAiContext((prev) => !prev)}
-              >
-                <span>AI Node Context</span>
-                <span className="text-sm text-slate-400">{showAiContext ? '▲' : '▼'}</span>
-              </button>
-              {!selectedNode && <p className="text-sm text-slate-400">Выберите узел</p>}
-              {selectedNode && showAiContext && (
-                <div className="flex-1 space-y-4 overflow-y-auto pr-1">
-                  <div>
-                    <h3 className="mb-2 text-sm font-medium uppercase tracking-wide text-slate-400">
-                      Полный контент предыдущих узлов
-                    </h3>
-                    <div className="space-y-2">
-                      {previousNodes.map((node) => (
-                        <article key={node.node_id} className="rounded border border-slate-700 p-2">
-                          <h4 className="text-sm font-semibold">{node.title}</h4>
-                          <p className="text-xs text-slate-400">{node.node_id}</p>
-                          {node.content ? (
-                            <JsonViewer value={node.content} collapsible />
-                          ) : (
-                            <p className="text-sm text-slate-300">Нет данных</p>
-                          )}
-                        </article>
-                      ))}
-                      {previousNodes.length === 0 && (
-                        <p className="text-sm text-slate-400">Нет предшествующих узлов</p>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="mb-2 text-sm font-medium uppercase tracking-wide text-slate-400">
-                      Метаданные следующих узлов
-                    </h3>
-                    <ul className="space-y-2">
-                      {nextNodes.map((node) => (
-                        <li key={node.node_id} className="rounded border border-slate-700 p-2">
-                          <p className="font-semibold">{node.title}</p>
-                          <p className="text-sm text-slate-300">
-                            {(node.meta?.short_description as string | undefined) ??
-                              (node.content ? node.content.slice(0, 200) : 'Нет описания')}
-                          </p>
-                        </li>
-                      ))}
-                      {nextNodes.length === 0 && (
-                        <p className="text-sm text-slate-400">Нет последующих узлов</p>
-                      )}
-                    </ul>
-                  </div>
-                </div>
-              )}
-            </section>
-            <div className="min-h-0 overflow-hidden rounded-lg bg-slate-800 shadow">
-              <NodeEditor
-                node={selectedNode}
-                projectId={project?.project_id ?? ''}
-                runs={selectedRuns}
-                loading={loading}
-              />
-            </div>
           </div>
         </div>
       </div>

@@ -73,6 +73,43 @@ textarea {
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4);
 }
 
+/* Smart Edge Styles */
+.rf-smart-edge__path {
+  fill: none;
+  stroke: #3b82f6;
+  stroke-width: 2;
+  transition: stroke-width 0.2s ease;
+}
+
+.rf-smart-edge__path--selected {
+  stroke: #10b981;
+  stroke-width: 3;
+}
+
+.rf-smart-edge__halo {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 10;
+  cursor: pointer;
+}
+
+.rf-smart-edge__preview {
+  fill: none;
+  stroke: #6b7280;
+  stroke-width: 2;
+  stroke-dasharray: 5;
+}
+
+.rf-smart-edge__delete-button {
+  pointer-events: all;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.rf-smart-edge__delete-button button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.6), 0 0 0 2px rgba(255, 255, 255, 1) !important;
+}
+
 .flow-node--dragging {
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45) !important;
   border-color: rgba(56, 189, 248, 0.6) !important;
@@ -103,36 +140,53 @@ textarea {
 
 .flow-node__resize-handle {
   position: absolute;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 4px;
-  background: rgba(148, 163, 184, 0.35);
-  border: 2px solid rgba(255, 255, 255, 0.65);
+  background: rgba(148, 163, 184, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.7);
   bottom: 6px;
   right: 6px;
   cursor: nwse-resize;
-  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.8);
-  transition: transform 120ms ease, background 120ms ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  z-index: 10;
 }
 
 .flow-node__resize-handle:hover {
-  transform: scale(1.15);
-  background: rgba(59, 130, 246, 0.5);
+  transform: scale(1.1);
+  background: rgba(59, 130, 246, 0.6);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .flow-node__resize-handle:active {
-  transform: scale(1.25);
-  background: rgba(56, 189, 248, 0.65);
+  transform: scale(1.2);
+  background: rgba(56, 189, 248, 0.7);
+  border-color: white;
 }
 
 .flow-node__header {
-  @apply flex items-center justify-between rounded-t-xl border-b px-3 py-2;
+  display: flex;
+  align-items: center;
+  justify-content: between;
   border-bottom-width: 1px;
+  padding: 12px 16px;
+  transition: all 0.2s ease;
+}
+
+.flow-node__header:hover {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .flow-node__identity {
-  @apply flex items-center gap-3 text-white/80 text-[11px];
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
   cursor: grab;
+  flex: 1;
 }
 
 .flow-node--dragging .flow-node__identity {
@@ -198,17 +252,52 @@ textarea {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* Collapsed content styles */
+.flow-node__collapsed-content {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.flow-node__compact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.flow-node__compact-info:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 8px;
+}
+
+.flow-node__actions-group {
   min-width: 120px;
   justify-content: flex-end;
 }
 
 .flow-node__toolbar-button {
-  @apply flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 text-xs text-white shadow transition;
-  background: rgba(30, 41, 59, 0.85);
+  @apply flex h-7 w-7 items-center justify-center rounded-md border border-white/20 text-xs text-white/80 transition-all duration-200;
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(4px);
 }
 
 .flow-node__toolbar-button:hover {
-  filter: brightness(1.1);
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 1);
+  transform: scale(1.05);
+}
+
+.flow-node__toolbar-button:active {
+  transform: scale(0.95);
+}
+
+.flow-node__toolbar-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .flow-node__toolbar-button--danger {
@@ -302,4 +391,68 @@ textarea {
 .flow-node__info {
   @apply rounded-lg border border-white/15 bg-black/20 p-3 text-[11px] text-white/85;
   border-color: rgba(148, 163, 184, 0.2);
+}
+
+.flow-node__footer-panel {
+  @apply flex items-center justify-end gap-2 px-3 py-2 border-t border-white/10 bg-black/10;
+}
+
+.flow-node__footer {
+  @apply px-3 py-2 bg-black/20 text-white/70 text-xs;
+  /* Ensure it doesn't narrow */
+  min-width: 100%;
+}
+
+/* Custom scrollbar styles for node content */
+.flow-node__content {
+  flex: 1;
+  overflow: hidden; /* Hide overflow from content area itself */
+  min-height: 0;
+  position: relative;
+}
+
+.flow-node__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.flow-node__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.flow-node__content::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
+  border-radius: 3px;
+}
+
+.flow-node__content::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.7);
+}
+
+/* Firefox scrollbar */
+.flow-node__content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+}
+
+.flow-node textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.flow-node textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.flow-node textarea::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
+  border-radius: 3px;
+}
+
+.flow-node textarea::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.7);
+}
+
+/* Firefox scrollbar */
+.flow-node textarea {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
 }

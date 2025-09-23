@@ -347,9 +347,105 @@ export async function deleteEdge(
   return response.json();
 }
 
+export interface IntegrationFieldConfig {
+  id: string;
+  label: string;
+  key: string;
+  type?: 'text' | 'textarea';
+  placeholder?: string;
+  description?: string;
+  required?: boolean;
+  default_value?: string;
+}
+
+export interface GlobalIntegration {
+  id: string;
+  providerId: string;
+  name: string;
+  description?: string;
+  apiKey?: string;
+  baseUrl?: string;
+  organization?: string;
+  webhookContract?: string;
+  systemPrompt?: string;
+  inputFields?: IntegrationFieldConfig[];
+  exampleRequest?: {
+    method: string;
+    url: string;
+    headers?: Record<string, string>;
+    body?: string;
+  };
+  exampleResponseMapping?: {
+    incoming?: Record<string, string>;
+    outgoing?: Record<string, string>;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchGlobalIntegrations(): Promise<GlobalIntegration[]> {
+  const response = await fetch('/api/integrations');
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function fetchGlobalIntegration(id: string): Promise<GlobalIntegration> {
+  const response = await fetch(`/api/integrations/${encodeURIComponent(id)}`);
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function createGlobalIntegration(payload: Omit<GlobalIntegration, 'id' | 'createdAt' | 'updatedAt'>): Promise<GlobalIntegration> {
+  const response = await fetch('/api/integrations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function updateGlobalIntegration(id: string, payload: Partial<Omit<GlobalIntegration, 'id' | 'createdAt' | 'updatedAt'>>): Promise<GlobalIntegration> {
+  const response = await fetch(`/api/integrations/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function deleteGlobalIntegration(id: string): Promise<void> {
+  const response = await fetch(`/api/integrations/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+}
+
+export interface RunResponse {
+  status: string;
+  nodeId: string;
+  content?: string | null;
+  contentType?: string | null;
+  logs: string[];
+  runId: string;
+  cloned?: boolean;
+  targetNodeId?: string;
+}
+
 export async function updateProjectSettingsRemote(
   projectId: string,
-  payload: { settings?: Record<string, unknown>; integrations?: Record<string, unknown> },
+  payload: { settings?: Record<string, unknown> },
 ): Promise<{ settings: Record<string, unknown>; updated_at: string }> {
   const response = await fetch(`/api/project/${encodeURIComponent(projectId)}/settings`, {
     method: 'PATCH',
@@ -361,6 +457,7 @@ export async function updateProjectSettingsRemote(
   }
   return response.json();
 }
+
 
 export async function deleteProject(projectId: string): Promise<void> {
   const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}`, {

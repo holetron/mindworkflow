@@ -1,5 +1,6 @@
 import type { Database as BetterSqliteDatabase } from 'better-sqlite3';
 import { addNodeVisualPropertiesMigration } from './20241012_add_node_visual_properties';
+import { createGlobalIntegrationsTableMigration } from './20250922_create_global_integrations_table';
 
 export interface Migration {
   id: string;
@@ -7,7 +8,7 @@ export interface Migration {
   run: (db: BetterSqliteDatabase) => void;
 }
 
-const MIGRATIONS: Migration[] = [addNodeVisualPropertiesMigration];
+const MIGRATIONS: Migration[] = [addNodeVisualPropertiesMigration, createGlobalIntegrationsTableMigration];
 
 export function runMigrations(db: BetterSqliteDatabase): void {
   db.exec(
