@@ -66,6 +66,8 @@ interface GraphCanvasProps {
   onRemoveEdges?: (edges: Array<{ from: string; to: string }>) => void;
   providerOptions?: AiProviderOption[];
   loading?: boolean;
+  sidebarCollapsed?: boolean;
+  sidebarWidth?: number;
 }
 
 interface BuildGraphArgs {
@@ -108,6 +110,8 @@ function GraphCanvasInner({
   onRemoveEdges,
   providerOptions = [],
   loading = false,
+  sidebarCollapsed = false,
+  sidebarWidth = 300,
 }: GraphCanvasProps) {
   const reactFlow = useReactFlow<FlowNodeCardData>();
   const [nodes, setNodes] = useState<Node<FlowNodeCardData>[]>([]);
@@ -408,8 +412,9 @@ function GraphCanvasInner({
           showZoom={false}
           showInteractive={false}
           position="bottom-left"
-          className="!bottom-4 !left-4 !gap-1"
+          className="!bottom-4 !gap-1"
           style={{
+            left: sidebarCollapsed ? '66px' : `${sidebarWidth + 82}px`, // +50px to the right
             display: 'flex',
             flexDirection: 'column',
             gap: '6px', // четверть высоты кнопки (24px * 0.25 = 6px)
@@ -463,7 +468,10 @@ function GraphCanvasInner({
         {showMiniMap && (
           <MiniMap 
             position="bottom-left"
-            className="!bottom-4 !left-[198px] !w-48 !h-32 !bg-slate-900/90 !border-2 !border-slate-500 !rounded-md !shadow-lg"
+            className="!bottom-4 !w-48 !h-32 !bg-slate-900/90 !border-2 !border-slate-500 !rounded-md !shadow-lg"
+            style={{
+              left: sidebarCollapsed ? '118px' : `${sidebarWidth + 134}px`, // -50px to the left from controls
+            }}
             nodeColor={(node) => {
               const nodeData = node.data as FlowNodeCardData;
               switch (nodeData.node.type) {

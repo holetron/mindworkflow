@@ -5,9 +5,10 @@ import type { ProjectFlow } from '../state/api';
 interface TokenDisplayProps {
   project: ProjectFlow | null;
   className?: string;
+  compact?: boolean;
 }
 
-export function TokenDisplay({ project, className = '' }: TokenDisplayProps) {
+export function TokenDisplay({ project, className = '', compact = false }: TokenDisplayProps) {
   const { total, byProvider, estimatedCost, warnings } = useTokenCounter(project);
 
   if (!project || total.total_tokens === 0) {
@@ -15,6 +16,22 @@ export function TokenDisplay({ project, className = '' }: TokenDisplayProps) {
   }
 
   const hasWarnings = warnings.length > 0;
+
+  if (compact) {
+    return (
+      <div className={`flex items-center gap-6 text-sm ${className}`}>
+        <div className="flex items-center gap-2">
+          <span className="text-white">🧮 Использование токенов</span>
+          <span className="text-white font-medium">{formatTokens(total.total_tokens)}</span>
+        </div>
+        <div className="text-slate-400">{formatCost(estimatedCost)}</div>
+        <div className="flex items-center gap-4 text-xs text-slate-400">
+          <span>Prompt: {formatTokens(total.prompt_tokens)}</span>
+          <span>Completion: {formatTokens(total.completion_tokens)}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`bg-slate-800 rounded-lg border ${hasWarnings ? 'border-red-500' : 'border-slate-700'} ${className}`}>

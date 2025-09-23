@@ -88,7 +88,12 @@ function NodeSidebar({
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="flex h-12 w-12 items-center justify-center text-slate-300 hover:bg-slate-700 rounded-t-lg"
+          className="flex h-12 w-12 items-center justify-center text-slate-300 hover:bg-slate-700 rounded-t-lg bg-transparent border-0 p-0"
+          style={{ 
+            backgroundColor: 'transparent',
+            backgroundImage: 'none',
+            boxShadow: 'none'
+          }}
           title="Развернуть панель нод"
         >
           ☰
@@ -103,14 +108,15 @@ function NodeSidebar({
                 key={node.node_id}
                 type="button"
                 onClick={() => onSelectNode(node.node_id)}
-                className="relative w-8 h-8 flex items-center justify-center rounded text-xs transition overflow-hidden"
+                className="relative w-8 h-8 flex items-center justify-center rounded text-xs transition overflow-hidden bg-transparent border-0 p-0"
                 style={{
-                  backgroundColor: `${nodeColor}15`,
-                  border: `2px solid ${nodeColor}`,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${nodeColor}40`,
                   backdropFilter: 'blur(10px)',
                   boxShadow: isSelected 
-                    ? `0 0 0 2px ${nodeColor}, 0 8px 24px ${nodeColor}30`
-                    : `0 4px 12px ${nodeColor}20`,
+                    ? `0 0 0 1px ${nodeColor}, 0 4px 12px ${nodeColor}20`
+                    : `0 2px 6px rgba(0,0,0,0.1)`,
+                  backgroundImage: 'none'
                 }}
                 title={node.title}
               >
@@ -144,7 +150,12 @@ function NodeSidebar({
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-700/30 rounded transition"
+          className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-700/30 rounded transition bg-transparent border-0 p-0"
+          style={{ 
+            backgroundColor: 'transparent',
+            backgroundImage: 'none',
+            boxShadow: 'none'
+          }}
           title="Свернуть панель"
         >
           ☰
@@ -166,18 +177,18 @@ function NodeSidebar({
                 draggable
                 onDragStart={(e) => handleDragStart(e, node)}
                 style={{
-                  backgroundColor: `${nodeColor}15`,
-                  border: `2px solid ${nodeColor}`,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${nodeColor}40`,
                   backdropFilter: 'blur(10px)',
                   boxShadow: isSelected 
-                    ? `0 0 0 2px ${nodeColor}, 0 8px 24px ${nodeColor}30`
-                    : `0 4px 12px ${nodeColor}20`,
+                    ? `0 0 0 1px ${nodeColor}, 0 4px 12px ${nodeColor}20`
+                    : `0 2px 6px rgba(0,0,0,0.1)`,
                 }}
               >
                 <div
                   className="flex items-center justify-between p-3 transition"
                   style={{
-                    backgroundColor: `${nodeColor}25`,
+                    backgroundColor: 'transparent',
                     borderBottom: (connections.incoming.length > 0 || connections.outgoing.length > 0) && isExpanded 
                       ? `1px solid ${nodeColor}40` 
                       : 'none',
@@ -186,7 +197,12 @@ function NodeSidebar({
                   <button
                     type="button"
                     onClick={() => onSelectNode(node.node_id)}
-                    className="flex items-center gap-3 flex-1 text-left"
+                    className="flex items-center gap-3 flex-1 text-left bg-transparent hover:bg-transparent p-0 border-0"
+                    style={{ 
+                      backgroundColor: 'transparent',
+                      backgroundImage: 'none',
+                      boxShadow: 'none'
+                    }}
                   >
                     <div 
                       className="flex items-center justify-center w-8 h-8 rounded text-sm"
@@ -207,7 +223,12 @@ function NodeSidebar({
                     <button
                       type="button"
                       onClick={() => toggleNodeExpanded(node.node_id)}
-                      className="ml-2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-700/30 rounded transition text-xs"
+                      className="ml-2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-700/30 rounded transition text-xs bg-transparent border-0 p-0"
+                      style={{ 
+                        backgroundColor: 'transparent',
+                        backgroundImage: 'none',
+                        boxShadow: 'none'
+                      }}
                       title={isExpanded ? "Свернуть связи" : "Показать связи"}
                     >
                       {isExpanded ? '−' : '+'}
@@ -219,7 +240,7 @@ function NodeSidebar({
                   <div 
                     className="p-3"
                     style={{
-                      backgroundColor: `${nodeColor}10`,
+                      backgroundColor: 'transparent',
                     }}
                   >
                     <div className="grid grid-cols-2 gap-3 text-xs">
@@ -233,7 +254,12 @@ function NodeSidebar({
                               key={inNode.node_id}
                               type="button"
                               onClick={() => onOpenNodeModal?.(inNode.node_id)}
-                              className="block text-emerald-300 hover:text-emerald-200 transition truncate w-full text-left mb-1 hover:underline"
+                              className="block text-emerald-300 hover:text-emerald-200 transition truncate w-full text-left mb-1 hover:underline bg-transparent border-0 p-0"
+                              style={{ 
+                                backgroundColor: 'transparent',
+                                backgroundImage: 'none',
+                                boxShadow: 'none'
+                              }}
                               title={inNode.title}
                             >
                               {inNode.title}
@@ -251,7 +277,12 @@ function NodeSidebar({
                               key={outNode.node_id}
                               type="button"
                               onClick={() => onOpenNodeModal?.(outNode.node_id)}
-                              className="block text-cyan-300 hover:text-cyan-200 transition truncate w-full text-left mb-1 hover:underline"
+                              className="block text-cyan-300 hover:text-cyan-200 transition truncate w-full text-left mb-1 hover:underline bg-transparent border-0 p-0"
+                              style={{ 
+                                backgroundColor: 'transparent',
+                                backgroundImage: 'none',
+                                boxShadow: 'none'
+                              }}
                               title={outNode.title}
                             >
                               {outNode.title}

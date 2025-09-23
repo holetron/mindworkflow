@@ -34,6 +34,8 @@ const getNodeTypeColor = (type: string): string => {
 interface NodePaletteProps {
   onCreateNode: (template: NodeTemplate, slug: string) => void | Promise<void>;
   disabled?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 const GROUPS: Array<{
@@ -45,7 +47,7 @@ const GROUPS: Array<{
   { key: 'agents', title: 'Агенты', collapsible: true },
 ];
 
-function NodePalette({ onCreateNode, disabled }: NodePaletteProps) {
+function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollapse }: NodePaletteProps) {
   const [search, setSearch] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({ agents: true });
   const [collapsedAgentGroups, setCollapsedAgentGroups] = useState<Record<AgentCategoryKey, boolean>>({
@@ -95,7 +97,7 @@ function NodePalette({ onCreateNode, disabled }: NodePaletteProps) {
     return { ...group, items };
   }).filter((group) => group.items.length > 0);
 
-  const handleDragStart = (event: DragEvent<HTMLDivElement>, item: NodePaletteItem) => {
+  const handleDragStart = (event: DragEvent<HTMLElement>, item: NodePaletteItem) => {
     event.dataTransfer.setData('application/reactflow-node', item.slug);
     event.dataTransfer.effectAllowed = 'move';
   };
@@ -117,10 +119,86 @@ function NodePalette({ onCreateNode, disabled }: NodePaletteProps) {
   const renderItem = (item: NodePaletteItem) =>
     renderPaletteItem(item, Boolean(disabled), handleClick, handleDragStart);
 
+  if (collapsed) {
+    return (
+      <div className="flex h-full w-12 flex-col bg-slate-800 rounded-lg shadow">
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="flex h-12 w-12 items-center justify-center text-slate-300 hover:bg-slate-700 rounded-t-lg bg-transparent border-0 p-0"
+          style={{ 
+            backgroundColor: 'transparent',
+            backgroundImage: 'none',
+            boxShadow: 'none'
+          }}
+          title="Развернуть палитру нод"
+        >
+          ⚒️
+        </button>
+        <div className="flex-1 flex flex-col items-center py-2 gap-1 overflow-y-auto">
+          {filteredItems.slice(0, 10).map((item) => {
+            const icon = item.icon || '⚙️';
+            const nodeColor = getNodeTypeColor(item.template.type);
+            
+            return (
+              <button
+                key={item.slug}
+                type="button"
+                onClick={() => handleClick(item)}
+                draggable
+                onDragStart={(e) => handleDragStart(e, item)}
+                className="relative w-8 h-8 flex items-center justify-center rounded text-xs transition overflow-hidden bg-transparent border-0 p-0"
+                style={{
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${nodeColor}40`,
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: `0 2px 6px rgba(0,0,0,0.1)`,
+                  backgroundImage: 'none'
+                }}
+                title={item.title}
+                disabled={disabled}
+              >
+                <div 
+                  className="flex items-center justify-center w-6 h-6 rounded text-xs"
+                  style={{ 
+                    backgroundColor: 'transparent',
+                    color: 'white'
+                  }}
+                >
+                  {icon}
+                </div>
+              </button>
+            );
+          })}
+          {filteredItems.length > 10 && (
+            <div className="text-xs text-slate-400 mt-1 transform rotate-90 origin-center">
+              +{filteredItems.length - 10}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section className="flex h-full w-full flex-col overflow-hidden rounded-lg bg-slate-800 p-4 shadow">
       <header className="mb-3 space-y-2">
-        <h2 className="text-lg font-semibold">Магазин нод</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Магазин нод</h2>
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-700/30 rounded transition bg-transparent border-0 p-0"
+            style={{ 
+              backgroundColor: 'transparent',
+              backgroundImage: 'none',
+              boxShadow: 'none'
+            }}
+            title="Свернуть панель"
+          >
+            ☰
+          </button>
+        </div>
         <input
           type="search"
           value={search}
@@ -142,9 +220,14 @@ function NodePalette({ onCreateNode, disabled }: NodePaletteProps) {
             <div key={group.key} className="space-y-2">
               <button
                 type="button"
-                className={`flex w-full items-center justify-between rounded bg-slate-900/70 px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-300 ${
+                className={`flex w-full items-center justify-between rounded bg-slate-900/70 px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-300 border-0 ${
                   group.collapsible ? 'hover:bg-slate-900/90' : ''
                 }`}
+                style={{ 
+                  backgroundColor: 'rgb(15 23 42 / 0.7)',
+                  backgroundImage: 'none',
+                  boxShadow: 'none'
+                }}
                 onClick={() => group.collapsible && !isSearching && toggleGroup(group.key)}
                 disabled={!group.collapsible || isSearching}
               >
@@ -166,9 +249,14 @@ function NodePalette({ onCreateNode, disabled }: NodePaletteProps) {
                           >
                             <button
                               type="button"
-                              className={`flex w-full items-start justify-between gap-2 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white transition ${
+                              className={`flex w-full items-start justify-between gap-2 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white transition border-0 ${
                                 subCollapsed ? 'bg-sky-700' : 'bg-sky-600'
                               } hover:bg-sky-500`}
+                              style={{ 
+                                backgroundColor: subCollapsed ? 'rgb(3 105 161)' : 'rgb(2 132 199)',
+                                backgroundImage: 'none',
+                                boxShadow: 'none'
+                              }}
                               onClick={() => toggleAgentGroup(key)}
                             >
                               <span>

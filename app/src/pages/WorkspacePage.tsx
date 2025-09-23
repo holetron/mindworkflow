@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import GraphCanvas from '../features/graph/GraphCanvas';
 import NodeSidebar from '../features/workspace/NodeSidebar';
 import NodePalette from '../features/workspace/NodePalette';
-import TokenDisplay from '../ui/TokenDisplay';
+import { TokenDisplay } from '../ui/TokenDisplay';
 import { NODE_PALETTE } from '../data/nodePalette';
 import { DEFAULT_STICKY_NOTE } from '../data/stickyNoteDefault';
 import {
@@ -93,6 +93,7 @@ function WorkspacePage() {
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [paletteWidth, setPaletteWidth] = useState(PALETTE_DEFAULT_WIDTH);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [paletteCollapsed, setPaletteCollapsed] = useState(false);
   const [showNodeModal, setShowNodeModal] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -712,18 +713,16 @@ function WorkspacePage() {
   }, []);
 
   return (
-    <div className="flex h-screen min-h-0 gap-4 p-4" style={{ width: '100vw', height: '100vh' }}>
-      <aside className="flex-shrink-0 flex flex-col" style={{ width: sidebarCollapsed ? 48 : sidebarWidth, paddingTop: '60px' }}>
-        <div className="mb-4 flex items-center justify-between text-slate-200">
-          <button
-            type="button"
-            className="rounded bg-slate-800 px-3 py-1 text-sm hover:bg-slate-700"
-            onClick={() => navigate('/')}
-          >
-            ← Projects
-          </button>
-          <span className="text-xs uppercase tracking-wide text-slate-500">Workspace</span>
-        </div>
+    <div className="relative h-screen min-h-0 p-4" style={{ width: '100vw', height: '100vh' }}>
+      {/* Sidebar positioned absolutely over the workflow */}
+      <aside 
+        className="absolute left-4 z-10 flex flex-col" 
+        style={{ 
+          top: '120px', // Position further below the header (80px + 40px)
+          width: sidebarCollapsed ? 48 : sidebarWidth,
+          height: 'calc(100vh - 136px)', // Adjust height to account for top offset
+        }}
+      >
         <div className="flex-1 overflow-auto">
           <NodeSidebar 
             project={project} 
@@ -736,49 +735,79 @@ function WorkspacePage() {
           />
         </div>
       </aside>
+      
+      {/* Resize handle positioned absolutely */}
       {!sidebarCollapsed && (
-        <ResizeHandle orientation="vertical" ariaLabel="Изменить ширину меню нод" onResize={(delta: number) => setSidebarWidth((prev: number) => clamp(prev + delta, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH))} />
+        <div 
+          className="absolute z-10" 
+          style={{ 
+            left: sidebarWidth + 16,
+            top: '120px',
+            height: 'calc(100vh - 136px)'
+          }}
+        >
+          <ResizeHandle orientation="vertical" ariaLabel="Изменить ширину меню нод" onResize={(delta: number) => setSidebarWidth((prev: number) => clamp(prev + delta, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH))} />
+        </div>
       )}
-      <div className="flex flex-1 flex-col gap-4 min-h-0">
+      
+      {/* Main content area - full width */}
+      <div className="flex flex-col gap-4 h-full min-h-0">
         <header className="flex items-center justify-between rounded-lg bg-slate-800 p-4 shadow">
-          <div>
-            <h1 className="text-2xl font-semibold">{project?.title ?? 'Loading...'}</h1>
-            <p className="text-sm text-slate-400">{project?.description}</p>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 text-slate-200">
+              <button
+                type="button"
+                className="rounded bg-slate-700 px-3 py-1 text-sm hover:bg-slate-600 transition"
+                onClick={() => navigate('/')}
+              >
+                ← Projects
+              </button>
+              <span className="text-xs uppercase tracking-wide text-slate-500">Workspace</span>
+            </div>
+            <div className="ml-4">
+              <h1 className="text-2xl font-semibold">{project?.title ?? 'Loading...'}</h1>
+              <p className="text-sm text-slate-400">{project?.description}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handleSaveWorkspace} 
-              disabled={!project || isSaving}
-              className={`h-9 px-4 text-sm text-white transition disabled:opacity-50 flex items-center gap-2 ${
-                hasUnsavedChanges 
-                  ? 'bg-orange-600 hover:bg-orange-500' 
-                  : 'bg-blue-600 hover:bg-blue-500'
-              }`}
-            >
-              {isSaving ? (
-                <>
-                  <span className="animate-spin">⟳</span>
-                  Сохраняю…
-                </>
-              ) : hasUnsavedChanges ? (
-                <>
-                  <span className="text-orange-200">●</span>
-                  Сохранить*
-                </>
-              ) : (
-                <>
-                  <span className="text-green-300">✓</span>
-                  Сохранено
-                </>
-              )}
-            </button>
-            <button
-              onClick={handleDeleteWorkspace}
-              className="h-9 w-24 rounded bg-rose-600 px-4 text-sm text-white transition hover:bg-rose-500 disabled:opacity-50"
-              disabled={!project || loading}
-            >
-              Удалить
-            </button>
+          <div className="flex items-center gap-4">
+            {/* Token Display - compact version */}
+            <TokenDisplay project={project} compact={true} />
+            
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={handleSaveWorkspace} 
+                disabled={!project || isSaving}
+                className={`h-9 px-4 text-sm text-white transition disabled:opacity-50 flex items-center gap-2 rounded ${
+                  hasUnsavedChanges 
+                    ? 'bg-orange-600 hover:bg-orange-500' 
+                    : 'bg-blue-600 hover:bg-blue-500'
+                }`}
+              >
+                {isSaving ? (
+                  <>
+                    <span className="animate-spin">⟳</span>
+                    Сохраняю…
+                  </>
+                ) : hasUnsavedChanges ? (
+                  <>
+                    <span className="text-orange-200">●</span>
+                    Сохранить*
+                  </>
+                ) : (
+                  <>
+                    <span className="text-green-300">✓</span>
+                    Сохранено
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleDeleteWorkspace}
+                className="h-9 w-24 rounded bg-rose-600 px-4 text-sm text-white transition hover:bg-rose-500 disabled:opacity-50"
+                disabled={!project || loading}
+              >
+                Удалить
+              </button>
+            </div>
           </div>
         </header>
         {error && <div className="rounded bg-red-500/20 p-3 text-sm text-red-200">{error}</div>}
@@ -793,9 +822,9 @@ function WorkspacePage() {
             {validation.message}
           </div>
         )}
-        <div className="flex flex-1 flex-col gap-4 overflow-hidden min-h-0">
-        <div 
-          className="flex-1 overflow-hidden rounded-lg bg-slate-800 shadow" 
+        
+        {/* Main workflow area */}
+        <div className="flex-1 overflow-hidden rounded-lg bg-slate-800 shadow" 
           style={{ 
             minHeight: '500px', 
             position: 'relative',
@@ -803,39 +832,48 @@ function WorkspacePage() {
             flexDirection: 'column'
           }}
         >
-            <GraphCanvas
-              project={project}
-              selectedNodeId={selectedNodeId}
-              onSelectNode={selectNode}
-              onRunNode={handleRunNode}
-              onRegenerateNode={handleRegenerateNode}
-              onDeleteNode={handleDeleteNode}
-              onChangeNodeMeta={handleUpdateNodeMeta}
-              onChangeNodeContent={handleUpdateNodeContent}
-              onChangeNodeTitle={handleUpdateNodeTitle}
-              onChangeNodeAi={handleUpdateNodeAi}
-              onChangeNodeUi={handleUpdateNodeUi}
-              onAddNodeFromPalette={handlePaletteDrop}
-              onCopyNode={handleNodeCopy}
-              onCreateEdge={handleConnectEdge}
-              onRemoveEdges={handleRemoveEdges}
-              providerOptions={providerOptions}
-              loading={loading}
+          <GraphCanvas
+            project={project}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={selectNode}
+            onRunNode={handleRunNode}
+            onRegenerateNode={handleRegenerateNode}
+            onDeleteNode={handleDeleteNode}
+            onChangeNodeMeta={handleUpdateNodeMeta}
+            onChangeNodeContent={handleUpdateNodeContent}
+            onChangeNodeTitle={handleUpdateNodeTitle}
+            onChangeNodeAi={handleUpdateNodeAi}
+            onChangeNodeUi={handleUpdateNodeUi}
+            onAddNodeFromPalette={handlePaletteDrop}
+            onCopyNode={handleNodeCopy}
+            onCreateEdge={handleConnectEdge}
+            onRemoveEdges={handleRemoveEdges}
+            providerOptions={providerOptions}
+            loading={loading}
+            sidebarCollapsed={sidebarCollapsed}
+            sidebarWidth={sidebarWidth}
+          />
+        </div>
+        
+        {/* Right palette positioned absolutely over the workflow */}
+        <aside 
+          className="absolute right-4 z-10 flex flex-col" 
+          style={{ 
+            top: '120px', // Same height as left sidebar
+            width: paletteCollapsed ? 48 : 320,
+            height: 'calc(100vh - 136px)', // Same height as left sidebar
+          }}
+        >
+          <div className="flex-1 overflow-auto">
+            <NodePalette 
+              onCreateNode={handlePaletteCreate} 
+              disabled={loading || !project}
+              collapsed={paletteCollapsed}
+              onToggleCollapse={() => setPaletteCollapsed(!paletteCollapsed)}
             />
           </div>
-        </div>
+        </aside>
       </div>
-      <ResizeHandle
-        orientation="vertical"
-        ariaLabel="Изменить ширину магазина"
-        onResize={(delta: number) => setPaletteWidth((prev: number) => clamp(prev - delta, PALETTE_MIN_WIDTH, PALETTE_MAX_WIDTH))}
-      />
-      <aside className="flex-shrink-0" style={{ width: paletteWidth }}>
-        <div className="h-full overflow-auto flex flex-col gap-4 p-4">
-          <TokenDisplay project={project} />
-          <NodePalette onCreateNode={handlePaletteCreate} disabled={loading || !project} />
-        </div>
-      </aside>
       
       {/* Node Modal */}
       {showNodeModal && project && (
