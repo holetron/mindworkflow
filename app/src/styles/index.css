@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Кастомный скролл */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #1e293b;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 body {
   @apply bg-slate-900 text-slate-100 font-sans;
 }
@@ -89,7 +113,7 @@ textarea {
 .rf-smart-edge__halo {
   fill: none;
   stroke: transparent;
-  stroke-width: 10;
+  stroke-width: 20;
   cursor: pointer;
 }
 

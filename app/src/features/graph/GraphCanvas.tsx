@@ -12,6 +12,7 @@ import ReactFlow, {
   Controls,
   ControlButton,
   MarkerType,
+  MiniMap,
   ReactFlowProvider,
   addEdge,
   applyEdgeChanges,
@@ -110,6 +111,7 @@ function GraphCanvasInner({
   const [nodes, setNodes] = useState<Node<FlowNodeCardData>[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [isLocked, setIsLocked] = useState(false);
+  const [showMiniMap, setShowMiniMap] = useState(false);
   const initialFitRef = useRef(true);
 
   useEffect(() => {
@@ -190,13 +192,18 @@ function GraphCanvasInner({
 
           const baseX = node.position.x;
           const baseY = node.position.y;
+          
+          // Preserve current dimensions if new dimensions are not provided
+          const currentWidth = node.width || NODE_DEFAULT_WIDTH;
+          const currentHeight = node.height || NODE_DEFAULT_HEIGHT;
+          
           const width = Math.max(
             NODE_MIN_WIDTH,
-            Math.min(NODE_MAX_WIDTH, Math.round(change.dimensions.width ?? NODE_DEFAULT_WIDTH)),
+            Math.min(NODE_MAX_WIDTH, Math.round(change.dimensions.width ?? currentWidth)),
           );
           const height = Math.max(
             NODE_MIN_HEIGHT,
-            Math.min(NODE_MAX_HEIGHT, Math.round(change.dimensions.height ?? NODE_DEFAULT_HEIGHT)),
+            Math.min(NODE_MAX_HEIGHT, Math.round(change.dimensions.height ?? currentHeight)),
           );
           onChangeNodeUi(change.id, {
             bbox: {
@@ -339,8 +346,10 @@ function GraphCanvasInner({
         onSelectionChange={handleSelectionChange}
         onNodeDragStart={handleNodeDragStart}
         onNodeDragStop={handleNodeDragStop}
-        panOnScroll
+        panOnScroll={false}
         panOnDrag
+        zoomOnScroll
+        zoomOnPinch
         zoomOnDoubleClick={false}
         nodesDraggable={!isLocked}
         multiSelectionKeyCode="Shift"
@@ -353,6 +362,44 @@ function GraphCanvasInner({
         className="bg-slate-900"
       >
         <Background color="#1e293b" gap={24} />
+        <Controls 
+          showFitView
+          showZoom
+          showInteractive
+          position="bottom-left"
+          className="!bottom-4 !left-4"
+        >
+          <ControlButton
+            onClick={() => setIsLocked(!isLocked)}
+            title={isLocked ? 'Разблокировать узлы' : 'Заблокировать узлы'}
+            className={isLocked ? '!bg-orange-500/20 !text-orange-300' : '!bg-slate-800/80 !text-slate-300'}
+          >
+            {isLocked ? '🔒' : '🔓'}
+          </ControlButton>
+          <ControlButton
+            onClick={() => setShowMiniMap(!showMiniMap)}
+            title={showMiniMap ? 'Скрыть обзор' : 'Показать обзор рабочего процесса'}
+            className={showMiniMap ? '!bg-blue-500/20 !text-blue-300' : '!bg-slate-800/80 !text-slate-300'}
+          >
+            �️
+          </ControlButton>
+        </Controls>
+        {showMiniMap && (
+          <MiniMap 
+            position="bottom-right"
+            className="!bottom-4 !right-4 !w-48 !h-32 !bg-slate-900/90 !border !border-slate-600 !rounded-md"
+            nodeColor={(node) => {
+              const nodeData = node.data as FlowNodeCardData;
+              switch (nodeData.node.type) {
+                case 'input': return '#10b981';
+                case 'output': return '#f59e0b';
+                case 'ai': return '#8b5cf6';
+                default: return '#64748b';
+              }
+            }}
+            maskColor="rgba(15, 23, 42, 0.7)"
+          />
+        )}
       </ReactFlow>
       {(!project || project.nodes.length === 0) && !loading && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-slate-400">

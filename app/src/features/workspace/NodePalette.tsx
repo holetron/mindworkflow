@@ -14,6 +14,28 @@ interface NodePaletteProps {
   disabled?: boolean;
 }
 
+// Цвета нод по типам (как на поле)
+const getNodeTypeColor = (type: string): string => {
+  switch (type) {
+    case 'input': return '#10b981'; // green
+    case 'output': return '#f59e0b'; // amber
+    case 'ai': return '#8b5cf6'; // purple
+    case 'ai_improved': return '#8b5cf6'; // purple
+    case 'text': return '#64748b'; // slate
+    case 'file': return '#f59e0b'; // amber
+    case 'image': return '#ec4899'; // pink
+    case 'video': return '#06b6d4'; // cyan
+    case 'audio': return '#84cc16'; // lime
+    case 'html': return '#f97316'; // orange
+    default: return '#6b7280'; // gray
+  }
+};
+
+interface NodePaletteProps {
+  onCreateNode: (template: NodeTemplate, slug: string) => void | Promise<void>;
+  disabled?: boolean;
+}
+
 const GROUPS: Array<{
   key: 'basic' | 'agents';
   title: string;
@@ -108,7 +130,7 @@ function NodePalette({ onCreateNode, disabled }: NodePaletteProps) {
         />
         <p className="text-xs text-slate-400">Перетащите или кликните, чтобы добавить</p>
       </header>
-      <div className="flex-1 space-y-3 overflow-y-auto pr-1 text-sm">
+      <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar pr-1 text-sm">
         {groups.length === 0 && (
           <p className="rounded border border-dashed border-slate-700 bg-slate-900/40 p-4 text-center text-xs text-slate-400">
             Ничего не найдено.
@@ -224,18 +246,22 @@ function renderPaletteItem(
           }
         }
       }}
-      className={`flex cursor-move flex-col gap-2 rounded border border-slate-700 bg-slate-900/60 p-3 transition hover:border-primary hover:bg-slate-800 ${
+      className={`flex cursor-move flex-col gap-2 rounded p-3 transition ${
         disabled ? 'pointer-events-none opacity-40' : ''
       }`}
+      style={{
+        border: `1px solid ${getNodeTypeColor(item.template.type)}40`,
+        backgroundColor: `${getNodeTypeColor(item.template.type)}10`,
+      }}
     >
       <div className="flex items-center gap-2">
         <span className="text-lg">{item.icon}</span>
         <div>
-          <p className="font-semibold">{item.title}</p>
-          <p className="text-xs text-slate-400">{item.slug}</p>
+          <p className="font-semibold text-white">{item.title}</p>
+          <p className="text-xs opacity-60">{item.slug}</p>
         </div>
       </div>
-      <p className="text-xs text-slate-300">{item.description}</p>
+      <p className="text-xs opacity-80">{item.description}</p>
     </div>
   );
 }

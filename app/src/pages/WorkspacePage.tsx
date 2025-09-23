@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import GraphCanvas from '../features/graph/GraphCanvas';
 import NodeSidebar from '../features/workspace/NodeSidebar';
 import NodePalette from '../features/workspace/NodePalette';
+import TokenDisplay from '../ui/TokenDisplay';
 import { NODE_PALETTE } from '../data/nodePalette';
 import { DEFAULT_STICKY_NOTE } from '../data/stickyNoteDefault';
 import {
@@ -86,8 +87,23 @@ function WorkspacePage() {
   const [paletteWidth, setPaletteWidth] = useState(280);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const pendingUiRef = useRef<Map<string, NodeUI>>(new Map());
   const pendingUiTimersRef = useRef<Map<string, number>>(new Map());
+
+  // Предупреждение о несохраненных изменениях при закрытии страницы
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'У вас есть несохраненные изменения. Вы уверены, что хотите покинуть страницу?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const selectedNode = useMemo(() => selectNodeById(project, selectedNodeId), [project, selectedNodeId]);
   const previousNodes = useMemo(
@@ -430,6 +446,7 @@ function WorkspacePage() {
       const mergedMeta = { ...(node.meta ?? {}), ...metaPatch };
       upsertNodeContent(nodeId, { meta: mergedMeta });
       void persistNodeUpdate(nodeId, { meta: mergedMeta });
+      setHasUnsavedChanges(true);
     },
     [project, upsertNodeContent, persistNodeUpdate],
   );
@@ -452,6 +469,7 @@ function WorkspacePage() {
           : current.bbox,
       };
       upsertNodeContent(nodeId, { ui: nextUi });
+      setHasUnsavedChanges(true);
       pendingUiRef.current.set(nodeId, nextUi);
       const existingTimer = pendingUiTimersRef.current.get(nodeId);
       if (existingTimer) {
@@ -476,6 +494,7 @@ function WorkspacePage() {
         content_type: 'text/markdown',
       });
       void persistNodeUpdate(nodeId, { content, content_type: 'text/markdown' });
+      setHasUnsavedChanges(true);
     },
     [upsertNodeContent, persistNodeUpdate],
   );
@@ -484,6 +503,7 @@ function WorkspacePage() {
     (nodeId: string, title: string) => {
       upsertNodeContent(nodeId, { title });
       void persistNodeUpdate(nodeId, { title });
+      setHasUnsavedChanges(true);
     },
     [upsertNodeContent, persistNodeUpdate],
   );
@@ -493,12 +513,14 @@ function WorkspacePage() {
       if (options?.replace) {
         upsertNodeContent(nodeId, { ai: aiPatch });
         void persistNodeUpdate(nodeId, { ai: aiPatch });
+        setHasUnsavedChanges(true);
         return;
       }
       const current = selectNodeById(project, nodeId)?.ai as Record<string, unknown> | undefined;
       const nextAi = { ...(current ?? {}), ...aiPatch };
       upsertNodeContent(nodeId, { ai: nextAi });
       void persistNodeUpdate(nodeId, { ai: nextAi });
+      setHasUnsavedChanges(true);
     },
     [project, persistNodeUpdate, upsertNodeContent],
   );
@@ -544,6 +566,8 @@ function WorkspacePage() {
       setValidation({ status: 'idle' });
       await syncProjectDrive(project.project_id);
       setValidation({ status: 'success', message: 'Воркфлоу сохранён' });
+      setHasUnsavedChanges(false);
+      setLastSavedTime(new Date());
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setValidation({ status: 'error', message: `Не удалось сохранить: ${message}` });
@@ -640,9 +664,28 @@ function WorkspacePage() {
             <button 
               onClick={handleSaveWorkspace} 
               disabled={!project || isSaving}
-              className="h-9 w-24 rounded bg-blue-600 px-4 text-sm text-white transition hover:bg-blue-500 disabled:opacity-50"
+              className={`h-9 px-4 text-sm text-white transition disabled:opacity-50 flex items-center gap-2 ${
+                hasUnsavedChanges 
+                  ? 'bg-orange-600 hover:bg-orange-500' 
+                  : 'bg-blue-600 hover:bg-blue-500'
+              }`}
             >
-              {isSaving ? 'Сохраняю…' : 'Сохранить'}
+              {isSaving ? (
+                <>
+                  <span className="animate-spin">⟳</span>
+                  Сохраняю…
+                </>
+              ) : hasUnsavedChanges ? (
+                <>
+                  <span className="text-orange-200">●</span>
+                  Сохранить*
+                </>
+              ) : (
+                <>
+                  <span className="text-green-300">✓</span>
+                  Сохранено
+                </>
+              )}
             </button>
             <button
               onClick={handleDeleteWorkspace}
@@ -702,7 +745,8 @@ function WorkspacePage() {
         onResize={(delta) => setPaletteWidth((prev) => clamp(prev - delta, PALETTE_MIN_WIDTH, PALETTE_MAX_WIDTH))}
       />
       <aside className="flex-shrink-0" style={{ width: paletteWidth }}>
-        <div className="h-full overflow-auto">
+        <div className="h-full overflow-auto flex flex-col gap-4 p-4">
+          <TokenDisplay project={project} />
           <NodePalette onCreateNode={handlePaletteCreate} disabled={loading || !project} />
         </div>
       </aside>

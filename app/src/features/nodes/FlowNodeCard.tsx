@@ -640,6 +640,9 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(node.title);
   const [isResizing, setIsResizing] = useState(false);
+  const [showFileDialog, setShowFileDialog] = useState(false);
+  const [fileUrlInput, setFileUrlInput] = useState('');
+  const [fileDialogMode, setFileDialogMode] = useState<'url' | 'upload'>('url');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [activeAiTab, setActiveAiTab] = useState<'settings' | 'fields' | 'routing' | 'provider' | 'model' | ''>('settings');
   
@@ -653,6 +656,12 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   // HTML node specific states
   const [htmlUrl, setHtmlUrl] = useState<string>((node.meta?.htmlUrl as string) || 'https://wikipedia.org');
   const [screenWidth, setScreenWidth] = useState<string>((node.meta?.screenWidth as string) || 'desktop');
+  const [htmlViewportWidth, setHtmlViewportWidth] = useState<number>((node.meta?.htmlViewportWidth as number) || 1024);
+  const [htmlViewMode, setHtmlViewMode] = useState<'render' | 'code'>(() => {
+    const mode = node.meta?.htmlViewMode as string;
+    return mode === 'code' ? 'code' : 'render';
+  });
+  const [htmlSourceCode, setHtmlSourceCode] = useState<string>((node.meta?.htmlSourceCode as string) || '');
 
   // Refs for DOM manipulation
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -730,6 +739,34 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
     e.stopPropagation(); // Prevent node dragging when clicking inside input
   }, []);
 
+  // File handling callbacks
+  const handleFileUrlSubmit = useCallback(() => {
+    if (fileUrlInput.trim()) {
+      const currentAttachments = node.meta?.attachments as string[] || [];
+      onChangeMeta(node.node_id, { 
+        attachments: [...currentAttachments, fileUrlInput.trim()] 
+      });
+      setFileUrlInput('');
+      setShowFileDialog(false);
+    }
+  }, [fileUrlInput, node.meta?.attachments, node.node_id, onChangeMeta]);
+
+  const handleFileUpload = useCallback((files: FileList) => {
+    const fileNames = Array.from(files).map(f => f.name);
+    const currentAttachments = node.meta?.attachments as string[] || [];
+    onChangeMeta(node.node_id, { 
+      attachments: [...currentAttachments, ...fileNames] 
+    });
+    setShowFileDialog(false);
+    console.log('Files attached:', fileNames);
+  }, [node.meta?.attachments, node.node_id, onChangeMeta]);
+
+  const openFileDialog = useCallback(() => {
+    setShowFileDialog(true);
+    setFileDialogMode('url');
+    setFileUrlInput('');
+  }, []);
+
   // Sync state with node changes
   useEffect(() => {
     setTitleValue(node.title);
@@ -765,6 +802,34 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
     setScreenWidth(width);
     onChangeMeta(node.node_id, { screenWidth: width });
   }, [onChangeMeta, node.node_id]);
+
+  const handleHtmlViewportWidthChange = useCallback((width: number) => {
+    setHtmlViewportWidth(width);
+    onChangeMeta(node.node_id, { htmlViewportWidth: width });
+  }, [onChangeMeta, node.node_id]);
+
+  const handleHtmlViewModeChange = useCallback((mode: 'render' | 'code') => {
+    setHtmlViewMode(mode);
+    onChangeMeta(node.node_id, { htmlViewMode: mode });
+  }, [onChangeMeta, node.node_id]);
+
+  const handleHtmlSourceCodeChange = useCallback((code: string) => {
+    setHtmlSourceCode(code);
+    onChangeMeta(node.node_id, { htmlSourceCode: code });
+  }, [onChangeMeta, node.node_id]);
+
+  const handleHtmlRefresh = useCallback(() => {
+    if (htmlViewMode === 'render') {
+      // Force iframe reload
+      const iframe = document.querySelector(`[data-node-id="${node.node_id}"] iframe`) as HTMLIFrameElement;
+      if (iframe && htmlUrl) {
+        iframe.src = htmlUrl + '?t=' + Date.now(); // Add timestamp to force reload
+        // Reset HTML source code when refreshing from URL
+        setHtmlSourceCode('');
+        onChangeMeta(node.node_id, { htmlSourceCode: '' });
+      }
+    }
+  }, [htmlViewMode, htmlUrl, node.node_id, onChangeMeta]);
 
   // Get node dimensions from React Flow state
   const currentReactFlowNode = reactFlow.getNode(node.node_id);
@@ -1057,6 +1122,23 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
         </div>
 
         <div className="flow-node__toolbar">
+          {/* Delete button - moved to right upper corner */}
+          <button
+            type="button"
+            className="flow-node__toolbar-button text-red-400 hover:text-red-300"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (window.confirm('Удалить эту ноду?')) {
+                onDelete(node.node_id);
+              }
+            }}
+            title="Удалить ноду"
+            disabled={disabled}
+          >
+            🗑️
+          </button>
+
           {/* Collapse/Expand button - hidden only for data and parser nodes */}
           {!(node.type === 'data' || node.type === 'parser') && (
             <button
@@ -1107,21 +1189,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              const input = document.createElement('input');
-              input.type = 'file';
-              input.multiple = true;
-              input.onchange = (event) => {
-                const files = (event.target as HTMLInputElement).files;
-                if (files) {
-                  const fileNames = Array.from(files).map(f => f.name);
-                  const currentAttachments = node.meta?.attachments as string[] || [];
-                  onChangeMeta(node.node_id, { 
-                    attachments: [...currentAttachments, ...fileNames] 
-                  });
-                  console.log('Files attached:', fileNames);
-                }
-              };
-              input.click();
+              openFileDialog();
             }}
             title="Прикрепить файлы"
             disabled={disabled}
@@ -1145,23 +1213,6 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
               ▶️
             </button>
           )}
-
-          {/* Delete button */}
-          <button
-            type="button"
-            className="flow-node__toolbar-button text-red-400 hover:text-red-300"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (window.confirm('Удалить эту ноду?')) {
-                onDelete(node.node_id);
-              }
-            }}
-            title="Удалить ноду"
-            disabled={disabled}
-          >
-            🗑️
-          </button>
         </div>
       </div>
 
@@ -1189,8 +1240,8 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
           ref={contentRef} 
           className="flow-node__content nodrag"
           style={{ 
-            padding: '16px', 
-            paddingBottom: '8px', // Less padding at bottom since footer provides separation
+            padding: node.type === 'image' ? '0' : '16px', 
+            paddingBottom: node.type === 'image' ? '0' : '8px', // Less padding at bottom since footer provides separation
             display: 'flex', 
             flexDirection: 'column',
             height: '100%'
@@ -1484,94 +1535,191 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
           }}>
             {/* Don't render content area for improved AI nodes - they handle their own content */}
             {isImprovedAiNode ? null : node.type === 'html' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }} data-node-id={node.id}>
-                {/* Website Preview */}
-                <div className="w-full bg-white/5 border border-white/10 rounded flex-1 mb-3 overflow-hidden">
-                  {htmlUrl ? (
-                    <iframe
-                      src={htmlUrl}
-                      className="w-full h-full border-0"
-                      style={{ 
-                        width: '100%', // Always fill the container width
-                        height: '100%', // Always fill the container height
-                        minHeight: '200px',
-                        transformOrigin: 'top left',
-                        // Scale content to fit if needed
-                        transform: screenWidth !== 'desktop' ? `scale(${getScaleForScreenWidth(screenWidth, nodeWidth)})` : 'none'
-                      }}
-                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
-                      loading="lazy"
-                      title="Website Preview"
-                    />
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }} data-node-id={node.node_id}>
+                {/* Content Area */}
+                <div className="w-full bg-white/5 border border-white/10 rounded flex-1 mb-2 overflow-hidden">
+                  {htmlViewMode === 'render' ? (
+                    htmlUrl ? (
+                      <iframe
+                        src={htmlUrl}
+                        className="w-full h-full border-0"
+                        style={{ 
+                          width: `${htmlViewportWidth}px`,
+                          height: '100%',
+                          minHeight: '200px',
+                          transformOrigin: 'top left',
+                          transform: htmlViewportWidth > nodeWidth ? `scale(${nodeWidth / htmlViewportWidth})` : 'none'
+                        }}
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+                        loading="lazy"
+                        title="Website Preview"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white/50 text-sm">
+                        Введите URL для предпросмотра сайта
+                      </div>
+                    )
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white/50 text-sm">
-                      Введите URL для предпросмотра сайта
-                    </div>
+                    <textarea
+                      value={htmlSourceCode}
+                      onChange={(e) => handleHtmlSourceCodeChange(e.target.value)}
+                      placeholder="Введите HTML код для предпросмотра..."
+                      className="w-full h-full p-3 bg-transparent border-0 text-white text-xs font-mono resize-none nodrag"
+                      style={{
+                        fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+                        lineHeight: '1.4',
+                        outline: 'none'
+                      }}
+                      data-nodrag="true"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    />
                   )}
                 </div>
                 
-                {/* HTML Controls - in one row at bottom */}
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1">
-                    <label className="text-xs text-white/70 block mb-1">URL</label>
-                    <input
-                      type="url"
-                      value={htmlUrl}
-                      onChange={(e) => handleHtmlUrlChange(e.target.value)}
-                      placeholder="https://wikipedia.org"
-                      className="w-full p-1.5 bg-black/20 border border-white/10 rounded text-xs text-white nodrag"
-                      onMouseDown={(e) => e.stopPropagation()} // Prevent node dragging when clicking in input
-                      onPointerDown={(e) => e.stopPropagation()} // Prevent pointer events from bubbling
-                      draggable={false} // Explicitly disable dragging
-                      data-nodrag="true" // Additional React Flow hint
-                      onKeyDown={(e) => {
-                        e.stopPropagation(); // Prevent keyboard events from bubbling
-                        if (e.key === 'Enter') {
-                          // Force iframe reload on Enter
-                          const iframe = e.currentTarget.closest('.flex')?.previousElementSibling?.querySelector('iframe') as HTMLIFrameElement;
-                          if (iframe && htmlUrl) {
-                            iframe.src = htmlUrl;
-                          }
-                        }
-                      }}
-                    />
+                {/* Enhanced Controls Panel */}
+                <div className="space-y-1">
+                  {/* URL and controls in one compact row */}
+                  {htmlViewMode === 'render' && (
+                    <div className="flex gap-1 items-end">
+                      <div className="flex-1 min-w-0">
+                        <label className="text-[10px] text-white/70 block mb-0.5">URL</label>
+                        <input
+                          type="url"
+                          value={htmlUrl}
+                          onChange={(e) => handleHtmlUrlChange(e.target.value)}
+                          placeholder="https://wikipedia.org"
+                          className="w-full p-1 bg-black/20 border border-white/10 rounded text-[10px] text-white nodrag"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          draggable={false}
+                          data-nodrag="true"
+                          onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === 'Enter') {
+                              handleHtmlRefresh();
+                            }
+                          }}
+                        />
+                      </div>
+                      <button
+                        onClick={handleHtmlRefresh}
+                        className="p-1 bg-black/20 border border-white/10 rounded text-white/70 hover:text-white hover:bg-black/30 transition-colors text-[10px]"
+                        title="Обновить страницу"
+                      >
+                        🔄
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Viewport and Scale in compact row */}
+                  <div className="flex gap-1 items-end">
+                    <div className="w-16">
+                      <label className="text-[10px] text-white/70 block mb-0.5">Viewport</label>
+                      <input
+                        type="number"
+                        value={htmlViewportWidth}
+                        onChange={(e) => handleHtmlViewportWidthChange(Number(e.target.value) || 1024)}
+                        placeholder="1024"
+                        min="320"
+                        max="1920"
+                        className="w-full p-1 bg-black/20 border border-white/10 rounded text-[10px] text-white nodrag"
+                        data-nodrag="true"
+                        title="Ширина viewport в пикселях"
+                      />
+                    </div>
+                    <div className="w-20">
+                      <label className="text-[10px] text-white/70 block mb-0.5">Масштаб</label>
+                      <select
+                        value={screenWidth}
+                        onChange={(e) => handleScreenWidthChange(e.target.value)}
+                        className="w-full p-1 bg-black/20 border border-white/10 rounded text-[10px] text-white nodrag"
+                        title="Предустановленные размеры экранов"
+                        data-nodrag="true"
+                      >
+                        {SCREEN_WIDTHS.map(sw => (
+                          <option key={sw.id} value={sw.id}>
+                            {sw.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="w-16">
+                      <label className="text-[10px] text-white/70 block mb-0.5">Режим</label>
+                      <select
+                        value={htmlViewMode}
+                        onChange={(e) => handleHtmlViewModeChange(e.target.value as 'render' | 'code')}
+                        className="w-full p-1 bg-black/20 border border-white/10 rounded text-[10px] text-white nodrag"
+                        title="Режим отображения"
+                        data-nodrag="true"
+                      >
+                        <option value="render">🌐 Рендер</option>
+                        <option value="code">📝 HTML</option>
+                      </select>
+                    </div>
+                    {htmlViewMode === 'code' && htmlSourceCode && (
+                      <button
+                        onClick={() => {
+                          // Create a blob URL from HTML source code
+                          const blob = new Blob([htmlSourceCode], { type: 'text/html' });
+                          const url = URL.createObjectURL(blob);
+                          setHtmlUrl(url);
+                          handleHtmlUrlChange(url);
+                          handleHtmlViewModeChange('render');
+                        }}
+                        className="p-1 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] transition-colors"
+                        title="Превью HTML кода"
+                      >
+                        👁️
+                      </button>
+                    )}
                   </div>
-                  <div className="w-32">
-                    <label className="text-xs text-white/70 block mb-1">Масштаб</label>
-                    <select
-                      value={screenWidth}
-                      onChange={(e) => handleScreenWidthChange(e.target.value)}
-                      className="w-full p-1.5 bg-black/20 border border-white/10 rounded text-xs text-white nodrag"
-                      title="Масштабирование для разных размеров экранов"
-                      data-nodrag="true"
-                    >
-                      {SCREEN_WIDTHS.map(sw => (
-                        <option key={sw.id} value={sw.id}>
-                          {sw.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    onClick={() => {
-                      // Force iframe reload
-                      const iframe = document.querySelector(`[data-node-id="${node.id}"] iframe`) as HTMLIFrameElement;
-                      if (iframe && htmlUrl) {
-                        iframe.src = htmlUrl + '?t=' + Date.now(); // Add timestamp to force reload
-                      }
-                    }}
-                    className="p-1.5 bg-black/20 border border-white/10 rounded text-white/70 hover:text-white hover:bg-black/30 transition-colors"
-                    title="Обновить страницу"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                      <path d="M8 2.5a5.5 5.5 0 0 1 4.596 2.463l1.154-1.154a.5.5 0 0 1 .85.353v3.5a.5.5 0 0 1-.5.5h-3.5a.5.5 0 0 1-.353-.854l1.12-1.12A4.5 4.5 0 1 0 8 12.5a.5.5 0 0 1 0 1A5.5 5.5 0 1 1 8 2.5z"/>
-                    </svg>
-                  </button>
                 </div>
               </div>
             ) : node.type === 'image' ? (
-              // Image node content
-              <div className="space-y-3">
+              // Image node content - заполняем всю область
+              <div className="flex-1 flex flex-col">
+                {/* Image Preview - заполняем всю доступную область */}
+                {(() => {
+                  const imageUrl = node.meta?.image_url;
+                  const imageData = node.meta?.image_data;
+                  const imageSrc = (typeof imageData === 'string' && imageData) || (typeof imageUrl === 'string' && imageUrl);
+                  const imageScale = (node.meta?.image_scale as number) || 1;
+                  
+                  return imageSrc ? (
+                    <div className="flex-1 overflow-hidden bg-black/20 rounded-none border-0">
+                      <img
+                        src={imageSrc}
+                        alt="Preview"
+                        className="w-full h-full object-cover cursor-pointer"
+                        style={{
+                          objectFit: 'cover',
+                          backgroundColor: 'rgba(0,0,0,0.1)',
+                          transform: `scale(${imageScale})`,
+                          transformOrigin: 'center',
+                          transition: 'transform 0.2s ease'
+                        }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                        onClick={() => {
+                          // Cycle through scale values: 1 -> 1.5 -> 2 -> 0.5 -> 1
+                          const scales = [1, 1.5, 2, 0.5];
+                          const currentIndex = scales.indexOf(imageScale);
+                          const nextScale = scales[(currentIndex + 1) % scales.length];
+                          onChangeMeta(node.node_id, { image_scale: nextScale });
+                        }}
+                        title={`Масштаб: ${Math.round(imageScale * 100)}% (клик для изменения)`}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-slate-400 text-sm bg-black/10">
+                      Изображение не загружено
+                    </div>
+                  );
+                })()}
+
+                {/* Controls */}
                 <div className="flex gap-2 mb-3">
                   <button
                     type="button"
@@ -1582,7 +1730,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                         : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30'
                     }`}
                   >
-                    По ссылке
+                    🔗 По ссылке
                   </button>
                   <button
                     type="button"
@@ -1593,8 +1741,50 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                         : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30'
                     }`}
                   >
-                    Загрузить
+                    📁 Загрузить
                   </button>
+                  
+                  {/* Scale controls - показываем только если есть изображение */}
+                  {((node.meta?.image_url as string) || (node.meta?.image_data as string)) && (
+                    <>
+                      <div className="w-px bg-white/20 mx-1"></div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentScale = (node.meta?.image_scale as number) || 1;
+                          const newScale = Math.max(0.25, currentScale - 0.25);
+                          onChangeMeta(node.node_id, { image_scale: newScale });
+                        }}
+                        className="px-2 py-1 text-xs rounded border border-white/10 bg-black/20 text-white/70 hover:bg-black/30 transition"
+                        title="Уменьшить"
+                      >
+                        🔍−
+                      </button>
+                      <span className="px-2 py-1 text-xs text-white/60 flex items-center">
+                        {Math.round(((node.meta?.image_scale as number) || 1) * 100)}%
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentScale = (node.meta?.image_scale as number) || 1;
+                          const newScale = Math.min(3, currentScale + 0.25);
+                          onChangeMeta(node.node_id, { image_scale: newScale });
+                        }}
+                        className="px-2 py-1 text-xs rounded border border-white/10 bg-black/20 text-white/70 hover:bg-black/30 transition"
+                        title="Увеличить"
+                      >
+                        🔍+
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onChangeMeta(node.node_id, { image_scale: 1 })}
+                        className="px-2 py-1 text-xs rounded border border-white/10 bg-black/20 text-white/70 hover:bg-black/30 transition"
+                        title="Сбросить масштаб"
+                      >
+                        🎯
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {(node.meta?.display_mode || 'url') === 'url' ? (
@@ -1607,21 +1797,6 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                       className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm text-white nodrag"
                       data-nodrag="true"
                     />
-                    {(() => {
-                      const imageUrl = node.meta?.image_url;
-                      return imageUrl && typeof imageUrl === 'string' ? (
-                        <div className="mt-3 border border-white/10 rounded overflow-hidden">
-                          <img
-                            src={imageUrl}
-                            alt="Preview"
-                            className="w-full h-auto max-h-64 object-contain bg-black/20"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                        </div>
-                      ) : null;
-                    })()}
                   </div>
                 ) : (
                   <div>
@@ -1634,8 +1809,18 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                         input.onchange = (e) => {
                           const file = (e.target as HTMLInputElement).files?.[0];
                           if (file) {
-                            onChangeMeta(node.node_id, { image_file: file.name });
-                            console.log('Image file selected:', file.name);
+                            // Создаем URL для предпросмотра
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const imageData = event.target?.result as string;
+                              onChangeMeta(node.node_id, { 
+                                image_file: file.name,
+                                image_data: imageData,
+                                file_size: file.size,
+                                file_type: file.type
+                              });
+                            };
+                            reader.readAsDataURL(file);
                           }
                         };
                         input.click();
@@ -1646,9 +1831,17 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                     </button>
                     {(() => {
                       const imageFile = node.meta?.image_file;
+                      const fileSize = node.meta?.file_size;
                       return imageFile && typeof imageFile === 'string' ? (
-                        <div className="mt-2 text-xs text-white/70">
-                          Файл: {imageFile}
+                        <div className="mt-2 flex justify-between items-center text-xs">
+                          <span className="text-white/70">
+                            📄 {imageFile}
+                          </span>
+                          {typeof fileSize === 'number' && (
+                            <span className="text-white/50">
+                              {(fileSize / 1024 / 1024).toFixed(1)} MB
+                            </span>
+                          )}
                         </div>
                       ) : null;
                     })()}
@@ -1658,6 +1851,46 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
             ) : node.type === 'video' ? (
               // Video node content
               <div className="space-y-3">
+                {/* Video Preview - показываем сверху */}
+                {(() => {
+                  const videoUrl = node.meta?.video_url;
+                  const videoData = node.meta?.video_data;
+                  const videoSrc = (typeof videoData === 'string' && videoData) || (typeof videoUrl === 'string' && videoUrl);
+                  const videoScale = (node.meta?.video_scale as number) || 1;
+                  
+                  return videoSrc ? (
+                    <div className="border border-white/10 rounded overflow-hidden bg-black/20">
+                      <video
+                        src={videoSrc}
+                        controls={node.meta?.controls !== false}
+                        autoPlay={false}
+                        className="w-full h-auto cursor-pointer"
+                        preload="metadata"
+                        style={{
+                          maxHeight: `${200 * videoScale}px`,
+                          minHeight: '120px',
+                          backgroundColor: 'rgba(0,0,0,0.1)',
+                          transform: `scale(${videoScale})`,
+                          transformOrigin: 'center',
+                          transition: 'transform 0.2s ease'
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          // Cycle through scale values: 1 -> 1.5 -> 2 -> 0.5 -> 1
+                          const scales = [1, 1.5, 2, 0.5];
+                          const currentIndex = scales.indexOf(videoScale);
+                          const nextIndex = (currentIndex + 1) % scales.length;
+                          const nextScale = scales[nextIndex];
+                          onChangeMeta(node.node_id, { video_scale: nextScale });
+                        }}
+                      >
+                        Ваш браузер не поддерживает видео.
+                      </video>
+                    </div>
+                  ) : null;
+                })()}
+
+                {/* Controls */}
                 <div className="flex gap-2 mb-3">
                   <button
                     type="button"
@@ -1668,7 +1901,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                         : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30'
                     }`}
                   >
-                    По ссылке
+                    🔗 По ссылке
                   </button>
                   <button
                     type="button"
@@ -1679,7 +1912,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                         : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30'
                     }`}
                   >
-                    Загрузить
+                    🎬 Загрузить
                   </button>
                 </div>
 
@@ -1693,22 +1926,6 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                       className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm text-white nodrag"
                       data-nodrag="true"
                     />
-                    {(() => {
-                      const videoUrl = node.meta?.video_url;
-                      return videoUrl && typeof videoUrl === 'string' ? (
-                        <div className="mt-3 border border-white/10 rounded overflow-hidden">
-                          <video
-                            src={videoUrl}
-                            controls={node.meta?.controls !== false}
-                            autoPlay={node.meta?.autoplay === true}
-                            className="w-full h-auto max-h-64"
-                            preload="metadata"
-                          >
-                            Ваш браузер не поддерживает видео.
-                          </video>
-                        </div>
-                      ) : null;
-                    })()}
                   </div>
                 ) : (
                   <div>
@@ -1721,8 +1938,18 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                         input.onchange = (e) => {
                           const file = (e.target as HTMLInputElement).files?.[0];
                           if (file) {
-                            onChangeMeta(node.node_id, { video_file: file.name });
-                            console.log('Video file selected:', file.name);
+                            // Создаем URL для предпросмотра
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const videoData = event.target?.result as string;
+                              onChangeMeta(node.node_id, { 
+                                video_file: file.name,
+                                video_data: videoData,
+                                file_size: file.size,
+                                file_type: file.type
+                              });
+                            };
+                            reader.readAsDataURL(file);
                           }
                         };
                         input.click();
@@ -1733,9 +1960,17 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                     </button>
                     {(() => {
                       const videoFile = node.meta?.video_file;
+                      const fileSize = node.meta?.file_size;
                       return videoFile && typeof videoFile === 'string' ? (
-                        <div className="mt-2 text-xs text-white/70">
-                          Файл: {videoFile}
+                        <div className="mt-2 flex justify-between items-center text-xs">
+                          <span className="text-white/70">
+                            🎬 {videoFile}
+                          </span>
+                          {typeof fileSize === 'number' && (
+                            <span className="text-white/50">
+                              {(fileSize / 1024 / 1024).toFixed(1)} MB
+                            </span>
+                          )}
                         </div>
                       ) : null;
                     })()}
@@ -1800,6 +2035,117 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                   </div>
                 </div>
               </div>
+            ) : node.type === 'file' ? (
+              // File node content
+              <div className="space-y-3">
+                {/* File Preview */}
+                {(() => {
+                  const attachments = (node.meta?.attachments as string[]) || [];
+                  const fileData = node.meta?.file_data;
+                  const fileName = node.meta?.file_name as string | undefined;
+                  
+                  const hasFiles = attachments.length > 0 || fileName;
+                  
+                  return hasFiles ? (
+                    <div className="space-y-2">
+                      <div className="text-xs text-white/70 mb-2">Прикрепленные файлы:</div>
+                      {/* Display attachments */}
+                      {attachments.map((file: string, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-black/20 rounded border border-white/10">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">📎</span>
+                            <span className="text-sm text-white/80 truncate max-w-48">{file}</span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const newAttachments = attachments.filter((_, i) => i !== index);
+                              onChangeMeta(node.node_id, { attachments: newAttachments });
+                            }}
+                            className="text-red-400 hover:text-red-300 text-xs ml-2"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                      
+                      {/* Display main file if exists */}
+                      {fileName && (
+                        <div className="flex items-center justify-between p-2 bg-black/20 rounded border border-white/10">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">📄</span>
+                            <span className="text-sm text-white/80 truncate max-w-48">{fileName}</span>
+                          </div>
+                          {typeof node.meta?.file_size === 'number' && (
+                            <span className="text-xs text-white/50">
+                              {((node.meta.file_size as number) / 1024 / 1024).toFixed(1)} MB
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-white/50 text-sm border border-dashed border-white/20 rounded">
+                      📁 Нет прикрепленных файлов
+                    </div>
+                  );
+                })()}
+
+                {/* File Upload Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.multiple = true;
+                    input.onchange = (e) => {
+                      const files = (e.target as HTMLInputElement).files;
+                      if (files && files.length > 0) {
+                        const fileNames = Array.from(files).map(f => f.name);
+                        const currentAttachments = node.meta?.attachments as string[] || [];
+                        
+                        // For single file, also store file info
+                        if (files.length === 1) {
+                          const file = files[0];
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            onChangeMeta(node.node_id, { 
+                              attachments: [...currentAttachments, ...fileNames],
+                              file_name: file.name,
+                              file_data: event.target?.result as string,
+                              file_size: file.size,
+                              file_type: file.type
+                            });
+                          };
+                          reader.readAsDataURL(file);
+                        } else {
+                          onChangeMeta(node.node_id, { 
+                            attachments: [...currentAttachments, ...fileNames] 
+                          });
+                        }
+                      }
+                    };
+                    input.click();
+                  }}
+                  className="w-full p-3 bg-black/20 border border-dashed border-white/30 rounded text-sm text-white/70 hover:bg-black/30 hover:border-white/50 transition"
+                >
+                  📎 Прикрепить файлы
+                </button>
+
+                {/* Description/Notes */}
+                <textarea
+                  value={contentValue}
+                  onChange={(e) => handleContentChange(e.target.value)}
+                  placeholder="Описание файлов или заметки..."
+                  disabled={disabled}
+                  className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm resize-none nodrag"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  draggable={false}
+                  data-nodrag="true"
+                  rows={2}
+                />
+              </div>
             ) : (
               // Regular textarea for other node types
               <textarea
@@ -1847,10 +2193,81 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
           {/* Compact info when collapsed */}
           <div className="flex items-center justify-between text-xs text-white/70">
             <div className="flex items-center gap-2">
-              {/* Content preview */}
-              <span className="max-w-32 truncate">
-                {node.content ? `"${node.content.substring(0, 40)}..."` : 'Нет содержимого'}
-              </span>
+              {/* Content preview - different for each node type */}
+              {(() => {
+                if (node.type === 'image') {
+                  const imageUrl = node.meta?.image_url as string | undefined;
+                  const imageFile = node.meta?.image_file as string | undefined;
+                  if (imageUrl || imageFile) {
+                    return (
+                      <span className="text-blue-300">
+                        🖼️ {imageFile || 'По ссылке'}
+                      </span>
+                    );
+                  }
+                  return <span className="text-white/40">Нет изображения</span>;
+                }
+                
+                if (node.type === 'video') {
+                  const videoUrl = node.meta?.video_url as string | undefined;
+                  const videoFile = node.meta?.video_file as string | undefined;
+                  if (videoUrl || videoFile) {
+                    return (
+                      <span className="text-purple-300">
+                        🎬 {videoFile || 'По ссылке'}
+                      </span>
+                    );
+                  }
+                  return <span className="text-white/40">Нет видео</span>;
+                }
+                
+                if (node.type === 'file') {
+                  const attachments = (node.meta?.attachments as string[]) || [];
+                  const fileName = node.meta?.file_name as string | undefined;
+                  const totalFiles = attachments.length + (fileName ? 1 : 0);
+                  if (totalFiles > 0) {
+                    return (
+                      <span className="text-green-300">
+                        📁 {totalFiles} файл{totalFiles > 1 ? 'ов' : ''}
+                      </span>
+                    );
+                  }
+                  return <span className="text-white/40">Нет файлов</span>;
+                }
+                
+                if (node.type === 'folder') {
+                  const items = (node.meta?.folder_items as string[]) || [];
+                  return (
+                    <span className="text-yellow-300">
+                      📂 {items.length} элемент{items.length !== 1 ? 'ов' : ''}
+                    </span>
+                  );
+                }
+                
+                if (node.type === 'html') {
+                  const htmlUrl = node.meta?.htmlUrl;
+                  if (htmlUrl) {
+                    try {
+                      const domain = new URL(htmlUrl as string).hostname;
+                      return (
+                        <span className="text-cyan-300">
+                          🌐 {domain}
+                        </span>
+                      );
+                    } catch {
+                      return <span className="text-cyan-300">🌐 HTML</span>;
+                    }
+                  }
+                  return <span className="text-white/40">Нет URL</span>;
+                }
+                
+                // Default content preview for other types
+                return (
+                  <span className="max-w-32 truncate">
+                    {node.content ? `"${node.content.substring(0, 40)}..."` : 'Нет содержимого'}
+                  </span>
+                );
+              })()}
             </div>
             <div className="flex items-center gap-3">
               {/* AI model indicator */}
@@ -1859,10 +2276,24 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                   🤖 {selectedProvider.name}
                 </span>
               )}
-              {/* Character count */}
-              <span className="text-white/50">
-                {(node.content || '').length} сим.
-              </span>
+              {/* Character count or specific info */}
+              {(() => {
+                if (node.type === 'image' || node.type === 'video') {
+                  const fileSize = node.meta?.file_size;
+                  if (fileSize && typeof fileSize === 'number') {
+                    return (
+                      <span className="text-white/50">
+                        {(fileSize / 1024 / 1024).toFixed(1)} MB
+                      </span>
+                    );
+                  }
+                }
+                return (
+                  <span className="text-white/50">
+                    {(node.content || '').length} сим.
+                  </span>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -1945,11 +2376,11 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
             position: 'absolute',
             bottom: '0px',
             right: '0px',
-            width: '16px',
-            height: '16px',
+            width: '24px',
+            height: '24px',
             cursor: 'nwse-resize',
             backgroundColor: isResizing ? 'rgba(59, 130, 246, 0.9)' : 'rgba(148, 163, 184, 0.8)',
-            borderRadius: '2px 0 2px 0',
+            borderRadius: '4px 0 4px 0',
             zIndex: 20,
             opacity: selected || isResizing ? 1 : 0.7,
             transition: isResizing ? 'none' : 'all 0.2s ease',
@@ -1979,6 +2410,123 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
           onUpdateNodeMeta={onChangeMeta}
           loading={disabled}
         />
+      )}
+
+      {/* File Dialog Modal */}
+      {showFileDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-900 rounded-lg border border-slate-700 p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-white mb-4">Добавить файл</h3>
+            
+            {/* Mode selector */}
+            <div className="flex rounded-lg overflow-hidden mb-4">
+              <button
+                className={`flex-1 py-2 px-4 text-sm font-medium transition ${
+                  fileDialogMode === 'url' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+                onClick={() => setFileDialogMode('url')}
+              >
+                По ссылке
+              </button>
+              <button
+                className={`flex-1 py-2 px-4 text-sm font-medium transition ${
+                  fileDialogMode === 'upload' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+                onClick={() => setFileDialogMode('upload')}
+              >
+                Загрузить
+              </button>
+            </div>
+
+            {/* URL input mode */}
+            {fileDialogMode === 'url' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    URL файла
+                  </label>
+                  <input
+                    type="url"
+                    value={fileUrlInput}
+                    onChange={(e) => setFileUrlInput(e.target.value)}
+                    placeholder="https://example.com/file.pdf"
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleFileUrlSubmit();
+                      } else if (e.key === 'Escape') {
+                        setShowFileDialog(false);
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setShowFileDialog(false)}
+                    className="px-4 py-2 text-slate-400 hover:text-white transition"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    onClick={handleFileUrlSubmit}
+                    disabled={!fileUrlInput.trim()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    Добавить
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Upload mode */}
+            {fileDialogMode === 'upload' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Выберите файлы
+                  </label>
+                  <div
+                    className="border-2 border-dashed border-slate-600 rounded-md p-6 text-center cursor-pointer hover:border-slate-500 transition"
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.multiple = true;
+                      input.onchange = (event) => {
+                        const files = (event.target as HTMLInputElement).files;
+                        if (files) {
+                          handleFileUpload(files);
+                        }
+                      };
+                      input.click();
+                    }}
+                  >
+                    <div className="text-slate-400">
+                      <div className="text-2xl mb-2">📁</div>
+                      <div className="text-sm">
+                        Нажмите для выбора файлов
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        Можно выбрать несколько файлов
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowFileDialog(false)}
+                    className="px-4 py-2 text-slate-400 hover:text-white transition"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
