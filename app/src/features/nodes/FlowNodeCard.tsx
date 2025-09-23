@@ -1924,6 +1924,11 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                       onChange={(e) => onChangeMeta(node.node_id, { video_url: e.target.value })}
                       placeholder="https://youtube.com/watch?v=... или прямая ссылка на видео"
                       className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm text-white nodrag"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      draggable={false}
                       data-nodrag="true"
                     />
                   </div>
