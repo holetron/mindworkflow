@@ -129,6 +129,22 @@ const COLOR_PALETTE = [
 const DEFAULT_COLOR = NODE_DEFAULT_COLOR;
 const DEFAULT_MODEL = 'gpt-4.1-mini';
 
+// Helper function to calculate scale for different screen widths
+function getScaleForScreenWidth(screenWidthId: string, nodeWidth: number): number {
+  const screenWidthConfig = SCREEN_WIDTHS.find(sw => sw.id === screenWidthId);
+  if (!screenWidthConfig) return 1;
+  
+  const targetWidth = parseInt(screenWidthConfig.width);
+  const availableWidth = nodeWidth - 32; // Account for padding
+  
+  // If target width is larger than available space, scale down
+  if (targetWidth > availableWidth) {
+    return availableWidth / targetWidth;
+  }
+  
+  return 1; // No scaling needed
+}
+
 const FALLBACK_PROVIDERS: AiProviderOption[] = [
   {
     id: 'stub',
@@ -1289,9 +1305,12 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                       src={htmlUrl}
                       className="w-full h-full border-0"
                       style={{ 
-                        width: SCREEN_WIDTHS.find(sw => sw.id === screenWidth)?.width || '100%',
+                        width: '100%', // Always fill the container width
+                        height: '100%', // Always fill the container height
                         minHeight: '200px',
-                        transformOrigin: 'top left'
+                        transformOrigin: 'top left',
+                        // Scale content to fit if needed
+                        transform: screenWidth !== 'desktop' ? `scale(${getScaleForScreenWidth(screenWidth, nodeWidth)})` : 'none'
                       }}
                       sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
                       loading="lazy"
@@ -1326,11 +1345,12 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                     />
                   </div>
                   <div className="w-32">
-                    <label className="text-xs text-white/70 block mb-1">Экран</label>
+                    <label className="text-xs text-white/70 block mb-1">Масштаб</label>
                     <select
                       value={screenWidth}
                       onChange={(e) => handleScreenWidthChange(e.target.value)}
                       className="w-full p-1.5 bg-black/20 border border-white/10 rounded text-xs text-white"
+                      title="Масштабирование для разных размеров экранов"
                     >
                       {SCREEN_WIDTHS.map(sw => (
                         <option key={sw.id} value={sw.id}>
