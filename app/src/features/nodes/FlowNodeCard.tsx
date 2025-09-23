@@ -110,9 +110,13 @@ export interface FlowNodeCardData {
 const TYPE_ICONS: Record<string, string> = {
   text: '📝',
   ai: '🤖',
+  ai_improved: '🤖',
   parser: '🧩',
   python: '🐍',
   file: '📁',
+  image: '🖼️',
+  video: '🎬',
+  folder: '📂',
   image_gen: '🖼️',
   audio_gen: '🔊',
   video_gen: '🎬',
@@ -637,7 +641,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   const [titleValue, setTitleValue] = useState(node.title);
   const [isResizing, setIsResizing] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [activeAiTab, setActiveAiTab] = useState<'settings' | 'fields' | 'routing'>('settings');
+  const [activeAiTab, setActiveAiTab] = useState<'settings' | 'fields' | 'routing' | 'provider' | 'model' | ''>('settings');
   
   // Color state for immediate UI updates
   const [currentColor, setCurrentColor] = useState(node.ui?.color ?? DEFAULT_COLOR);
@@ -660,7 +664,8 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
 
   // Node properties
   const baseColor = currentColor; // Use local state for immediate updates
-  const isAiNode = node.type === 'ai';
+  const isAiNode = node.type === 'ai' || node.type === 'ai_improved';
+  const isImprovedAiNode = node.type === 'ai_improved' || node.meta?.ui_mode === 'improved';
   const typeIcon = TYPE_ICONS[node.type] || '❓';
 
   // AI node specific state
@@ -1191,9 +1196,9 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
             height: '100%'
           }}
         >
-          {isAiNode && (
+          {isAiNode && !isImprovedAiNode && (
             <div className="space-y-4" style={{ flexShrink: 0 }}>
-              {/* AI Content */}
+              {/* Traditional AI Content */}
               <div>
                 {activeAiTab === 'settings' && (
                   <div className="space-y-3">
@@ -1305,13 +1310,180 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
             </div>
           )}
 
+          {/* Improved AI Agent Layout */}
+          {isImprovedAiNode && (
+            <div className="space-y-3" style={{ flexShrink: 0 }}>
+              {/* User Prompt - сверху без подписей */}
+              <textarea
+                value={contentValue}
+                onChange={(e) => handleContentChange(e.target.value)}
+                placeholder="Введите ваш промпт для агента..."
+                disabled={disabled}
+                className="w-full p-3 bg-black/20 border border-white/10 rounded text-sm resize-none nodrag"
+                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+                draggable={false}
+                data-nodrag="true"
+                rows={4}
+                style={{ 
+                  minHeight: '80px',
+                  resize: 'none',
+                  fontSize: '13px',
+                  lineHeight: '1.4'
+                }}
+              />
+              
+              {/* Control Panel */}
+              <div className="flex gap-2 items-center">
+                {/* Agent Settings Button */}
+                <button
+                  type="button"
+                  onClick={() => setActiveAiTab(activeAiTab === 'settings' ? '' : 'settings')}
+                  className={`px-3 py-2 text-xs rounded border transition flex items-center gap-2 ${
+                    activeAiTab === 'settings'
+                      ? 'bg-blue-600/20 border-blue-500/50 text-blue-300'
+                      : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white'
+                  }`}
+                  disabled={disabled}
+                >
+                  ⚙️ Настройки агента
+                  <span className="text-xs opacity-60">
+                    {activeAiTab === 'settings' ? '▴' : '▾'}
+                  </span>
+                </button>
+
+                {/* Provider/Model Display Buttons */}
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveAiTab(activeAiTab === 'provider' ? '' : 'provider')}
+                    className={`px-2 py-2 text-xs rounded border transition ${
+                      activeAiTab === 'provider'
+                        ? 'bg-green-600/20 border-green-500/50 text-green-300'
+                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30'
+                    }`}
+                    title="Выбор провайдера"
+                    disabled={disabled}
+                  >
+                    {selectedProvider?.name || 'Провайдер'} {activeAiTab === 'provider' ? '▴' : '▾'}
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setActiveAiTab(activeAiTab === 'model' ? '' : 'model')}
+                    className={`px-2 py-2 text-xs rounded border transition ${
+                      activeAiTab === 'model'
+                        ? 'bg-purple-600/20 border-purple-500/50 text-purple-300'
+                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30'
+                    }`}
+                    title="Выбор модели"
+                    disabled={disabled}
+                  >
+                    {String(node.ai?.model || selectedProvider?.defaultModel || 'Модель')} {activeAiTab === 'model' ? '▴' : '▾'}
+                  </button>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-1 ml-auto">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onRegenerate(node.node_id);
+                    }}
+                    className="px-3 py-2 text-xs rounded border border-orange-500/50 bg-orange-600/20 text-orange-300 hover:bg-orange-600/30 transition"
+                    title="Перегенерировать ответ"
+                    disabled={disabled}
+                  >
+                    🔄 Перегенерация
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onRun(node.node_id);
+                    }}
+                    className="px-3 py-2 text-xs rounded border border-green-500/50 bg-green-600/20 text-green-300 hover:bg-green-600/30 transition"
+                    title="Запустить генерацию"
+                    disabled={disabled}
+                  >
+                    ▶️ Генерация
+                  </button>
+                </div>
+              </div>
+
+              {/* Expandable Settings Panels */}
+              {activeAiTab === 'settings' && (
+                <div className="bg-black/20 border border-white/10 rounded p-3 space-y-3">
+                  <div>
+                    <label className="text-xs text-white/70 block mb-2">Системный промпт</label>
+                    <textarea
+                      value={systemPromptValue}
+                      onChange={(e) => handleSystemPromptChange(e.target.value)}
+                      placeholder="Например: Ты — полезный ассистент."
+                      rows={4}
+                      disabled={disabled}
+                      className="w-full p-2 bg-black/30 border border-white/10 rounded text-sm resize-y nodrag"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      draggable={false}
+                      data-nodrag="true"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {activeAiTab === 'provider' && (
+                <div className="bg-black/20 border border-white/10 rounded p-3">
+                  <label className="text-xs text-white/70 block mb-2">Выберите провайдера</label>
+                  <select
+                    value={String(node.ai?.provider || '')}
+                    onChange={(e) => handleProviderChange(e.target.value)}
+                    disabled={disabled}
+                    className="w-full p-2 bg-black/30 border border-white/10 rounded text-sm nodrag"
+                    data-nodrag="true"
+                  >
+                    {providers.map(p => (
+                      <option key={p.id} value={p.id} disabled={!p.available}>
+                        {p.name} {!p.available && `(${p.reason || 'Недоступен'})`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {activeAiTab === 'model' && selectedProvider && (
+                <div className="bg-black/20 border border-white/10 rounded p-3">
+                  <label className="text-xs text-white/70 block mb-2">Выберите модель</label>
+                  <select
+                    value={String(node.ai?.model || selectedProvider.defaultModel)}
+                    onChange={(e) => handleModelChange(e.target.value)}
+                    disabled={disabled}
+                    className="w-full p-2 bg-black/30 border border-white/10 rounded text-sm nodrag"
+                    data-nodrag="true"
+                  >
+                    {selectedProvider.models.map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={{ 
             flex: 1, 
             display: 'flex', 
             flexDirection: 'column',
             minHeight: 0 
           }}>
-            {node.type === 'html' ? (
+            {/* Don't render content area for improved AI nodes - they handle their own content */}
+            {isImprovedAiNode ? null : node.type === 'html' ? (
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }} data-node-id={node.id}>
                 {/* Website Preview */}
                 <div className="w-full bg-white/5 border border-white/10 rounded flex-1 mb-3 overflow-hidden">
@@ -1395,6 +1567,237 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                       <path d="M8 2.5a5.5 5.5 0 0 1 4.596 2.463l1.154-1.154a.5.5 0 0 1 .85.353v3.5a.5.5 0 0 1-.5.5h-3.5a.5.5 0 0 1-.353-.854l1.12-1.12A4.5 4.5 0 1 0 8 12.5a.5.5 0 0 1 0 1A5.5 5.5 0 1 1 8 2.5z"/>
                     </svg>
                   </button>
+                </div>
+              </div>
+            ) : node.type === 'image' ? (
+              // Image node content
+              <div className="space-y-3">
+                <div className="flex gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => onChangeMeta(node.node_id, { display_mode: 'url' })}
+                    className={`px-3 py-1 text-xs rounded border transition ${
+                      (node.meta?.display_mode || 'url') === 'url'
+                        ? 'bg-blue-600/20 border-blue-500/50 text-blue-300'
+                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30'
+                    }`}
+                  >
+                    По ссылке
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChangeMeta(node.node_id, { display_mode: 'upload' })}
+                    className={`px-3 py-1 text-xs rounded border transition ${
+                      (node.meta?.display_mode || 'url') === 'upload'
+                        ? 'bg-green-600/20 border-green-500/50 text-green-300'
+                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30'
+                    }`}
+                  >
+                    Загрузить
+                  </button>
+                </div>
+
+                {(node.meta?.display_mode || 'url') === 'url' ? (
+                  <div>
+                    <input
+                      type="url"
+                      value={node.meta?.image_url as string || ''}
+                      onChange={(e) => onChangeMeta(node.node_id, { image_url: e.target.value })}
+                      placeholder="https://example.com/image.jpg"
+                      className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm text-white nodrag"
+                      data-nodrag="true"
+                    />
+                    {(() => {
+                      const imageUrl = node.meta?.image_url;
+                      return imageUrl && typeof imageUrl === 'string' ? (
+                        <div className="mt-3 border border-white/10 rounded overflow-hidden">
+                          <img
+                            src={imageUrl}
+                            alt="Preview"
+                            className="w-full h-auto max-h-64 object-contain bg-black/20"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (file) {
+                            onChangeMeta(node.node_id, { image_file: file.name });
+                            console.log('Image file selected:', file.name);
+                          }
+                        };
+                        input.click();
+                      }}
+                      className="w-full p-4 bg-black/20 border border-dashed border-white/30 rounded text-sm text-white/70 hover:bg-black/30 hover:border-white/50 transition"
+                    >
+                      📁 Выберите файл изображения
+                    </button>
+                    {(() => {
+                      const imageFile = node.meta?.image_file;
+                      return imageFile && typeof imageFile === 'string' ? (
+                        <div className="mt-2 text-xs text-white/70">
+                          Файл: {imageFile}
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+              </div>
+            ) : node.type === 'video' ? (
+              // Video node content
+              <div className="space-y-3">
+                <div className="flex gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => onChangeMeta(node.node_id, { display_mode: 'url' })}
+                    className={`px-3 py-1 text-xs rounded border transition ${
+                      (node.meta?.display_mode || 'url') === 'url'
+                        ? 'bg-blue-600/20 border-blue-500/50 text-blue-300'
+                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30'
+                    }`}
+                  >
+                    По ссылке
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChangeMeta(node.node_id, { display_mode: 'upload' })}
+                    className={`px-3 py-1 text-xs rounded border transition ${
+                      (node.meta?.display_mode || 'url') === 'upload'
+                        ? 'bg-green-600/20 border-green-500/50 text-green-300'
+                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30'
+                    }`}
+                  >
+                    Загрузить
+                  </button>
+                </div>
+
+                {(node.meta?.display_mode || 'url') === 'url' ? (
+                  <div>
+                    <input
+                      type="url"
+                      value={node.meta?.video_url as string || ''}
+                      onChange={(e) => onChangeMeta(node.node_id, { video_url: e.target.value })}
+                      placeholder="https://youtube.com/watch?v=... или прямая ссылка на видео"
+                      className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm text-white nodrag"
+                      data-nodrag="true"
+                    />
+                    {(() => {
+                      const videoUrl = node.meta?.video_url;
+                      return videoUrl && typeof videoUrl === 'string' ? (
+                        <div className="mt-3 border border-white/10 rounded overflow-hidden">
+                          <video
+                            src={videoUrl}
+                            controls={node.meta?.controls !== false}
+                            autoPlay={node.meta?.autoplay === true}
+                            className="w-full h-auto max-h-64"
+                            preload="metadata"
+                          >
+                            Ваш браузер не поддерживает видео.
+                          </video>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'video/*';
+                        input.onchange = (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (file) {
+                            onChangeMeta(node.node_id, { video_file: file.name });
+                            console.log('Video file selected:', file.name);
+                          }
+                        };
+                        input.click();
+                      }}
+                      className="w-full p-4 bg-black/20 border border-dashed border-white/30 rounded text-sm text-white/70 hover:bg-black/30 hover:border-white/50 transition"
+                    >
+                      🎬 Выберите видео файл
+                    </button>
+                    {(() => {
+                      const videoFile = node.meta?.video_file;
+                      return videoFile && typeof videoFile === 'string' ? (
+                        <div className="mt-2 text-xs text-white/70">
+                          Файл: {videoFile}
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+              </div>
+            ) : node.type === 'folder' ? (
+              // Folder node content
+              <div className="space-y-3">
+                <div className="flex gap-2 items-center mb-3">
+                  <span className="text-sm text-white/70">Папка для организации нод</span>
+                  <button
+                    type="button"
+                    onClick={() => onChangeMeta(node.node_id, { collapsed: !(node.meta?.collapsed) })}
+                    className={`px-2 py-1 text-xs rounded border transition ${
+                      node.meta?.collapsed
+                        ? 'bg-orange-600/20 border-orange-500/50 text-orange-300'
+                        : 'bg-blue-600/20 border-blue-500/50 text-blue-300'
+                    }`}
+                  >
+                    {node.meta?.collapsed ? '📁 Свернута' : '📂 Развернута'}
+                  </button>
+                </div>
+
+                <textarea
+                  value={contentValue}
+                  onChange={(e) => handleContentChange(e.target.value)}
+                  placeholder="Описание папки или инструкции..."
+                  disabled={disabled}
+                  className="w-full p-2 bg-black/20 border border-white/10 rounded text-sm resize-none nodrag"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  draggable={false}
+                  data-nodrag="true"
+                  rows={3}
+                />
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-white/70">Содержимое папки:</span>
+                    <span className="text-xs text-white/50">
+                      {(node.meta?.folder_items as string[] || []).length} элементов
+                    </span>
+                  </div>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {(node.meta?.folder_items as string[] || []).map((item, index) => (
+                      <div key={index} className="flex items-center justify-between text-xs bg-black/20 rounded p-2">
+                        <span className="text-white/80">{item}</span>
+                        <button
+                          onClick={() => {
+                            const currentItems = (node.meta?.folder_items as string[] || []);
+                            const newItems = currentItems.filter((_, i) => i !== index);
+                            onChangeMeta(node.node_id, { folder_items: newItems });
+                          }}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             ) : (
