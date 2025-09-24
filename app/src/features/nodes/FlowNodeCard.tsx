@@ -1492,29 +1492,51 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                         const plannerPrompt = `Ты - агент-планировщик workflow. Твоя задача создавать структурированные планы в виде множественных нод.
 
 ДОСТУПНЫЕ ТИПЫ НОД:
-- text: Текстовый контент
-- ai: AI-агент для генерации
-- ai_improved: Улучшенный AI-агент  
-- image: Изображение
-- video: Видео
-- audio: Аудио
-- html: HTML контент
-- json: JSON данные
-- markdown: Markdown документ
-- file: Файл
-- python: Python код
-- router: Маршрутизатор
+• text - Текстовый контент, заметки, описания
+• ai - AI-агент для генерации контента (используй для задач требующих ИИ)
+• ai_improved - Улучшенный AI-агент с расширенными возможностями
+• image - Изображения, картинки, визуализации
+• video - Видео контент, демонстрации
+• audio - Аудио контент, подкасты, записи
+• html - HTML страницы, веб-контент
+• json - Структурированные данные в JSON формате
+• markdown - Документы в формате Markdown
+• file - Файлы, документы, ресурсы
+• python - Python код, скрипты, вычисления
+• router - Условная логика, маршрутизация между нодами
 
-ФОРМАТ ОТВЕТА:
-Всегда отвечай JSON объектом с массивом "nodes". Каждая нода должна содержать:
-- type: тип ноды (обязательно)
-- title: заголовок (обязательно)
-- content: содержимое (опционально)
-- x, y: координаты (опционально, будут назначены автоматически)
-- meta: дополнительные метаданные (опционально)
-- ai: конфигурация AI для AI-нод (опционально)
+ПРАВИЛА СОЗДАНИЯ НОД:
+1. Всегда указывай type и title (обязательно!)
+2. Добавляй content с описанием того, что должна делать нода
+3. Для AI-нод добавляй ai конфигурацию с system_prompt
+4. Создавай логическую последовательность - от постановки задачи к результату
+5. Используй разные типы нод для разнообразия workflow
 
-Создавай логичные workflow с последовательностью операций.`;
+ФОРМАТ ОТВЕТА (строго JSON):
+{
+  "nodes": [
+    {
+      "type": "тип_ноды",
+      "title": "Название ноды",
+      "content": "Описание задачи ноды",
+      "ai": {
+        "system_prompt": "Инструкции для ИИ",
+        "model": "gpt-4",
+        "temperature": 0.7
+      }
+    }
+  ]
+}
+
+ПРИМЕРЫ ИСПОЛЬЗОВАНИЯ ТИПОВ:
+- text: для описаний, планов, заметок
+- ai: для генерации контента, анализа, обработки
+- python: для вычислений, обработки данных
+- image: для создания диаграмм, схем
+- markdown: для отчетов, документации
+- json: для структурированных результатов
+
+Создавай практичные и полезные workflow!`;
                         handleSystemPromptChange(plannerPrompt);
                       }}
                       disabled={disabled}
@@ -1554,18 +1576,33 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                           nodes: [
                             {
                               type: "text",
-                              title: "Анализ данных",
-                              content: "Проведем анализ предоставленных данных...",
+                              title: "1. Постановка задачи",
+                              content: "Определяем цели и требования проекта"
+                            },
+                            {
+                              type: "python",
+                              title: "2. Обработка данных",
+                              content: "import pandas as pd\n# Загрузка и очистка данных\ndata = pd.read_csv('data.csv')"
                             },
                             {
                               type: "ai",
-                              title: "Генерация отчета",
-                              content: "Создай подробный отчет на основе анализа",
+                              title: "3. Анализ и выводы",
+                              content: "Проанализируй обработанные данные и сделай выводы",
                               ai: {
-                                system_prompt: "Ты - эксперт по анализу данных. Создавай детальные отчеты.",
+                                system_prompt: "Ты - эксперт по анализу данных. Давай четкие и структурированные выводы.",
                                 model: "gpt-4",
-                                temperature: 0.7
+                                temperature: 0.3
                               }
+                            },
+                            {
+                              type: "markdown",
+                              title: "4. Финальный отчет",
+                              content: "# Отчет по анализу данных\n\n## Основные выводы\n\n- Вывод 1\n- Вывод 2\n\n## Рекомендации\n\nПоследующие действия..."
+                            },
+                            {
+                              type: "image",
+                              title: "5. Визуализация результатов",
+                              content: "Создание графиков и диаграмм для презентации"
                             }
                           ]
                         }, null, 2);
@@ -2603,16 +2640,67 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                 <label className="text-sm text-white/70 block mb-2">
                   Описание формата ответа для агента-планировщика:
                 </label>
-                <div className="bg-black/30 border border-white/10 rounded p-3 text-xs text-white/80">
-                  <p className="mb-2">Для создания множественных нод используйте JSON массив:</p>
-                  <pre className="text-green-400">{`{
+                <div className="bg-black/30 border border-white/10 rounded p-3 text-xs text-white/80 max-h-60 overflow-y-auto">
+                  <p className="mb-2 font-semibold text-blue-300">Для создания множественных нод используйте JSON массив:</p>
+                  
+                  <div className="mb-3">
+                    <p className="text-green-300 font-semibold mb-1">ДОСТУПНЫЕ ТИПЫ НОД:</p>
+                    <div className="grid grid-cols-2 gap-1 text-xs">
+                      <div><span className="text-yellow-300">text</span> - Текстовый контент</div>
+                      <div><span className="text-yellow-300">ai</span> - AI-агент для генерации</div>
+                      <div><span className="text-yellow-300">ai_improved</span> - Улучшенный AI-агент</div>
+                      <div><span className="text-yellow-300">image</span> - Изображение/картинка</div>
+                      <div><span className="text-yellow-300">video</span> - Видео контент</div>
+                      <div><span className="text-yellow-300">audio</span> - Аудио контент</div>
+                      <div><span className="text-yellow-300">html</span> - HTML страница</div>
+                      <div><span className="text-yellow-300">json</span> - JSON данные</div>
+                      <div><span className="text-yellow-300">markdown</span> - Markdown документ</div>
+                      <div><span className="text-yellow-300">file</span> - Файл/документ</div>
+                      <div><span className="text-yellow-300">python</span> - Python код/скрипт</div>
+                      <div><span className="text-yellow-300">router</span> - Маршрутизатор условий</div>
+                    </div>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <p className="text-green-300 font-semibold mb-1">ОБЯЗАТЕЛЬНЫЕ ПОЛЯ:</p>
+                    <div className="pl-2">
+                      <div><span className="text-orange-300">type</span> - тип ноды (из списка выше)</div>
+                      <div><span className="text-orange-300">title</span> - заголовок ноды</div>
+                    </div>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <p className="text-green-300 font-semibold mb-1">ОПЦИОНАЛЬНЫЕ ПОЛЯ:</p>
+                    <div className="pl-2">
+                      <div><span className="text-blue-300">content</span> - содержимое ноды</div>
+                      <div><span className="text-blue-300">x, y</span> - координаты (авто если не указаны)</div>
+                      <div><span className="text-blue-300">meta</span> - дополнительные настройки</div>
+                      <div><span className="text-blue-300">ai</span> - настройки ИИ для ai/ai_improved нод</div>
+                    </div>
+                  </div>
+                  
+                  <p className="text-purple-300 font-semibold mb-1">ПРИМЕР СТРУКТУРЫ:</p>
+                  <pre className="text-green-400 text-xs bg-black/50 p-2 rounded">{`{
   "nodes": [
     {
       "type": "text",
-      "title": "Заголовок ноды",
-      "content": "Содержимое ноды",
-      "x": 100,
-      "y": 200
+      "title": "Постановка задачи",
+      "content": "Описание задачи..."
+    },
+    {
+      "type": "ai",
+      "title": "Анализ данных",
+      "content": "Проанализируй данные",
+      "ai": {
+        "system_prompt": "Ты эксперт по данным",
+        "model": "gpt-4",
+        "temperature": 0.7
+      }
+    },
+    {
+      "type": "markdown", 
+      "title": "Отчет",
+      "content": "# Результаты\\n\\nВыводы..."
     }
   ]
 }`}</pre>
@@ -2637,18 +2725,27 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                       nodes: [
                         {
                           type: "text",
-                          title: "Анализ данных",
-                          content: "Проведем анализ предоставленных данных...",
+                          title: "1. Постановка задачи",
+                          content: "Определяем цели и требования проекта"
+                        },
+                        {
+                          type: "python",
+                          title: "2. Обработка данных", 
+                          content: "import pandas as pd\n# Обработка CSV файла"
                         },
                         {
                           type: "ai",
-                          title: "Генерация отчета",
-                          content: "Создай подробный отчет на основе анализа",
+                          title: "3. Анализ результатов",
+                          content: "Проанализируй данные и сделай выводы",
                           ai: {
-                            system_prompt: "Ты - эксперт по анализу данных. Создавай детальные отчеты.",
-                            model: "gpt-4",
-                            temperature: 0.7
+                            system_prompt: "Ты - аналитик данных",
+                            temperature: 0.3
                           }
+                        },
+                        {
+                          type: "markdown",
+                          title: "4. Отчет",
+                          content: "# Результаты\n\n## Выводы\n- Основные находки"
                         }
                       ]
                     }, null, 2);
