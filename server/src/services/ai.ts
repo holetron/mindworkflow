@@ -53,11 +53,19 @@ export class AiService {
     const aiConfig = (context.node.config.ai ?? {}) as Record<string, unknown>;
     const providerId = typeof aiConfig.provider === 'string' ? aiConfig.provider : 'stub';
 
-    if (providerId === 'openai' || providerId === 'openai_gpt') {
+    console.log(`[AI Service] Provider ID: ${providerId}, Schema: ${context.schemaRef}`);
+
+    // Use appropriate provider based on configuration
+    if (providerId === 'stub' || providerId === 'local_stub') {
+      if (context.schemaRef === 'TEXT_RESPONSE' || context.schemaRef === 'text_response') {
+        return this.generateStubTextResponse(context, context.node.content || '');
+      } else {
+        return this.generateStubPlan(context);
+      }
+    } else {
+      // For other providers (openai, anthropic, etc.), use OpenAI implementation
       return this.runOpenAi(context, aiConfig);
     }
-
-    return this.generateStubPlan(context);
   }
 
   private async runOpenAi(context: AiContext, aiConfig: Record<string, unknown>): Promise<AiResult> {
@@ -93,7 +101,13 @@ export class AiService {
 
     const apiKey = typeof openaiConfig.api_key === 'string' ? openaiConfig.api_key.trim() : '';
     if (!apiKey) {
-      throw new Error('OpenAI API key is not configured. Please add OpenAI integration.');
+      console.log('[AI Service] OpenAI API key not configured, using stub response');
+      // Fallback to stub if no API key is configured
+      if (context.schemaRef === 'TEXT_RESPONSE' || context.schemaRef === 'text_response') {
+        return this.generateStubTextResponse(context, context.node.content || '');
+      } else {
+        return this.generateStubPlan(context);
+      }
     }
 
     const baseUrl =
@@ -105,11 +119,17 @@ export class AiService {
     const model =
       typeof aiConfig.model === 'string' && aiConfig.model.trim().length > 0
         ? aiConfig.model.trim()
-        : 'gpt-4.1-mini';
+        : 'gpt-4o-mini';
     const temperature = this.parseNumeric(aiConfig.temperature, 0.7);
 
+    // Check if model supports structured outputs (json_schema response_format)
+    const supportsStructuredOutputs = model.includes('gpt-4o') || model.includes('gpt-4-turbo') || 
+                                     (model.includes('gpt-4') && !model.includes('gpt-3.5'));
+    
+    console.log(`[AI Service] Using model: ${model}, supports structured outputs: ${supportsStructuredOutputs}`);
+
     const schema = this.ajv.getSchema(context.schemaRef)?.schema ?? this.ajv.getSchema(context.schemaRef.toUpperCase())?.schema;
-    const responseFormat = schema && typeof schema === 'object'
+    const responseFormat = schema && typeof schema === 'object' && supportsStructuredOutputs
       ? {
           type: 'json_schema',
           json_schema: {
@@ -119,10 +139,16 @@ export class AiService {
         }
       : undefined;
 
-    const systemPrompt =
+    let systemPrompt =
       typeof aiConfig.system_prompt === 'string' && aiConfig.system_prompt.trim().length > 0
         ? aiConfig.system_prompt.trim()
         : 'You are an assistant that produces JSON strictly matching the provided schema.';
+    
+    // For models without structured outputs, add explicit JSON instruction
+    if (!supportsStructuredOutputs && schema) {
+      systemPrompt += ' Always respond with valid JSON only, no additional text or explanation.';
+    }
+    
     const providerFieldsConfig = Array.isArray(openaiConfig.input_fields)
       ? (openaiConfig.input_fields as ProviderFieldConfig[])
       : [];
@@ -145,10 +171,10 @@ export class AiService {
         { role: 'user', content: userPrompt },
       ],
     };
-    // Disable response_format for testing - gpt-3.5-turbo doesn't support structured outputs
-    // if (responseFormat) {
-    //   requestBody.response_format = responseFormat;
-    // }
+    // Enable response_format for structured JSON output
+    if (responseFormat) {
+      requestBody.response_format = responseFormat;
+    }
     // Note: provider_fields metadata is not sent to OpenAI API
     // It's used internally for field resolution
 
@@ -185,7 +211,15 @@ export class AiService {
     try {
       parsed = JSON.parse(rawContent);
     } catch (error) {
-      throw new Error(`OpenAI response is not valid JSON: ${(error as Error).message}`);
+      // If JSON parsing fails, try to wrap the response in appropriate schema structure
+      if (context.schemaRef === 'TEXT_RESPONSE' || context.schemaRef === 'text_response') {
+        // For TEXT_RESPONSE schema, wrap the raw content in the expected format
+        console.log(`[AI Service] OpenAI returned plain text instead of JSON, wrapping in TEXT_RESPONSE format`);
+        parsed = { response: rawContent.trim() };
+      } else {
+        // For other schemas, still throw the error
+        throw new Error(`OpenAI response is not valid JSON: ${(error as Error).message}`);
+      }
     }
 
     const validator = this.ajv.getSchema(context.schemaRef) ?? this.ajv.getSchema(context.schemaRef.toUpperCase());
@@ -348,16 +382,19 @@ export class AiService {
     schema: unknown,
     resolvedFields: ResolvedProviderField[],
   ): string {
-    const template =
-      typeof aiConfig.user_prompt_template === 'string' && aiConfig.user_prompt_template.trim().length > 0
+    // Для AI нод используем содержимое ноды как основной промпт
+    const nodeContent = typeof context.node.content === 'string' ? context.node.content.trim() : '';
+    const template = nodeContent.length > 0 
+      ? nodeContent
+      : (typeof aiConfig.user_prompt_template === 'string' && aiConfig.user_prompt_template.trim().length > 0
         ? aiConfig.user_prompt_template.trim()
-        : 'Generate a structured JSON response that satisfies the JSON schema and reflects the provided context.';
+        : 'Generate a structured JSON response that satisfies the JSON schema and reflects the provided context.');
 
     const sections: string[] = [template];
 
     const upstreamSummary = this.buildContextSummary(context.previousNodes);
     if (upstreamSummary) {
-      sections.push(`# Upstream Context\n${upstreamSummary}`);
+      sections.push(`# Контекст\n${upstreamSummary}`);
     }
 
     const nextSummary = this.summarizeNextNodes(context.nextNodes);

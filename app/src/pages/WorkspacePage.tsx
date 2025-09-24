@@ -105,6 +105,8 @@ function WorkspacePage() {
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [generatingNodes, setGeneratingNodes] = useState<Set<string>>(new Set());
+  const [generatingEdges, setGeneratingEdges] = useState<Map<string, string>>(new Map());
   const pendingUiRef = useRef<Map<string, NodeUI>>(new Map());
   const pendingUiTimersRef = useRef<Map<string, number>>(new Map());
 
@@ -152,41 +154,58 @@ function WorkspacePage() {
   }, []);
 
   const providerOptions = useMemo<AiProviderOption[]>(() => {
-    // Используем глобальные интеграции вместо project.settings.integrations
-    const integrationsMap = globalIntegrations.reduce((acc: Record<string, any>, integration: any) => {
-      acc[integration.key] = integration;
-      return acc;
-    }, {} as Record<string, any>);
-
-    return AI_PROVIDER_PRESETS.map((preset) => {
-      const integrationKey = preset.integrationKey ?? preset.id;
-      const integration = integrationsMap[integrationKey];
-      const integrationConfig = integration?.config || {};
-      const apiKey = 
-        typeof integrationConfig['api_key'] === 'string'
-          ? String(integrationConfig['api_key']).trim()
-          : '';
-      const available = preset.integrationKey === null ? true : (integration?.enabled === true && apiKey.length > 0);
-
-      const option: AiProviderOption = {
-        id: preset.id,
-        name: preset.name,
-        models: preset.models,
-        defaultModel: preset.defaultModel,
-        available,
-        description: preset.description,
-        reason: available ? undefined : 'Добавьте API ключ в интеграциях, чтобы использовать провайдера.',
-        config: integrationConfig,
-        systemPromptTemplate:
-          typeof integrationConfig?.system_prompt_template === 'string'
-            ? String(integrationConfig.system_prompt_template)
-            : undefined,
-        inputFields: Array.isArray(integrationConfig?.input_fields)
-          ? (integrationConfig?.input_fields as IntegrationFieldConfig[])
-          : undefined,
-      };
-      return option;
+    const options: AiProviderOption[] = [];
+    
+    // Добавляем stub провайдер всегда
+    options.push({
+      id: 'stub',
+      name: 'Local Stub',
+      models: ['local-llm-7b-q5'],
+      defaultModel: 'local-llm-7b-q5',
+      available: true,
+      description: 'Встроенный оффлайн движок для тестовых запусков.',
+      inputFields: [],
     });
+
+    // Преобразуем глобальные интеграции в провайдеры
+    globalIntegrations.forEach((integration) => {
+      const hasApiKey = Boolean(integration.apiKey && integration.apiKey.trim().length > 0);
+      
+      let models: string[] = [];
+      let defaultModel = '';
+      
+      // Определяем модели в зависимости от провайдера
+      if (integration.providerId === 'openai_gpt') {
+        models = ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'];
+        defaultModel = 'gpt-4o-mini';
+      } else if (integration.providerId === 'anthropic') {
+        models = ['claude-3-haiku', 'claude-3-sonnet', 'claude-3-opus'];
+        defaultModel = 'claude-3-haiku';
+      } else {
+        // Fallback для других провайдеров
+        models = ['default-model'];
+        defaultModel = 'default-model';
+      }
+
+      options.push({
+        id: integration.providerId,
+        name: integration.name,
+        models,
+        defaultModel,
+        available: hasApiKey,
+        description: integration.description || `${integration.name} integration`,
+        reason: hasApiKey ? undefined : 'Добавьте API ключ в интеграциях, чтобы использовать провайдера.',
+        config: {
+          api_key: integration.apiKey,
+          base_url: integration.baseUrl,
+          organization: integration.organization,
+        },
+        systemPromptTemplate: integration.systemPrompt,
+        inputFields: integration.inputFields || [],
+      });
+    });
+
+    return options;
   }, [globalIntegrations]);
 
   useEffect(() => {
@@ -448,9 +467,8 @@ function WorkspacePage() {
         // Update edges in state to prevent ReactFlow state desync
         setEdges(edgeResponse.edges, edgeResponse.updated_at);
         
-        setTimeout(() => {
-          selectNode(null);
-        }, 0);
+        // Clear selection immediately to prevent sticky behavior
+        selectNode(null);
         
       } catch (err) {
         console.error('Failed to create new node from generation:', err);
@@ -459,83 +477,278 @@ function WorkspacePage() {
     [project, addNodeFromServer, setEdges, selectNode],
   );
 
+  // Функция для расчета позиции новой ноды справа от источника
+  const calculateOutputNodePosition = useCallback((sourceNode: FlowNode) => {
+    const sourceBbox = sourceNode.ui?.bbox ?? DEFAULT_NODE_BBOX;
+    const sourceWidth = sourceBbox.x2 - sourceBbox.x1;
+    
+    return {
+      x: sourceBbox.x1 + sourceWidth + 150, // 150px отступ справа
+      y: sourceBbox.y1, // Та же высота
+    };
+  }, []);
+
   const handleRunNode = useCallback(
     async (nodeId: string) => {
       if (!project) return;
       try {
-        setLoading(true);
         selectNode(nodeId);
+        
+        // For AI nodes, create result node immediately and add to generating set
+        const sourceNode = selectNodeById(project, nodeId);
+        let resultNodeId: string | null = null;
+        
+        if (sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved')) {
+          // Create placeholder result node immediately
+          const resultPosition = calculateOutputNodePosition(sourceNode);
+          const resultNode: CreateNodePayload = {
+            type: 'text',
+            slug: 'text',
+            meta: {},
+            position: resultPosition,
+            ai: {},
+            ui: {
+              bbox: {
+                x1: resultPosition.x,
+                y1: resultPosition.y,
+                x2: resultPosition.x + NODE_DEFAULT_WIDTH,
+                y2: resultPosition.y + NODE_DEFAULT_HEIGHT,
+              },
+              color: NODE_DEFAULT_COLOR,
+            },
+            title: 'Генерируется ответ...',
+            content: 'Пожалуйста подождите, идет генерация ответа...',
+          };
+          
+          // Create the result node
+          const createResponse = await createNode(project.project_id, resultNode);
+          resultNodeId = createResponse.node.node_id;
+          
+          // Add edge from AI node to result node
+          await createEdge(project.project_id, {
+            from: nodeId,
+            to: resultNodeId,
+          });
+          
+          // Add to generating edges map and nodes set
+          if (resultNodeId) {
+            setGeneratingEdges(prev => new Map(prev).set(nodeId, resultNodeId));
+            setGeneratingNodes(prev => new Set(prev).add(resultNodeId));
+          }
+          
+          // Refresh project to show the new node
+          const refreshedProject = await fetchProject(project.project_id);
+          if (refreshedProject) {
+            setProject(refreshedProject);
+          }
+        }
+        
+        // Now run the AI node in background
         const response = await runNode(project.project_id, nodeId);
         
-        // For AI nodes, automatically create a new node to the right with the generated content
-        // Do NOT update the original AI node content - keep the original request
-        const sourceNode = selectNodeById(project, nodeId);
-        
-        if (
-          sourceNode &&
-          (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved') &&
-          response.content
-        ) {
-          // For AI nodes: ONLY create new node, do NOT update original content
-          await createNewNodeFromGeneration(sourceNode, response.content);
-        } else {
+        if (sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved') && response.content && resultNodeId) {
+          // Extract content from response - it might be in different formats
+          let responseContent = response.content;
+          if (typeof responseContent === 'string') {
+            try {
+              // Try to parse if it's JSON with a response field
+              const parsed = JSON.parse(responseContent);
+              if (parsed.response) {
+                responseContent = parsed.response;
+              }
+            } catch {
+              // If not JSON, use as is
+            }
+          }
+          
+          // Update the result node with actual content
+          await updateNode(project.project_id, resultNodeId, {
+            content: responseContent,
+            title: `Ответ от ${sourceNode.title}`,
+          });
+          
+          // Remove from generating edges map and nodes set
+          setGeneratingEdges(prev => {
+            const next = new Map(prev);
+            next.delete(nodeId);
+            return next;
+          });
+          
+          setGeneratingNodes(prev => {
+            const next = new Set(prev);
+            if (resultNodeId) next.delete(resultNodeId);
+            return next;
+          });
+          
+          // Update logs for the original AI node
+          const refreshedLogs = await fetchNodeLogs(project.project_id, nodeId);
+          setRuns(nodeId, refreshedLogs);
+          
+          // Refresh project to show updated content
+          const refreshedProject = await fetchProject(project.project_id);
+          if (refreshedProject) {
+            setProject(refreshedProject);
+          }
+        } else if (!sourceNode || (sourceNode.type !== 'ai' && sourceNode.type !== 'ai_improved')) {
           // Only update content for non-AI nodes
           upsertNodeContent(response.nodeId, {
             content: response.content ?? undefined,
             content_type: response.contentType ?? undefined,
           });
+          
+          // Update logs for the response node
+          const refreshedLogs = await fetchNodeLogs(project.project_id, response.nodeId);
+          setRuns(response.nodeId, refreshedLogs);
         }
-        
-        const refreshedLogs = await fetchNodeLogs(project.project_id, response.nodeId);
-        setRuns(response.nodeId, refreshedLogs);
         
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setError(message);
+        
+        // Remove from generating edges on error
+        setGeneratingEdges(prev => {
+          const next = new Map(prev);
+          next.delete(nodeId);
+          return next;
+        });
       } finally {
-        setLoading(false);
+        // Clear selection after node execution to prevent sticking
+        selectNode(null);
       }
     },
-    [project, selectNode, setLoading, upsertNodeContent, setRuns, setError, createNewNodeFromGeneration],
+    [project, selectNode, upsertNodeContent, setRuns, setError, setProject, setGeneratingEdges, setGeneratingNodes],
   );
 
   const handleRegenerateNode = useCallback(
     async (nodeId: string) => {
       if (!project) return;
       try {
-        setLoading(true);
         selectNode(nodeId);
-        const response = await rerunNode(project.project_id, nodeId, { clone: false });
-        const targetNodeId = response.targetNodeId ?? response.nodeId;
         
-        // Check if this is an AI node - don't update content for AI nodes
+        // For AI nodes, create result node immediately and add to generating set
         const sourceNode = selectNodeById(project, nodeId);
-        if (
-          sourceNode &&
-          (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved') &&
-          response.content
-        ) {
-          // For AI nodes: create new node with response, don't update original
-          await createNewNodeFromGeneration(sourceNode, response.content);
-        } else {
+        let resultNodeId: string | null = null;
+        
+        if (sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved')) {
+          // Create placeholder result node immediately
+          const resultPosition = calculateOutputNodePosition(sourceNode);
+          const resultNode: CreateNodePayload = {
+            type: 'text',
+            slug: 'text',
+            meta: {},
+            position: resultPosition,
+            ai: {},
+            ui: {
+              bbox: {
+                x1: resultPosition.x,
+                y1: resultPosition.y,
+                x2: resultPosition.x + NODE_DEFAULT_WIDTH,
+                y2: resultPosition.y + NODE_DEFAULT_HEIGHT,
+              },
+              color: NODE_DEFAULT_COLOR,
+            },
+            title: 'Регенерируется ответ...',
+            content: 'Пожалуйста подождите, идет регенерация ответа...',
+          };
+          
+          // Create the result node
+          const createResponse = await createNode(project.project_id, resultNode);
+          resultNodeId = createResponse.node.node_id;
+          
+          // Add edge from AI node to result node
+          await createEdge(project.project_id, {
+            from: nodeId,
+            to: resultNodeId,
+          });
+          
+          // Add to generating edges map and nodes set
+          if (resultNodeId) {
+            setGeneratingEdges(prev => new Map(prev).set(nodeId, resultNodeId));
+            setGeneratingNodes(prev => new Set(prev).add(resultNodeId));
+          }
+          
+          // Refresh project to show the new node
+          const refreshedProject = await fetchProject(project.project_id);
+          if (refreshedProject) {
+            setProject(refreshedProject);
+          }
+        }
+        
+        // Now run the regeneration in background
+        const response = await rerunNode(project.project_id, nodeId, { clone: false });
+        
+        if (sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved') && response.content && resultNodeId) {
+          // Extract content from response - it might be in different formats
+          let responseContent = response.content;
+          if (typeof responseContent === 'string') {
+            try {
+              // Try to parse if it's JSON with a response field
+              const parsed = JSON.parse(responseContent);
+              if (parsed.response) {
+                responseContent = parsed.response;
+              }
+            } catch {
+              // If not JSON, use as is
+            }
+          }
+          
+          // Update the result node with actual content
+          await updateNode(project.project_id, resultNodeId, {
+            content: responseContent,
+            title: `Регенерированный ответ от ${sourceNode.title}`,
+          });
+          
+          // Remove from generating edges map and nodes set
+          setGeneratingEdges(prev => {
+            const next = new Map(prev);
+            next.delete(nodeId);
+            return next;
+          });
+          
+          setGeneratingNodes(prev => {
+            const next = new Set(prev);
+            if (resultNodeId) next.delete(resultNodeId);
+            return next;
+          });
+          
+          // Update logs for the original AI node
+          const refreshedLogs = await fetchNodeLogs(project.project_id, nodeId);
+          setRuns(nodeId, refreshedLogs);
+          
+          // Refresh project to show updated content
+          const refreshedProject = await fetchProject(project.project_id);
+          if (refreshedProject) {
+            setProject(refreshedProject);
+          }
+        } else if (!sourceNode || (sourceNode.type !== 'ai' && sourceNode.type !== 'ai_improved')) {
           // For non-AI nodes: update content as usual
+          const targetNodeId = response.targetNodeId ?? response.nodeId;
           upsertNodeContent(targetNodeId, {
             content: response.content ?? undefined,
             content_type: response.contentType ?? undefined,
           });
+          
+          // Update logs for the target node
+          const refreshedLogs = await fetchNodeLogs(project.project_id, targetNodeId);
+          setRuns(targetNodeId, refreshedLogs);
         }
-        
-        const refreshedLogs = await fetchNodeLogs(project.project_id, targetNodeId);
-        setRuns(targetNodeId, refreshedLogs);
         
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setError(message);
+        
+        // Remove from generating edges on error
+        setGeneratingEdges(prev => {
+          const next = new Map(prev);
+          next.delete(nodeId);
+          return next;
+        });
       } finally {
-        setLoading(false);
+        // Clear selection after node execution to prevent sticking
+        selectNode(null);
       }
     },
-    [project, selectNode, setLoading, upsertNodeContent, setRuns, setError, createNewNodeFromGeneration],
+    [project, selectNode, upsertNodeContent, setRuns, setError, setProject, setGeneratingEdges, setGeneratingNodes, calculateOutputNodePosition],
   );
 
   const handleDeleteNode = useCallback(
@@ -1037,6 +1250,8 @@ function WorkspacePage() {
             loading={loading}
             sidebarCollapsed={sidebarCollapsed}
             sidebarWidth={sidebarWidth}
+            generatingNodes={generatingNodes}
+            generatingEdges={generatingEdges}
           />
         </div>
         

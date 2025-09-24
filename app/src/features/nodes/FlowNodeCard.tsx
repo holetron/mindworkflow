@@ -112,6 +112,7 @@ export interface FlowNodeCardData {
   providers?: AiProviderOption[];
   sources?: Array<{ node_id: string; title: string; type: string }>;
   disabled?: boolean;
+  isGenerating?: boolean; // Индикатор что нода сейчас генерирует ответ
 }
 
 const TYPE_ICONS: Record<string, string> = {
@@ -164,6 +165,15 @@ const FALLBACK_PROVIDERS: AiProviderOption[] = [
     defaultModel: 'local-llm-7b-q5',
     available: true,
     description: 'Встроенный оффлайн движок для тестовых запусков.',
+    inputFields: [],
+  },
+  {
+    id: 'openai_gpt',
+    name: 'OpenAI GPT',
+    models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+    defaultModel: 'gpt-4o-mini',
+    available: true,
+    description: 'OpenAI GPT модели с поддержкой структурированного вывода.',
     inputFields: [],
   },
 ];
@@ -635,7 +645,8 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
     onOpenConnections,
     providers = FALLBACK_PROVIDERS,
     sources = [],
-    disabled = false
+    disabled = false,
+    isGenerating = false
   } = data;
 
   // State management
@@ -1121,13 +1132,30 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
       >
         <div className="flow-node__identity">
           <div 
-            className="flow-node__type-icon"
+            className="flow-node__type-icon relative"
             style={{ 
               backgroundColor: 'rgba(255, 255, 255, 0.9)',
               boxShadow: `0 2px 4px ${baseColor}30`
             }}
           >
-            {typeIcon}
+            {isGenerating ? (
+              <div className="relative flex items-center justify-center">
+                {/* Фоновая иконка приглушенная */}
+                <span className="absolute opacity-30">{typeIcon}</span>
+                
+                {/* Индикатор загрузки */}
+                <div className="w-5 h-5 relative">
+                  <div className="w-full h-full border-2 border-slate-400 border-t-sky-500 rounded-full animate-spin"></div>
+                  
+                  {/* Пульсирующая точка в центре */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              typeIcon
+            )}
           </div>
           <div className="flow-node__identity-text">
             {editingTitle ? (

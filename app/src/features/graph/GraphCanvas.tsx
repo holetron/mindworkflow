@@ -24,6 +24,7 @@ import ReactFlow, {
   type NodeChange,
   useReactFlow,
 } from 'reactflow';
+import LoadingIndicator from './LoadingIndicator';
 import type { ProjectFlow, FlowNode, NodeUI } from '../../state/api';
 import FlowNodeCard, {
   type AiProviderOption,
@@ -68,6 +69,8 @@ interface GraphCanvasProps {
   loading?: boolean;
   sidebarCollapsed?: boolean;
   sidebarWidth?: number;
+  generatingNodes?: Set<string>; // Ноды, которые сейчас генерируют ответы
+  generatingEdges?: Map<string, string>; // Мапа sourceNodeId -> targetNodeId для генерирующихся связей
 }
 
 interface BuildGraphArgs {
@@ -86,6 +89,7 @@ interface BuildGraphArgs {
   onChangeNodeAi: GraphCanvasProps['onChangeNodeAi'];
   onChangeNodeUi: GraphCanvasProps['onChangeNodeUi'];
   currentNodeSizes?: Map<string, { width: number; height: number }>;
+  generatingNodes?: Set<string>;
 }
 
 interface GraphElements {
@@ -113,6 +117,8 @@ function GraphCanvasInner({
   loading = false,
   sidebarCollapsed = false,
   sidebarWidth = 300,
+  generatingNodes = new Set(),
+  generatingEdges = new Map(),
 }: GraphCanvasProps) {
   const reactFlow = useReactFlow<FlowNodeCardData>();
   const [nodes, setNodes] = useState<Node<FlowNodeCardData>[]>([]);
@@ -144,6 +150,7 @@ function GraphCanvasInner({
   }, []);
 
   useEffect(() => {
+    console.log('Saving lock state to localStorage:', isLocked);
     localStorage.setItem('lc-flow-is-locked', JSON.stringify(isLocked));
   }, [isLocked]);
 
@@ -151,6 +158,18 @@ function GraphCanvasInner({
     if (!project) return 'empty';
     return `${project.project_id}:${project.updated_at}:${project.nodes.length}:${project.edges.length}`;
   }, [project]);
+
+  // Restore lock state after any project change that might cause re-render
+  useEffect(() => {
+    const storedIsLocked = localStorage.getItem('lc-flow-is-locked');
+    if (storedIsLocked) {
+      const lockState = JSON.parse(storedIsLocked);
+      if (lockState !== isLocked) {
+        console.log('Restoring lock state after project change:', lockState);
+        setIsLocked(lockState);
+      }
+    }
+  }, [projectSignature, isLocked]); // Re-check lock state when project changes
 
   useEffect(() => {
     if (!project) {
@@ -186,6 +205,7 @@ function GraphCanvasInner({
       onChangeNodeAi,
       onChangeNodeUi,
       currentNodeSizes, // Pass current sizes
+      generatingNodes,
     });
 
     setNodes(next.nodes);
@@ -211,19 +231,6 @@ function GraphCanvasInner({
         selected: node.id === selectedNodeId,
       })),
     );
-  }, [selectedNodeId]);
-
-  // Force clear selection after certain operations to prevent sticky behavior
-  useEffect(() => {
-    if (selectedNodeId === null) {
-      // Additional cleanup when selection is cleared
-      setNodes((prev) =>
-        prev.map((node) => ({
-          ...node,
-          selected: false,
-        })),
-      );
-    }
   }, [selectedNodeId]);
 
   const handleNodesChange = useCallback(
@@ -505,7 +512,11 @@ function GraphCanvasInner({
           
           {/* Lock/Unlock Button */}
           <ControlButton
-            onClick={() => setIsLocked(!isLocked)}
+            onClick={() => {
+              const newLockState = !isLocked;
+              console.log('Lock button clicked, changing state:', isLocked, '->', newLockState);
+              setIsLocked(newLockState);
+            }}
             title={isLocked ? 'Разблокировать узлы' : 'Заблокировать узлы'}
             className={`${isLocked ? '!bg-orange-500/20 !text-orange-300' : '!bg-slate-800/80 !text-slate-300'} !h-6 !w-6 !min-h-6 !min-w-6`}
           >
@@ -582,6 +593,7 @@ function buildGraphElements({
   onChangeNodeAi,
   onChangeNodeUi,
   currentNodeSizes,
+  generatingNodes = new Set(),
 }: BuildGraphArgs): GraphElements {
   if (!project) {
     return { nodes: [], edges: [] };
@@ -616,6 +628,7 @@ function buildGraphElements({
           type: sourceNode.type,
         })),
       disabled: loading,
+      isGenerating: generatingNodes?.has(node.node_id) || false,
     };
 
     return {
