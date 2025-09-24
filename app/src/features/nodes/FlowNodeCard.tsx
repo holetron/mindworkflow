@@ -665,6 +665,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   const [activeAiTab, setActiveAiTab] = useState<'settings' | 'fields' | 'routing' | 'logs' | 'provider' | 'model' | 'ai_config' | ''>('');
   const [showRoutingEditor, setShowRoutingEditor] = useState(false);
   const [showLogsModal, setShowLogsModal] = useState(false);
+  const [showOutputExampleModal, setShowOutputExampleModal] = useState(false);
   
   // Color state for immediate UI updates
   const [currentColor, setCurrentColor] = useState(node.ui?.color ?? DEFAULT_COLOR);
@@ -672,6 +673,7 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   // Text content states for controlled components
   const [contentValue, setContentValue] = useState(node.content || '');
   const [systemPromptValue, setSystemPromptValue] = useState(String(node.ai?.system_prompt || ''));
+  const [outputExampleValue, setOutputExampleValue] = useState(String(node.ai?.output_example || ''));
   
   // HTML node specific states
   const [htmlUrl, setHtmlUrl] = useState<string>((node.meta?.htmlUrl as string) || 'https://wikipedia.org');
@@ -1071,6 +1073,12 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
     onChangeAi?.(node.node_id, { system_prompt: systemPrompt });
   }, [onChangeAi, node.node_id]);
 
+  // Output example change handler
+  const handleOutputExampleChange = useCallback((outputExample: string) => {
+    setOutputExampleValue(outputExample); // Immediately update local state
+    onChangeAi?.(node.node_id, { output_example: outputExample });
+  }, [onChangeAi, node.node_id]);
+
   // Field configuration handler
   const handleFieldsChange = useCallback((fields: NodeFieldConfig[]) => {
     onChangeMeta(node.node_id, { displayFields: fields });
@@ -1426,6 +1434,17 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                   >
                     📝
                   </button>
+
+                  {/* Output Example Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowOutputExampleModal(true)}
+                    className="w-7 h-7 rounded border transition flex items-center justify-center bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white"
+                    title="Пример вывода"
+                    disabled={disabled}
+                  >
+                    📋
+                  </button>
                 </div>
 
                 {/* Right Side - Action Buttons */}
@@ -1466,10 +1485,102 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
               <div className="mt-2 bg-black/20 border border-white/10 rounded p-3 space-y-3" style={{ flexShrink: 0 }}>
                 <div>
                   <label className="text-xs text-white/70 block mb-2">Системный промпт</label>
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const plannerPrompt = `Ты - агент-планировщик workflow. Твоя задача создавать структурированные планы в виде множественных нод.
+
+ДОСТУПНЫЕ ТИПЫ НОД:
+- text: Текстовый контент
+- ai: AI-агент для генерации
+- ai_improved: Улучшенный AI-агент  
+- image: Изображение
+- video: Видео
+- audio: Аудио
+- html: HTML контент
+- json: JSON данные
+- markdown: Markdown документ
+- file: Файл
+- python: Python код
+- router: Маршрутизатор
+
+ФОРМАТ ОТВЕТА:
+Всегда отвечай JSON объектом с массивом "nodes". Каждая нода должна содержать:
+- type: тип ноды (обязательно)
+- title: заголовок (обязательно)
+- content: содержимое (опционально)
+- x, y: координаты (опционально, будут назначены автоматически)
+- meta: дополнительные метаданные (опционально)
+- ai: конфигурация AI для AI-нод (опционально)
+
+Создавай логичные workflow с последовательностью операций.`;
+                        handleSystemPromptChange(plannerPrompt);
+                      }}
+                      disabled={disabled}
+                      className="px-2 py-1 text-xs bg-blue-600/20 border border-blue-500/50 text-blue-300 hover:bg-blue-600/30 rounded transition"
+                    >
+                      Планировщик
+                    </button>
+                  </div>
                   <textarea
                     value={systemPromptValue}
                     onChange={(e) => handleSystemPromptChange(e.target.value)}
                     placeholder="Например: Ты — полезный ассистент."
+                    disabled={disabled}
+                    className="w-full p-3 bg-black/20 border border-white/10 rounded text-sm resize-none nodrag"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    draggable={false}
+                    data-nodrag="true"
+                    rows={4}
+                    style={{ 
+                      minHeight: '80px',
+                      resize: 'none',
+                      fontSize: '13px',
+                      lineHeight: '1.4'
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-xs text-white/70 block mb-2">Пример вывода</label>
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const exampleFormat = JSON.stringify({
+                          nodes: [
+                            {
+                              type: "text",
+                              title: "Анализ данных",
+                              content: "Проведем анализ предоставленных данных...",
+                            },
+                            {
+                              type: "ai",
+                              title: "Генерация отчета",
+                              content: "Создай подробный отчет на основе анализа",
+                              ai: {
+                                system_prompt: "Ты - эксперт по анализу данных. Создавай детальные отчеты.",
+                                model: "gpt-4",
+                                temperature: 0.7
+                              }
+                            }
+                          ]
+                        }, null, 2);
+                        handleOutputExampleChange(exampleFormat);
+                      }}
+                      disabled={disabled}
+                      className="px-2 py-1 text-xs bg-blue-600/20 border border-blue-500/50 text-blue-300 hover:bg-blue-600/30 rounded transition"
+                    >
+                      Пример
+                    </button>
+                  </div>
+                  <textarea
+                    value={outputExampleValue}
+                    onChange={(e) => handleOutputExampleChange(e.target.value)}
+                    placeholder='Например: {"nodes": [{"type": "text", "title": "...", "content": "..."}]}'
                     disabled={disabled}
                     className="w-full p-3 bg-black/20 border border-white/10 rounded text-sm resize-none nodrag"
                     onMouseDown={(e) => e.stopPropagation()}
@@ -2471,6 +2582,92 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
           projectId={data.projectId || ''}
           onClose={() => setShowLogsModal(false)}
         />
+      )}
+
+      {/* Output Example Modal */}
+      {showOutputExampleModal && (node.type === 'ai_improved' || node.type === 'ai') && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowOutputExampleModal(false)}>
+          <div className="bg-slate-900 border border-white/20 rounded-lg p-6 w-[600px] max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Пример вывода</h3>
+              <button
+                onClick={() => setShowOutputExampleModal(false)}
+                className="text-white/60 hover:text-white text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-white/70 block mb-2">
+                  Описание формата ответа для агента-планировщика:
+                </label>
+                <div className="bg-black/30 border border-white/10 rounded p-3 text-xs text-white/80">
+                  <p className="mb-2">Для создания множественных нод используйте JSON массив:</p>
+                  <pre className="text-green-400">{`{
+  "nodes": [
+    {
+      "type": "text",
+      "title": "Заголовок ноды",
+      "content": "Содержимое ноды",
+      "x": 100,
+      "y": 200
+    }
+  ]
+}`}</pre>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm text-white/70 block mb-2">Пример вывода:</label>
+                <textarea
+                  value={outputExampleValue}
+                  onChange={(e) => handleOutputExampleChange(e.target.value)}
+                  placeholder='{"nodes": [{"type": "text", "title": "Заголовок", "content": "Содержимое"}]}'
+                  className="w-full h-48 p-3 bg-black/30 border border-white/10 rounded text-sm text-white placeholder-white/40 resize-none"
+                  style={{ fontSize: '13px', lineHeight: '1.4' }}
+                />
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    const exampleFormat = JSON.stringify({
+                      nodes: [
+                        {
+                          type: "text",
+                          title: "Анализ данных",
+                          content: "Проведем анализ предоставленных данных...",
+                        },
+                        {
+                          type: "ai",
+                          title: "Генерация отчета",
+                          content: "Создай подробный отчет на основе анализа",
+                          ai: {
+                            system_prompt: "Ты - эксперт по анализу данных. Создавай детальные отчеты.",
+                            model: "gpt-4",
+                            temperature: 0.7
+                          }
+                        }
+                      ]
+                    }, null, 2);
+                    handleOutputExampleChange(exampleFormat);
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded transition"
+                >
+                  Заполнить пример
+                </button>
+                <button
+                  onClick={() => setShowOutputExampleModal(false)}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition"
+                >
+                  Готово
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

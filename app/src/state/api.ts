@@ -148,6 +148,12 @@ export interface RunResponse {
   runId: string;
   cloned?: boolean;
   targetNodeId?: string;
+  createdNodes?: Array<{
+    node_id: string;
+    type: string;
+    title: string;
+  }>;
+  isMultiNodeResult?: boolean;
 }
 
 export async function fetchProject(projectId: string): Promise<ProjectFlow> {
@@ -456,6 +462,12 @@ export interface RunResponse {
   runId: string;
   cloned?: boolean;
   targetNodeId?: string;
+  createdNodes?: Array<{
+    node_id: string;
+    type: string;
+    title: string;
+  }>;
+  isMultiNodeResult?: boolean;
 }
 
 export async function updateProjectSettingsRemote(

@@ -546,7 +546,40 @@ function WorkspacePage() {
         // Now run the AI node in background
         const response = await runNode(project.project_id, nodeId);
         
-        if (sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved') && response.content && resultNodeId) {
+        // Check if this is a multi-node result
+        if (sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved') && response.isMultiNodeResult && response.createdNodes) {
+          // Multi-node result: remove the placeholder node and refresh project
+          if (resultNodeId) {
+            // Delete the placeholder result node since we created multiple nodes instead
+            await deleteNode(project.project_id, resultNodeId);
+            
+            setGeneratingEdges(prev => {
+              const next = new Map(prev);
+              next.delete(nodeId);
+              return next;
+            });
+            
+            setGeneratingNodes(prev => {
+              const next = new Set(prev);
+              if (resultNodeId) next.delete(resultNodeId);
+              return next;
+            });
+            
+            // Update logs for the original AI node
+            const refreshedLogs = await fetchNodeLogs(project.project_id, nodeId);
+            setRuns(nodeId, refreshedLogs);
+            
+            // Refresh project to show created nodes
+            const refreshedProject = await fetchProject(project.project_id);
+            if (refreshedProject) {
+              setProject(refreshedProject);
+            }
+            
+            // Show success message
+            setError(`✅ Создано ${response.createdNodes.length} нод: ${response.createdNodes.map((n: { node_id: string; type: string; title: string }) => n.title).join(', ')}`);
+            setTimeout(() => setError(''), 5000);
+          }
+        } else if (sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved') && response.content && resultNodeId) {
           // Extract content from response - it might be in different formats
           let responseContent = response.content;
           if (typeof responseContent === 'string') {
@@ -663,8 +696,8 @@ function WorkspacePage() {
           
           // Add to generating edges map and nodes set
           if (resultNodeId) {
-            setGeneratingEdges(prev => new Map(prev).set(nodeId, resultNodeId));
-            setGeneratingNodes(prev => new Set(prev).add(resultNodeId));
+            setGeneratingEdges(prev => new Map(prev).set(nodeId, resultNodeId!));
+            setGeneratingNodes(prev => new Set(prev).add(resultNodeId!));
           }
           
           // Refresh project to show the new node

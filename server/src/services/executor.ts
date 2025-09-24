@@ -12,11 +12,14 @@ import {
   storeRun,
   updateNodeContent,
   withTransaction,
+  createProjectNode,
+  addProjectEdge,
 } from '../db';
 import { AiService } from './ai';
 import { ParserService } from './parser';
 import { executePython } from './pythonSandbox';
 import { generatePreviz } from './videoGenStub';
+import { processMultiNodeResponse, ProcessedMultiNodes } from './multiNodeProcessor';
 import serverPackage from '../../package.json';
 
 interface ExecutionContext {
@@ -34,12 +37,26 @@ export interface ExecutionResult {
   contentType?: string | null;
   logs: string[];
   runId: string;
+  createdNodes?: Array<{
+    node_id: string;
+    type: string;
+    title: string;
+  }>;
+  isMultiNodeResult?: boolean;
 }
 
 interface RetryOutcome<T> {
   result: T;
   attempts: number;
   logs: string[];
+}
+
+interface ExecutionStepResult {
+  content: string;
+  contentType: string;
+  logs: string[];
+  createdNodes?: Array<{ node_id: string; type: string; title: string }>;
+  isMultiNodeResult?: boolean;
 }
 
 const MAX_ATTEMPTS = 3;
@@ -54,6 +71,43 @@ export class ExecutorService {
     this.aiService = new AiService(ajv);
     this.parserService = new ParserService(ajv);
     this.engineVersion = serverPackage.version ?? '0.0.0';
+  }
+
+  private async createMultipleNodes(
+    projectId: string, 
+    sourceNodeId: string, 
+    multiNodeResult: ProcessedMultiNodes
+  ): Promise<Array<{ node_id: string; type: string; title: string }>> {
+    const createdNodes: Array<{ node_id: string; type: string; title: string }> = [];
+    
+    return withTransaction(() => {
+      for (const nodeSpec of multiNodeResult.nodes) {
+        const { node } = createProjectNode(projectId, {
+          type: nodeSpec.type,
+          title: nodeSpec.title,
+          content: nodeSpec.content || '',
+          slug: nodeSpec.slug,
+          meta: nodeSpec.meta,
+          ai: nodeSpec.ai,
+        }, {
+          position: { x: nodeSpec.x, y: nodeSpec.y }
+        });
+        
+        // Add edge from source AI node to created node
+        addProjectEdge(projectId, {
+          from: sourceNodeId,
+          to: node.node_id,
+        });
+        
+        createdNodes.push({
+          node_id: node.node_id,
+          type: node.type,
+          title: node.title,
+        });
+      }
+      
+      return createdNodes;
+    });
   }
 
   async runNode(projectId: string, nodeId: string): Promise<ExecutionResult> {
@@ -87,7 +141,7 @@ export class ExecutorService {
     const runId = uuidv4();
 
     try {
-      const outcome = await this.withRetry(async () => {
+      const outcome = await this.withRetry<ExecutionStepResult>(async () => {
         switch (node.type) {
         case 'ai': {
           const aiConfig = (node.config.ai ?? {}) as Record<string, unknown>;
@@ -100,6 +154,31 @@ export class ExecutorService {
             schemaRef,
             settings: (project.settings ?? {}) as Record<string, unknown>,
           });
+          
+          // Check if this is a multi-node response
+          const multiNodeResult = processMultiNodeResponse(
+            aiResult.output, 
+            {
+              ...node,
+              content_type: node.content_type || undefined,
+              content: node.content || undefined,
+            }, 
+            node.ui.bbox.x2 + 100, 
+            node.ui.bbox.y1
+          );
+          
+          if (multiNodeResult.isMultiNode) {
+            // Create multiple nodes and return special result
+            const createdNodes = await this.createMultipleNodes(projectId, nodeId, multiNodeResult);
+            return {
+              content: `Создано ${createdNodes.length} нод: ${createdNodes.map((n: { node_id: string; type: string; title: string }) => n.title).join(', ')}`,
+              contentType: 'text/plain',
+              logs: [...aiResult.logs, `Created ${createdNodes.length} nodes from AI response`],
+              createdNodes,
+              isMultiNodeResult: true,
+            };
+          }
+          
           return {
             content: aiResult.output,
             contentType: aiResult.contentType,
@@ -240,6 +319,8 @@ export class ExecutorService {
         contentType: outcome.result.contentType ?? null,
         logs: [...outcome.logs, ...outcome.result.logs],
         runId,
+        createdNodes: (outcome.result as any).createdNodes,
+        isMultiNodeResult: (outcome.result as any).isMultiNodeResult || false,
       };
     } catch (error) {
       const finishedAt = new Date().toISOString();
