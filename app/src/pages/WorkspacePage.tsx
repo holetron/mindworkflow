@@ -38,6 +38,7 @@ import { useGlobalIntegrationsStore } from '../state/globalIntegrationsStore';
 import { AI_PROVIDER_PRESETS } from '../data/aiProviders';
 import type { AiProviderOption } from '../features/nodes/FlowNodeCard';
 import type { IntegrationFieldConfig } from '../state/api';
+import { useConfirmDialog } from '../ui/ConfirmDialog';
 import {
   DEFAULT_NODE_BBOX,
   NODE_DEFAULT_COLOR,
@@ -107,6 +108,9 @@ function WorkspacePage() {
   const [editDescription, setEditDescription] = useState('');
   const [generatingNodes, setGeneratingNodes] = useState<Set<string>>(new Set());
   const [generatingEdges, setGeneratingEdges] = useState<Map<string, string>>(new Map());
+
+  // Confirm dialog hook
+  const { showConfirm, ConfirmDialog } = useConfirmDialog();
   const pendingUiRef = useRef<Map<string, NodeUI>>(new Map());
   const pendingUiTimersRef = useRef<Map<string, number>>(new Map());
 
@@ -494,65 +498,140 @@ function WorkspacePage() {
       try {
         selectNode(nodeId);
         
-        // For AI nodes, create result node immediately and add to generating set
+        // For AI nodes, check if we need to create a placeholder result node
         const sourceNode = selectNodeById(project, nodeId);
         let resultNodeId: string | null = null;
         
         if (sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved')) {
-          // Create placeholder result node immediately
-          const resultPosition = calculateOutputNodePosition(sourceNode);
-          const resultNode: CreateNodePayload = {
-            type: 'text',
-            slug: 'text',
-            meta: {},
-            position: resultPosition,
-            ai: {},
-            ui: {
-              bbox: {
-                x1: resultPosition.x,
-                y1: resultPosition.y,
-                x2: resultPosition.x + NODE_DEFAULT_WIDTH,
-                y2: resultPosition.y + NODE_DEFAULT_HEIGHT,
+          // Check both response_type from AI config and output_type from meta
+          const responseType = sourceNode.ai?.response_type as string || 'single';
+          const outputType = sourceNode.meta?.output_type as string;
+          
+          console.log(`[WorkspacePage] Node ${nodeId}: responseType=${responseType}, outputType=${outputType}`);
+          
+          // Only create placeholder for single response mode WITHOUT mindmap/folder
+          const shouldCreatePlaceholder = (
+            responseType === 'single' && 
+            outputType !== 'mindmap' && 
+            outputType !== 'folder'
+          );
+          
+          if (shouldCreatePlaceholder) {
+            // Create placeholder result node for single response mode only
+            const resultPosition = calculateOutputNodePosition(sourceNode);
+            const resultNode: CreateNodePayload = {
+              type: 'text',
+              slug: 'text',
+              meta: {},
+              position: resultPosition,
+              ai: {},
+              ui: {
+                bbox: {
+                  x1: resultPosition.x,
+                  y1: resultPosition.y,
+                  x2: resultPosition.x + NODE_DEFAULT_WIDTH,
+                  y2: resultPosition.y + NODE_DEFAULT_HEIGHT,
+                },
+                color: NODE_DEFAULT_COLOR,
               },
-              color: NODE_DEFAULT_COLOR,
-            },
-            title: 'Генерируется ответ...',
-            content: 'Пожалуйста подождите, идет генерация ответа...',
-          };
-          
-          // Create the result node
-          const createResponse = await createNode(project.project_id, resultNode);
-          resultNodeId = createResponse.node.node_id;
-          
-          // Add edge from AI node to result node
-          await createEdge(project.project_id, {
-            from: nodeId,
-            to: resultNodeId,
-          });
-          
-          // Add to generating edges map and nodes set
-          if (resultNodeId) {
-            setGeneratingEdges(prev => new Map(prev).set(nodeId, resultNodeId));
-            setGeneratingNodes(prev => new Set(prev).add(resultNodeId));
-          }
-          
-          // Refresh project to show the new node
-          const refreshedProject = await fetchProject(project.project_id);
-          if (refreshedProject) {
-            setProject(refreshedProject);
+              title: 'Генерируется ответ...',
+              content: 'Пожалуйста подождите, идет генерация ответа...',
+            };
+            
+            // Create the result node
+            const createResponse = await createNode(project.project_id, resultNode);
+            resultNodeId = createResponse.node.node_id;
+            
+            // Add edge from AI node to result node
+            await createEdge(project.project_id, {
+              from: nodeId,
+              to: resultNodeId,
+            });
+            
+            // Add to generating edges map and nodes set
+            if (resultNodeId) {
+              setGeneratingEdges(prev => new Map(prev).set(nodeId, resultNodeId!));
+              setGeneratingNodes(prev => new Set(prev).add(resultNodeId!));
+            }
+            
+            // Refresh project to show the new node
+            const refreshedProject = await fetchProject(project.project_id);
+            if (refreshedProject) {
+              setProject(refreshedProject);
+            }
+          } else {
+            // For mindmap/tree/folder modes, just add to generating set without placeholder
+            setGeneratingNodes(prev => new Set(prev).add(nodeId));
           }
         }
         
         // Now run the AI node in background
         const response = await runNode(project.project_id, nodeId);
         
-        // Check if this is a multi-node result
-        if (sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved') && response.isMultiNodeResult && response.createdNodes) {
-          // Multi-node result: remove the placeholder node and refresh project
-          if (resultNodeId) {
-            // Delete the placeholder result node since we created multiple nodes instead
-            await deleteNode(project.project_id, resultNodeId);
+        // Handle different response types
+        if (sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved')) {
+          if (response.isMultiNodeResult && response.createdNodes) {
+            // Multi-node result (mindmap/tree): remove placeholder if exists
+            if (resultNodeId) {
+              // Delete the placeholder result node since we created multiple nodes instead
+              await deleteNode(project.project_id, resultNodeId);
+              
+              setGeneratingEdges(prev => {
+                const next = new Map(prev);
+                next.delete(nodeId);
+                return next;
+              });
+              
+              setGeneratingNodes(prev => {
+                const next = new Set(prev);
+                if (resultNodeId) next.delete(resultNodeId);
+                return next;
+              });
+            } else {
+              // No placeholder, just remove from generating set
+              setGeneratingNodes(prev => {
+                const next = new Set(prev);
+                next.delete(nodeId);
+                return next;
+              });
+            }
             
+            // Update logs for the original AI node
+            const refreshedLogs = await fetchNodeLogs(project.project_id, nodeId);
+            setRuns(nodeId, refreshedLogs);
+            
+            // Refresh project to show created nodes
+            const refreshedProject = await fetchProject(project.project_id);
+            if (refreshedProject) {
+              setProject(refreshedProject);
+            }
+            
+            // Show success message
+            setError(`✅ Создано ${response.createdNodes.length} нод: ${response.createdNodes.map((n: { node_id: string; type: string; title: string }) => n.title).join(', ')}`);
+            setTimeout(() => setError(''), 5000);
+            
+          } else if (response.content && resultNodeId) {
+            // Single response with placeholder node
+            let responseContent = response.content;
+            if (typeof responseContent === 'string') {
+              try {
+                // Try to parse if it's JSON with a response field
+                const parsed = JSON.parse(responseContent);
+                if (parsed.response) {
+                  responseContent = parsed.response;
+                }
+              } catch {
+                // If not JSON, use as is
+              }
+            }
+            
+            // Update the result node with actual content
+            await updateNode(project.project_id, resultNodeId, {
+              content: responseContent,
+              title: `Ответ от ${sourceNode.title}`,
+            });
+            
+            // Remove from generating edges map and nodes set
             setGeneratingEdges(prev => {
               const next = new Map(prev);
               next.delete(nodeId);
@@ -569,58 +648,34 @@ function WorkspacePage() {
             const refreshedLogs = await fetchNodeLogs(project.project_id, nodeId);
             setRuns(nodeId, refreshedLogs);
             
-            // Refresh project to show created nodes
+            // Refresh project to show updated content
             const refreshedProject = await fetchProject(project.project_id);
             if (refreshedProject) {
               setProject(refreshedProject);
             }
             
-            // Show success message
-            setError(`✅ Создано ${response.createdNodes.length} нод: ${response.createdNodes.map((n: { node_id: string; type: string; title: string }) => n.title).join(', ')}`);
-            setTimeout(() => setError(''), 5000);
-          }
-        } else if (sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved') && response.content && resultNodeId) {
-          // Extract content from response - it might be in different formats
-          let responseContent = response.content;
-          if (typeof responseContent === 'string') {
-            try {
-              // Try to parse if it's JSON with a response field
-              const parsed = JSON.parse(responseContent);
-              if (parsed.response) {
-                responseContent = parsed.response;
-              }
-            } catch {
-              // If not JSON, use as is
+          } else {
+            // Handle cases without placeholder (mindmap/tree/folder without isMultiNodeResult)
+            setGeneratingNodes(prev => {
+              const next = new Set(prev);
+              next.delete(nodeId);
+              return next;
+            });
+            
+            // Update logs for the original AI node
+            const refreshedLogs = await fetchNodeLogs(project.project_id, nodeId);
+            setRuns(nodeId, refreshedLogs);
+            
+            const refreshedProject = await fetchProject(project.project_id);
+            if (refreshedProject) {
+              setProject(refreshedProject);
             }
-          }
-          
-          // Update the result node with actual content
-          await updateNode(project.project_id, resultNodeId, {
-            content: responseContent,
-            title: `Ответ от ${sourceNode.title}`,
-          });
-          
-          // Remove from generating edges map and nodes set
-          setGeneratingEdges(prev => {
-            const next = new Map(prev);
-            next.delete(nodeId);
-            return next;
-          });
-          
-          setGeneratingNodes(prev => {
-            const next = new Set(prev);
-            if (resultNodeId) next.delete(resultNodeId);
-            return next;
-          });
-          
-          // Update logs for the original AI node
-          const refreshedLogs = await fetchNodeLogs(project.project_id, nodeId);
-          setRuns(nodeId, refreshedLogs);
-          
-          // Refresh project to show updated content
-          const refreshedProject = await fetchProject(project.project_id);
-          if (refreshedProject) {
-            setProject(refreshedProject);
+            
+            // Show response message if available
+            if (response.content) {
+              setError(`📁 Ответ обработан: ${response.content.substring(0, 100)}...`);
+              setTimeout(() => setError(''), 5000);
+            }
           }
         } else if (!sourceNode || (sourceNode.type !== 'ai' && sourceNode.type !== 'ai_improved')) {
           // Only update content for non-AI nodes
@@ -638,9 +693,15 @@ function WorkspacePage() {
         const message = err instanceof Error ? err.message : String(err);
         setError(message);
         
-        // Remove from generating edges on error
+        // Remove from generating sets on error
         setGeneratingEdges(prev => {
           const next = new Map(prev);
+          next.delete(nodeId);
+          return next;
+        });
+        
+        setGeneratingNodes(prev => {
+          const next = new Set(prev);
           next.delete(nodeId);
           return next;
         });
@@ -649,7 +710,7 @@ function WorkspacePage() {
         selectNode(null);
       }
     },
-    [project, selectNode, upsertNodeContent, setRuns, setError, setProject, setGeneratingEdges, setGeneratingNodes],
+    [project, selectNode, upsertNodeContent, setRuns, setError, setProject, setGeneratingEdges, setGeneratingNodes, calculateOutputNodePosition],
   );
 
   const handleRegenerateNode = useCallback(
@@ -788,7 +849,6 @@ function WorkspacePage() {
     async (nodeId: string) => {
       if (!project) return;
       try {
-        setLoading(true);
         console.log('Deleting node:', nodeId);
         
         // Clear any pending operations for this node to prevent update conflicts
@@ -812,11 +872,9 @@ function WorkspacePage() {
         const message = err instanceof Error ? err.message : String(err);
         console.error('Failed to delete node:', message);
         setError(message);
-      } finally {
-        setLoading(false);
       }
     },
-    [project, removeNode, setLoading, setError, setProject],
+    [project, removeNode, setError, setProject],
   );
 
   const handleUpdateNodeMeta = useCallback(
@@ -959,7 +1017,13 @@ function WorkspacePage() {
 
   const handleDeleteWorkspace = useCallback(async () => {
     if (!project) return;
-    const confirmed = window.confirm('Удалить весь воркспейс? Действие необратимо.');
+    const confirmed = await showConfirm({
+      title: 'Удалить воркспейс?',
+      message: 'Весь воркспейс и все данные в нём будут удалены безвозвратно. Это действие нельзя отменить.',
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      type: 'danger'
+    });
     if (!confirmed) return;
     try {
       setLoading(true);
@@ -1373,6 +1437,9 @@ function WorkspacePage() {
           </div>
         </div>
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog />
     </div>
   );
 }

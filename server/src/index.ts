@@ -49,7 +49,7 @@ export default app;
 
 function loadCoreSchemas(validator: Ajv): void {
   const schemaDir = path.resolve(__dirname, 'schemas');
-  const files = ['PLAN_SCHEMA.json', 'ACTOR_SCHEMA.json', 'PARSE_SCHEMA.json', 'TEXT_RESPONSE.json'];
+  const files = ['PLAN_SCHEMA.json', 'ACTOR_SCHEMA.json', 'PARSE_SCHEMA.json', 'TEXT_RESPONSE.json', 'MINDMAP_SCHEMA.json'];
   for (const file of files) {
     const schemaPath = path.join(schemaDir, file);
     const raw = fs.readFileSync(schemaPath, 'utf8');
@@ -61,7 +61,19 @@ function loadCoreSchemas(validator: Ajv): void {
 }
 
 function registerStaticClient(app: express.Express): void {
-  const clientDir = path.resolve(process.cwd(), 'app', 'dist');
+  // В pkg окружении файлы находятся в __dirname, в dev режиме - в process.cwd()
+  const isPkg = typeof (process as any).pkg !== 'undefined';
+  
+  // Проверяем есть ли app-dist в текущей директории (портабельная версия)
+  const portableClientDir = path.resolve(process.cwd(), 'app-dist');
+  const isPortable = fs.existsSync(portableClientDir);
+  
+  const clientDir = isPortable 
+    ? portableClientDir
+    : isPkg 
+      ? path.resolve(__dirname, '..', 'app', 'dist')
+      : path.resolve(process.cwd(), 'app', 'dist');
+  
   const indexPath = path.join(clientDir, 'index.html');
   if (!fs.existsSync(clientDir) || !fs.existsSync(indexPath)) {
     return;

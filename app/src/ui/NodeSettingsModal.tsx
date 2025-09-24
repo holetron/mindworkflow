@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Modal from './Modal';
+import { useConfirmDialog } from './ConfirmDialog';
 import type { FlowNode } from '../state/api';
 
 interface NodeSettingsModalProps {
@@ -15,6 +16,9 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
   const [localMeta, setLocalMeta] = useState<Record<string, unknown>>(node.meta || {});
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Confirm dialog hook
+  const { showConfirm, ConfirmDialog } = useConfirmDialog();
+
   const handleSave = () => {
     if (onUpdateNodeMeta && hasChanges) {
       onUpdateNodeMeta(node.node_id, localMeta);
@@ -22,9 +26,17 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
     }
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
     if (hasChanges) {
-      if (window.confirm('У вас есть несохраненные изменения. Хотите сохранить их?')) {
+      const confirmed = await showConfirm({
+        title: 'Есть несохраненные изменения',
+        message: 'У вас есть несохраненные изменения в настройках ноды. Хотите сохранить их перед закрытием?',
+        confirmText: 'Сохранить',
+        cancelText: 'Не сохранять',
+        type: 'warning'
+      });
+      
+      if (confirmed) {
         handleSave();
       }
     }
@@ -140,6 +152,9 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
           </pre>
         </div>
       </div>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog />
     </Modal>
   );
 }

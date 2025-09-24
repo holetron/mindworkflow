@@ -51,7 +51,7 @@ interface GraphCanvasProps {
   onSelectNode: (nodeId: string | null) => void;
   onRunNode: (nodeId: string) => void;
   onRegenerateNode: (nodeId: string) => void;
-  onDeleteNode: (nodeId: string) => void;
+  onDeleteNode: (nodeId: string) => void | Promise<void>;
   onAddNodeFromPalette: (slug: string, position: { x: number; y: number }) => void | Promise<void>;
   onCopyNode?: (node: FlowNode, position: { x: number; y: number }) => void | Promise<void>;
   onChangeNodeMeta: (nodeId: string, patch: Record<string, unknown>) => void;
@@ -285,6 +285,25 @@ function GraphCanvasInner({
     [onRemoveEdges],
   );
 
+  const handleNodesDelete = useCallback(
+    (removed: Node<FlowNodeCardData>[]) => {
+      if (removed.length === 0) return;
+      console.log('Deleting nodes:', removed.map(node => node.id));
+      
+      // Delete nodes with small delays to avoid race conditions
+      removed.forEach((node, index) => {
+        setTimeout(async () => {
+          try {
+            await onDeleteNode(node.id);
+          } catch (error) {
+            console.error(`Failed to delete node ${node.id}:`, error);
+          }
+        }, index * 100); // 100ms delay between each deletion
+      });
+    },
+    [onDeleteNode],
+  );
+
   const handleConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) return;
@@ -445,6 +464,7 @@ function GraphCanvasInner({
         edgeTypes={edgeTypes}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
+        onNodesDelete={handleNodesDelete}
         onEdgesDelete={handleEdgesDelete}
         onConnect={handleConnect}
         onNodeClick={handleNodeClick}

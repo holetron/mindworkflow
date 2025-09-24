@@ -17,10 +17,36 @@ import {
 } from '../db';
 import { AiService } from './ai';
 import { ParserService } from './parser';
+import { TransformerService } from './transformerService';
 import { executePython } from './pythonSandbox';
 import { generatePreviz } from './videoGenStub';
-import { processMultiNodeResponse, ProcessedMultiNodes } from './multiNodeProcessor';
-import serverPackage from '../../package.json';
+// import { processMultiNodeResponse, ProcessedMultiNodes } from './multiNodeProcessor'; // Moved to experimental
+import * as fs from 'fs';
+
+// Динамически загружаем package.json
+const getPackageInfo = () => {
+  try {
+    // Пробуем разные пути для разных окружений
+    const possiblePaths = [
+      path.resolve(__dirname, '../../package.json'), // dev mode
+      path.resolve(process.cwd(), 'package.json'),   // portable mode
+      path.resolve(__dirname, '../package.json'),    // другой случай
+    ];
+    
+    for (const packagePath of possiblePaths) {
+      if (fs.existsSync(packagePath)) {
+        return JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+      }
+    }
+    
+    // Fallback если package.json не найден
+    return { name: 'local-creative-flow-server', version: '0.1.0' };
+  } catch {
+    return { name: 'local-creative-flow-server', version: '0.1.0' };
+  }
+};
+
+const serverPackage = getPackageInfo();
 
 interface ExecutionContext {
   projectId: string;
@@ -65,14 +91,18 @@ const BACKOFF = [0, 1_000, 2_000];
 export class ExecutorService {
   private readonly aiService: AiService;
   private readonly parserService: ParserService;
+  private readonly transformerService: TransformerService;
   private readonly engineVersion: string;
 
   constructor(private readonly ajv: Ajv) {
     this.aiService = new AiService(ajv);
     this.parserService = new ParserService(ajv);
+    this.transformerService = new TransformerService();
     this.engineVersion = serverPackage.version ?? '0.0.0';
   }
 
+  // EXPERIMENTAL FEATURE - Multi-node creation disabled
+  /*
   private async createMultipleNodes(
     projectId: string, 
     sourceNodeId: string, 
@@ -109,6 +139,7 @@ export class ExecutorService {
       return createdNodes;
     });
   }
+  */
 
   async runNode(projectId: string, nodeId: string): Promise<ExecutionResult> {
     ensureProjectDirs(projectId);
@@ -145,63 +176,178 @@ export class ExecutorService {
         switch (node.type) {
         case 'ai': {
           const aiConfig = (node.config.ai ?? {}) as Record<string, unknown>;
-          const schemaRef = String(aiConfig.output_schema_ref ?? 'PLAN_SCHEMA');
-          const aiResult = await this.aiService.run({
-            projectId,
-            node,
-            previousNodes,
-            nextNodes: nextMetadata,
-            schemaRef,
-            settings: (project.settings ?? {}) as Record<string, unknown>,
-          });
+          const outputType = node.meta?.output_type as string;
+          console.log(`[Executor DEBUG] Node config:`, JSON.stringify(aiConfig, null, 2));
+          console.log(`[Executor DEBUG] Node meta output_type:`, outputType);
           
-          // Check if this is a multi-node response
-          const multiNodeResult = processMultiNodeResponse(
-            aiResult.output, 
-            {
-              ...node,
-              content_type: node.content_type || undefined,
-              content: node.content || undefined,
-            }, 
-            node.ui.bbox.x2 + 100, 
-            node.ui.bbox.y1
-          );
-          
-          if (multiNodeResult.isMultiNode) {
-            // Create multiple nodes and return special result
-            const createdNodes = await this.createMultipleNodes(projectId, nodeId, multiNodeResult);
+          // Проверяем тип вывода из мета-данных
+          if (outputType === 'mindmap') {
+            // Для mindmap используем MINDMAP_SCHEMA для правильного JSON формата
+            const schemaRef = 'MINDMAP_SCHEMA';
+            console.log(`[Executor] Node ${node.node_id}: Using ${schemaRef} for mindmap output`);
+            
+            const aiResult = await this.aiService.run({
+              projectId,
+              node,
+              previousNodes,
+              nextNodes: nextMetadata,
+              schemaRef,
+              settings: (project.settings ?? {}) as Record<string, unknown>,
+            });
+            
+            // Используем transformer service для создания дерева нод
+            try {
+              console.log(`[Executor] Transforming MINDMAP JSON to nodes:`, aiResult.output.substring(0, 200));
+              
+              const transformerResult = await this.transformerService.transformJsonToNodes(
+                projectId,
+                node.node_id,
+                aiResult.output,
+                node.ui.bbox.x2 + 100,
+                node.ui.bbox.y1
+              );
+              
+              return {
+                content: `Создан mindmap из ${transformerResult.createdNodes.length} нод: ${transformerResult.createdNodes.map(n => n.title).join(', ')}`,
+                contentType: 'text/plain',
+                logs: [...aiResult.logs, ...transformerResult.logs],
+                createdNodes: transformerResult.createdNodes,
+                isMultiNodeResult: true,
+              };
+            } catch (error) {
+              console.error('[Executor] Error creating mindmap:', error);
+              return {
+                content: `Ошибка создания mindmap: ${error instanceof Error ? error.message : 'Unknown error'}\n\nОтвет ИИ:\n${aiResult.output}`,
+                contentType: 'text/plain',
+                logs: [...aiResult.logs, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`],
+              };
+            }
+          } else {
+            // Для обычного режима используем PLAN_SCHEMA (как было раньше)
+            const schemaRef = 'PLAN_SCHEMA';
+            console.log(`[Executor] Node ${node.node_id}: FORCING schema to ${schemaRef}`);
+            
+            const aiResult = await this.aiService.run({
+              projectId,
+              node,
+              previousNodes,
+              nextNodes: nextMetadata,
+              schemaRef,
+              settings: (project.settings ?? {}) as Record<string, unknown>,
+            });
+            
             return {
-              content: `Создано ${createdNodes.length} нод: ${createdNodes.map((n: { node_id: string; type: string; title: string }) => n.title).join(', ')}`,
-              contentType: 'text/plain',
-              logs: [...aiResult.logs, `Created ${createdNodes.length} nodes from AI response`],
-              createdNodes,
-              isMultiNodeResult: true,
+              content: aiResult.output,
+              contentType: aiResult.contentType,
+              logs: aiResult.logs,
             };
           }
-          
-          return {
-            content: aiResult.output,
-            contentType: aiResult.contentType,
-            logs: aiResult.logs,
-          };
         }
         case 'ai_improved': {
-          // Handle ai_improved nodes similar to ai nodes
+          // Handle ai_improved nodes with support for different response types
           const aiConfig = (node.config?.ai ?? {}) as Record<string, unknown>;
-          const schemaRef = 'TEXT_RESPONSE'; // Use simple text response for ai_improved
-          const aiResult = await this.aiService.run({
-            projectId,
-            node,
-            previousNodes,
-            nextNodes: nextMetadata,
-            schemaRef,
-            settings: (project.settings ?? {}) as Record<string, unknown>,
-          });
-          return {
-            content: aiResult.output,
-            contentType: aiResult.contentType,
-            logs: aiResult.logs,
-          };
+          const responseType = aiConfig.response_type as string || 'single';
+          const outputType = node.meta?.output_type as string;
+          
+          console.log(`[Executor] AI Improved node ${node.node_id}: response_type = ${responseType}, output_type = ${outputType}`);
+          
+          // Проверяем output_type из метаданных (приоритет над response_type)
+          if (outputType === 'mindmap' || responseType === 'tree') {
+            const schemaRef = outputType === 'mindmap' ? 'MINDMAP_SCHEMA' : 'TEXT_RESPONSE';
+            
+            const aiResult = await this.aiService.run({
+              projectId,
+              node,
+              previousNodes,
+              nextNodes: nextMetadata,
+              schemaRef,
+              settings: (project.settings ?? {}) as Record<string, unknown>,
+            });
+            
+            // Use transformer service to create node tree
+            try {
+              let jsonContent = aiResult.output;
+              
+              // Если не используем MINDMAP_SCHEMA, пробуем извлечь JSON из текста
+              if (schemaRef !== 'MINDMAP_SCHEMA') {
+                // Try to extract JSON from markdown code blocks
+                const jsonMatch = jsonContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                  jsonContent = jsonMatch[1].trim();
+                }
+                
+                // Try to find JSON object in the text
+                const jsonObjectMatch = jsonContent.match(/\{[\s\S]*\}/);
+                if (jsonObjectMatch && !jsonMatch) {
+                  jsonContent = jsonObjectMatch[0];
+                }
+              }
+              
+              console.log(`[Executor] Creating mindmap from AI_IMPROVED output (${schemaRef}):`, jsonContent.substring(0, 200));
+              
+              const transformerResult = await this.transformerService.transformJsonToNodes(
+                projectId,
+                node.node_id,
+                jsonContent,
+                node.ui.bbox.x2 + 100,
+                node.ui.bbox.y1
+              );
+              
+              const modeText = outputType === 'mindmap' ? 'mindmap' : 'дерево';
+              return {
+                content: `Создан ${modeText} из ${transformerResult.createdNodes.length} нод: ${transformerResult.createdNodes.map(n => n.title).join(', ')}`,
+                contentType: 'text/plain',
+                logs: [...aiResult.logs, ...transformerResult.logs],
+                createdNodes: transformerResult.createdNodes,
+                isMultiNodeResult: true,
+              };
+            } catch (error) {
+              console.error('[Executor] Error creating node tree:', error);
+              return {
+                content: `Ошибка создания дерева нод: ${error instanceof Error ? error.message : 'Unknown error'}\n\nОтвет ИИ:\n${aiResult.output}`,
+                contentType: 'text/plain',
+                logs: [...aiResult.logs, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`],
+              };
+            }
+          } else if (responseType === 'folder') {
+            // Determine schema based on response type
+            const schemaRef = 'TEXT_RESPONSE'; // Use text response for file descriptions (for now)
+            
+            const aiResult = await this.aiService.run({
+              projectId,
+              node,
+              previousNodes,
+              nextNodes: nextMetadata,
+              schemaRef,
+              settings: (project.settings ?? {}) as Record<string, unknown>,
+            });
+            
+            // TODO: Implement folder creation logic
+            // This would parse AI response for file specifications and create actual files
+            return {
+              content: `Режим "папка файлов" в разработке. Ответ ИИ:\n${aiResult.output}`,
+              contentType: 'text/plain',
+              logs: [...aiResult.logs, 'Folder mode not yet implemented'],
+            };
+          } else {
+            // Default single response
+            const schemaRef = 'TEXT_RESPONSE'; // Default for single response
+            
+            const aiResult = await this.aiService.run({
+              projectId,
+              node,
+              previousNodes,
+              nextNodes: nextMetadata,
+              schemaRef,
+              settings: (project.settings ?? {}) as Record<string, unknown>,
+            });
+            
+            return {
+              content: aiResult.output,
+              contentType: aiResult.contentType,
+              logs: aiResult.logs,
+            };
+          }
         }
         case 'parser': {
           const htmlSource = previousNodes[previousNodes.length - 1]?.content ?? '';
@@ -262,6 +408,45 @@ export class ExecutorService {
             contentType: 'application/json',
             logs: ['Audio generation stub executed'],
           };
+        }
+        case 'transformer': {
+          const jsonContent = node.content ?? '';
+          if (!jsonContent.trim()) {
+            return {
+              content: 'Transformer node requires JSON content with nodes',
+              contentType: 'text/plain',
+              logs: ['No JSON content provided for transformation'],
+            };
+          }
+          
+          try {
+            // Позиция для создания нод - правее текущей ноды
+            const startX = node.ui.bbox.x2 + 100;
+            const startY = node.ui.bbox.y1;
+            
+            const transformResult = await this.transformerService.transformJsonToNodes(
+              projectId,
+              node.node_id,
+              jsonContent,
+              startX,
+              startY
+            );
+            
+            return {
+              content: `🔄 Создано ${transformResult.createdNodes.length} нод: ${transformResult.createdNodes.map(n => n.title).join(', ')}`,
+              contentType: 'text/plain',
+              logs: transformResult.logs,
+              createdNodes: transformResult.createdNodes,
+              isMultiNodeResult: true,
+            };
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+            return {
+              content: `❌ Ошибка трансформации: ${errorMessage}`,
+              contentType: 'text/plain',
+              logs: [`Transformer error: ${errorMessage}`],
+            };
+          }
         }
         case 'video_gen': {
           const videoResult = await generatePreviz({ projectId, nodeId: node.node_id });

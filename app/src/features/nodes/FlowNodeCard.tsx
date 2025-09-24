@@ -32,6 +32,8 @@ import {
 } from '../../constants/nodeDefaults';
 import { SettingsIcon } from '../../ui/icons/SettingsIcon';
 import { NodeSettingsModal } from '../../ui/NodeSettingsModal';
+import { AiSettingsModal } from '../../ui/AiSettingsModal';
+import { useConfirmDialog } from '../../ui/ConfirmDialog';
 import type { AgentRoutingConfig } from '../routing/agentRouting';
 import { DEFAULT_ROUTING_CONFIGS } from '../routing/agentRouting';
 import { AgentRoutingDisplay } from '../routing/AgentRoutingDisplay';
@@ -662,18 +664,23 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   const [fileUrlInput, setFileUrlInput] = useState('');
   const [fileDialogMode, setFileDialogMode] = useState<'url' | 'upload'>('url');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showAiSettingsModal, setShowAiSettingsModal] = useState(false);
+  const [activeAiModalTab, setActiveAiModalTab] = useState<'settings' | 'ai_config' | 'routing'>('settings');
   const [activeAiTab, setActiveAiTab] = useState<'settings' | 'fields' | 'routing' | 'logs' | 'provider' | 'model' | 'ai_config' | ''>('');
   const [showRoutingEditor, setShowRoutingEditor] = useState(false);
   const [showLogsModal, setShowLogsModal] = useState(false);
-  const [showOutputExampleModal, setShowOutputExampleModal] = useState(false);
+  const [outputType, setOutputType] = useState<'mindmap' | 'node' | 'folder'>('node');
+  const [showPresetSave, setShowPresetSave] = useState(false);
   
   // Color state for immediate UI updates
   const [currentColor, setCurrentColor] = useState(node.ui?.color ?? DEFAULT_COLOR);
   
+  // Confirm dialog hook
+  const { showConfirm, ConfirmDialog } = useConfirmDialog();
+  
   // Text content states for controlled components
   const [contentValue, setContentValue] = useState(node.content || '');
   const [systemPromptValue, setSystemPromptValue] = useState(String(node.ai?.system_prompt || ''));
-  const [outputExampleValue, setOutputExampleValue] = useState(String(node.ai?.output_example || ''));
   
   // HTML node specific states
   const [htmlUrl, setHtmlUrl] = useState<string>((node.meta?.htmlUrl as string) || 'https://wikipedia.org');
@@ -800,6 +807,33 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
     setFileUrlInput('');
   }, []);
 
+  // Preset handling callbacks
+  const handleSavePreset = useCallback(() => {
+    const preset = {
+      provider: node.ai?.provider,
+      model: node.ai?.model,
+      temperature: node.ai?.temperature || 0.7,
+      system_prompt: systemPromptValue,
+      output_example: node.ai?.output_example,
+      output_type: outputType
+    };
+    
+    // Сохраняем пресет в localStorage
+    const savedPresets = JSON.parse(localStorage.getItem('ai_presets') || '[]');
+    const presetName = `Preset_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}`;
+    savedPresets.push({ name: presetName, ...preset });
+    localStorage.setItem('ai_presets', JSON.stringify(savedPresets));
+    
+    // Уведомляем пользователя
+    alert(`Пресет сохранен как "${presetName}"`);
+  }, [node.ai?.provider, node.ai?.model, node.ai?.temperature, systemPromptValue, node.ai?.output_example, outputType]);
+
+  const handleOutputTypeChange = useCallback((type: 'mindmap' | 'node' | 'folder') => {
+    setOutputType(type);
+    // Можно также сохранить в метаданных ноды
+    onChangeMeta(node.node_id, { output_type: type });
+  }, [node.node_id, onChangeMeta]);
+
   // Sync state with node changes
   useEffect(() => {
     setTitleValue(node.title);
@@ -816,6 +850,10 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
   useEffect(() => {
     setCurrentColor(node.ui?.color ?? DEFAULT_COLOR);
   }, [node.ui?.color]);
+
+  useEffect(() => {
+    setOutputType((node.meta?.output_type as 'mindmap' | 'node' | 'folder') || 'node');
+  }, [node.meta?.output_type]);
 
   // Focus title input when editing starts
   useEffect(() => {
@@ -1073,12 +1111,6 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
     onChangeAi?.(node.node_id, { system_prompt: systemPrompt });
   }, [onChangeAi, node.node_id]);
 
-  // Output example change handler
-  const handleOutputExampleChange = useCallback((outputExample: string) => {
-    setOutputExampleValue(outputExample); // Immediately update local state
-    onChangeAi?.(node.node_id, { output_example: outputExample });
-  }, [onChangeAi, node.node_id]);
-
   // Field configuration handler
   const handleFieldsChange = useCallback((fields: NodeFieldConfig[]) => {
     onChangeMeta(node.node_id, { displayFields: fields });
@@ -1283,10 +1315,18 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
           <button
             type="button"
             className="flow-node__toolbar-button text-red-400 hover:text-red-300"
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (window.confirm('Удалить эту ноду?')) {
+              const confirmed = await showConfirm({
+                title: 'Удалить ноду?',
+                message: 'Эта нода будет удалена безвозвратно. Все данные и связи с ней будут потеряны.',
+                confirmText: 'Удалить',
+                cancelText: 'Отмена',
+                type: 'danger'
+              });
+              
+              if (confirmed) {
                 onDelete(node.node_id);
               }
             }}
@@ -1382,12 +1422,11 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                   {/* Agent Settings Button */}
                   <button
                     type="button"
-                    onClick={() => setActiveAiTab(activeAiTab === 'settings' ? '' : 'settings')}
-                    className={`w-7 h-7 rounded border transition flex items-center justify-center ${
-                      activeAiTab === 'settings'
-                        ? 'bg-blue-600/30 border-blue-500/50 text-blue-300'
-                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white'
-                    }`}
+                    onClick={() => {
+                      setActiveAiModalTab('settings');
+                      setShowAiSettingsModal(true);
+                    }}
+                    className="w-7 h-7 rounded border transition flex items-center justify-center bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white"
                     title="Настройки агента"
                     disabled={disabled}
                   >
@@ -1397,12 +1436,11 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                   {/* AI Configuration Button */}
                   <button
                     type="button"
-                    onClick={() => setActiveAiTab(activeAiTab === 'ai_config' ? '' : 'ai_config')}
-                    className={`w-7 h-7 rounded border transition flex items-center justify-center ${
-                      activeAiTab === 'ai_config'
-                        ? 'bg-purple-600/30 border-purple-500/50 text-purple-300'
-                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white'
-                    }`}
+                    onClick={() => {
+                      setActiveAiModalTab('ai_config');
+                      setShowAiSettingsModal(true);
+                    }}
+                    className="w-7 h-7 rounded border transition flex items-center justify-center bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white"
                     title="Настройки ИИ"
                     disabled={disabled}
                   >
@@ -1412,12 +1450,11 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                   {/* Routing Configuration Button */}
                   <button
                     type="button"
-                    onClick={() => setActiveAiTab(activeAiTab === 'routing' ? '' : 'routing')}
-                    className={`w-7 h-7 rounded border transition flex items-center justify-center ${
-                      activeAiTab === 'routing'
-                        ? 'bg-green-600/30 border-green-500/50 text-green-300'
-                        : 'bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white'
-                    }`}
+                    onClick={() => {
+                      setActiveAiModalTab('routing');
+                      setShowAiSettingsModal(true);
+                    }}
+                    className="w-7 h-7 rounded border transition flex items-center justify-center bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white"
                     title="Настройки роутинга"
                     disabled={disabled}
                   >
@@ -1434,16 +1471,32 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                   >
                     📝
                   </button>
+                </div>
 
-                  {/* Output Example Button */}
-                  <button
-                    type="button"
-                    onClick={() => setShowOutputExampleModal(true)}
-                    className="w-7 h-7 rounded border transition flex items-center justify-center bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white"
-                    title="Пример вывода"
+                {/* Center - Preset and Output Type Controls */}
+                <div className="flex gap-1 items-center">
+                  {/* Output Type Selector */}
+                  <select
+                    value={outputType}
+                    onChange={(e) => handleOutputTypeChange(e.target.value as 'mindmap' | 'node' | 'folder')}
+                    className="px-2 py-1 text-xs bg-black/30 border border-white/10 rounded text-white/70 hover:text-white hover:bg-black/40 transition"
+                    title="Тип вывода"
                     disabled={disabled}
                   >
-                    📋
+                    <option value="mindmap">Mindmap</option>
+                    <option value="node">Node</option>
+                    <option value="folder">Folder</option>
+                  </select>
+
+                  {/* Save Preset Button */}
+                  <button
+                    type="button"
+                    onClick={handleSavePreset}
+                    className="w-7 h-7 rounded border transition flex items-center justify-center bg-black/20 border-blue-500/50 text-blue-300 hover:bg-blue-600/30 hover:text-blue-200"
+                    title="Сохранить пресет агента"
+                    disabled={disabled}
+                  >
+                    💾
                   </button>
                 </div>
 
@@ -1549,75 +1602,6 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
                     value={systemPromptValue}
                     onChange={(e) => handleSystemPromptChange(e.target.value)}
                     placeholder="Например: Ты — полезный ассистент."
-                    disabled={disabled}
-                    className="w-full p-3 bg-black/20 border border-white/10 rounded text-sm resize-none nodrag"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                    draggable={false}
-                    data-nodrag="true"
-                    rows={4}
-                    style={{ 
-                      minHeight: '80px',
-                      resize: 'none',
-                      fontSize: '13px',
-                      lineHeight: '1.4'
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-xs text-white/70 block mb-2">Пример вывода</label>
-                  <div className="flex gap-2 mb-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const exampleFormat = JSON.stringify({
-                          nodes: [
-                            {
-                              type: "text",
-                              title: "1. Постановка задачи",
-                              content: "Определяем цели и требования проекта"
-                            },
-                            {
-                              type: "python",
-                              title: "2. Обработка данных",
-                              content: "import pandas as pd\n# Загрузка и очистка данных\ndata = pd.read_csv('data.csv')"
-                            },
-                            {
-                              type: "ai",
-                              title: "3. Анализ и выводы",
-                              content: "Проанализируй обработанные данные и сделай выводы",
-                              ai: {
-                                system_prompt: "Ты - эксперт по анализу данных. Давай четкие и структурированные выводы.",
-                                model: "gpt-4",
-                                temperature: 0.3
-                              }
-                            },
-                            {
-                              type: "markdown",
-                              title: "4. Финальный отчет",
-                              content: "# Отчет по анализу данных\n\n## Основные выводы\n\n- Вывод 1\n- Вывод 2\n\n## Рекомендации\n\nПоследующие действия..."
-                            },
-                            {
-                              type: "image",
-                              title: "5. Визуализация результатов",
-                              content: "Создание графиков и диаграмм для презентации"
-                            }
-                          ]
-                        }, null, 2);
-                        handleOutputExampleChange(exampleFormat);
-                      }}
-                      disabled={disabled}
-                      className="px-2 py-1 text-xs bg-blue-600/20 border border-blue-500/50 text-blue-300 hover:bg-blue-600/30 rounded transition"
-                    >
-                      Пример
-                    </button>
-                  </div>
-                  <textarea
-                    value={outputExampleValue}
-                    onChange={(e) => handleOutputExampleChange(e.target.value)}
-                    placeholder='Например: {"nodes": [{"type": "text", "title": "...", "content": "..."}]}'
                     disabled={disabled}
                     className="w-full p-3 bg-black/20 border border-white/10 rounded text-sm resize-none nodrag"
                     onMouseDown={(e) => e.stopPropagation()}
@@ -2483,6 +2467,20 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
         />
       )}
 
+      {/* AI Settings Modal */}
+      {showAiSettingsModal && (
+        <AiSettingsModal
+          node={node}
+          onClose={() => setShowAiSettingsModal(false)}
+          activeTab={activeAiModalTab}
+          onTabChange={setActiveAiModalTab}
+          onChangeAi={onChangeAi}
+          onUpdateNodeMeta={onChangeMeta}
+          providers={providers}
+          loading={disabled}
+        />
+      )}
+
       {/* File Dialog Modal */}
       {showFileDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -2621,151 +2619,8 @@ function FlowNodeCard({ data, selected, dragging }: NodeProps<FlowNodeCardData>)
         />
       )}
 
-      {/* Output Example Modal */}
-      {showOutputExampleModal && (node.type === 'ai_improved' || node.type === 'ai') && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowOutputExampleModal(false)}>
-          <div className="bg-slate-900 border border-white/20 rounded-lg p-6 w-[600px] max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Пример вывода</h3>
-              <button
-                onClick={() => setShowOutputExampleModal(false)}
-                className="text-white/60 hover:text-white text-xl leading-none"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm text-white/70 block mb-2">
-                  Описание формата ответа для агента-планировщика:
-                </label>
-                <div className="bg-black/30 border border-white/10 rounded p-3 text-xs text-white/80 max-h-60 overflow-y-auto">
-                  <p className="mb-2 font-semibold text-blue-300">Для создания множественных нод используйте JSON массив:</p>
-                  
-                  <div className="mb-3">
-                    <p className="text-green-300 font-semibold mb-1">ДОСТУПНЫЕ ТИПЫ НОД:</p>
-                    <div className="grid grid-cols-2 gap-1 text-xs">
-                      <div><span className="text-yellow-300">text</span> - Текстовый контент</div>
-                      <div><span className="text-yellow-300">ai</span> - AI-агент для генерации</div>
-                      <div><span className="text-yellow-300">ai_improved</span> - Улучшенный AI-агент</div>
-                      <div><span className="text-yellow-300">image</span> - Изображение/картинка</div>
-                      <div><span className="text-yellow-300">video</span> - Видео контент</div>
-                      <div><span className="text-yellow-300">audio</span> - Аудио контент</div>
-                      <div><span className="text-yellow-300">html</span> - HTML страница</div>
-                      <div><span className="text-yellow-300">json</span> - JSON данные</div>
-                      <div><span className="text-yellow-300">markdown</span> - Markdown документ</div>
-                      <div><span className="text-yellow-300">file</span> - Файл/документ</div>
-                      <div><span className="text-yellow-300">python</span> - Python код/скрипт</div>
-                      <div><span className="text-yellow-300">router</span> - Маршрутизатор условий</div>
-                    </div>
-                  </div>
-                  
-                  <div className="mb-3">
-                    <p className="text-green-300 font-semibold mb-1">ОБЯЗАТЕЛЬНЫЕ ПОЛЯ:</p>
-                    <div className="pl-2">
-                      <div><span className="text-orange-300">type</span> - тип ноды (из списка выше)</div>
-                      <div><span className="text-orange-300">title</span> - заголовок ноды</div>
-                    </div>
-                  </div>
-                  
-                  <div className="mb-3">
-                    <p className="text-green-300 font-semibold mb-1">ОПЦИОНАЛЬНЫЕ ПОЛЯ:</p>
-                    <div className="pl-2">
-                      <div><span className="text-blue-300">content</span> - содержимое ноды</div>
-                      <div><span className="text-blue-300">x, y</span> - координаты (авто если не указаны)</div>
-                      <div><span className="text-blue-300">meta</span> - дополнительные настройки</div>
-                      <div><span className="text-blue-300">ai</span> - настройки ИИ для ai/ai_improved нод</div>
-                    </div>
-                  </div>
-                  
-                  <p className="text-purple-300 font-semibold mb-1">ПРИМЕР СТРУКТУРЫ:</p>
-                  <pre className="text-green-400 text-xs bg-black/50 p-2 rounded">{`{
-  "nodes": [
-    {
-      "type": "text",
-      "title": "Постановка задачи",
-      "content": "Описание задачи..."
-    },
-    {
-      "type": "ai",
-      "title": "Анализ данных",
-      "content": "Проанализируй данные",
-      "ai": {
-        "system_prompt": "Ты эксперт по данным",
-        "model": "gpt-4",
-        "temperature": 0.7
-      }
-    },
-    {
-      "type": "markdown", 
-      "title": "Отчет",
-      "content": "# Результаты\\n\\nВыводы..."
-    }
-  ]
-}`}</pre>
-                </div>
-              </div>
-              
-              <div>
-                <label className="text-sm text-white/70 block mb-2">Пример вывода:</label>
-                <textarea
-                  value={outputExampleValue}
-                  onChange={(e) => handleOutputExampleChange(e.target.value)}
-                  placeholder='{"nodes": [{"type": "text", "title": "Заголовок", "content": "Содержимое"}]}'
-                  className="w-full h-48 p-3 bg-black/30 border border-white/10 rounded text-sm text-white placeholder-white/40 resize-none"
-                  style={{ fontSize: '13px', lineHeight: '1.4' }}
-                />
-              </div>
-              
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => {
-                    const exampleFormat = JSON.stringify({
-                      nodes: [
-                        {
-                          type: "text",
-                          title: "1. Постановка задачи",
-                          content: "Определяем цели и требования проекта"
-                        },
-                        {
-                          type: "python",
-                          title: "2. Обработка данных", 
-                          content: "import pandas as pd\n# Обработка CSV файла"
-                        },
-                        {
-                          type: "ai",
-                          title: "3. Анализ результатов",
-                          content: "Проанализируй данные и сделай выводы",
-                          ai: {
-                            system_prompt: "Ты - аналитик данных",
-                            temperature: 0.3
-                          }
-                        },
-                        {
-                          type: "markdown",
-                          title: "4. Отчет",
-                          content: "# Результаты\n\n## Выводы\n- Основные находки"
-                        }
-                      ]
-                    }, null, 2);
-                    handleOutputExampleChange(exampleFormat);
-                  }}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded transition"
-                >
-                  Заполнить пример
-                </button>
-                <button
-                  onClick={() => setShowOutputExampleModal(false)}
-                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition"
-                >
-                  Готово
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Confirm Dialog */}
+      <ConfirmDialog />
     </div>
   );
 }

@@ -72,7 +72,11 @@ export interface RunRecord {
   logs_json: string;
 }
 
-const dbPath = path.resolve(__dirname, '../../data/localcreativeflow.db');
+// В pkg режиме используем рабочую директорию, в dev режиме - __dirname
+const isPkg = typeof (process as any).pkg !== 'undefined';
+const dbPath = isPkg 
+  ? path.resolve(process.cwd(), 'data', 'localcreativeflow.db')
+  : path.resolve(__dirname, '../../data/localcreativeflow.db');
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 cleanupStaleJournalFiles(dbPath);
 
@@ -994,10 +998,11 @@ export function removeProjectEdge(projectId: string, fromNode: string, toNode: s
     const removal = db
       .prepare(`DELETE FROM edges WHERE project_id = ? AND from_node = ? AND to_node = ?`)
       .run(projectId, fromNode, toNode);
-    if (removal.changes === 0) {
-      throw createHttpError(404, `Edge ${fromNode} -> ${toNode} not found in project ${projectId}`);
+    // Don't throw error if edge doesn't exist - it might have been already deleted
+    // when deleting connected nodes in bulk operations
+    if (removal.changes > 0) {
+      db.prepare(`UPDATE projects SET updated_at = ? WHERE project_id = ?`).run(now, projectId);
     }
-    db.prepare(`UPDATE projects SET updated_at = ? WHERE project_id = ?`).run(now, projectId);
   });
 
   const project = getProject(projectId);

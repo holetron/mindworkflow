@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Modal from '../../ui/Modal';
+import { useConfirmDialog } from '../../ui/ConfirmDialog';
 import { PROVIDERS, type ProviderConfig } from '../../data/providers';
 import type { GlobalIntegration, IntegrationFieldConfig } from '../../state/api';
 import { useGlobalIntegrationsStore } from '../../state/globalIntegrationsStore';
@@ -29,6 +30,9 @@ function ProviderPanel({ onSelect }: ProviderPanelProps) {
   const [showEditModal, setShowEditModal] = useState(false); // New state for editing modal
   const [integrationDraft, setIntegrationDraft] = useState<IntegrationDraft | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  // Confirm dialog hook
+  const { showConfirm, ConfirmDialog } = useConfirmDialog();
 
   const activeGlobalIntegration = useMemo(
     () => integrations.find((integration) => integration.id === activeGlobalIntegrationId) ?? null,
@@ -171,7 +175,15 @@ function ProviderPanel({ onSelect }: ProviderPanelProps) {
   }, [integrationDraft, addIntegration, updateIntegration]);
 
   const handleDeleteIntegration = useCallback(async (id: string) => {
-    if (window.confirm('Вы уверены, что хотите удалить эту интеграцию?')) {
+    const confirmed = await showConfirm({
+      title: 'Удалить интеграцию?',
+      message: 'Интеграция будет удалена безвозвратно. Все связанные с ней настройки будут потеряны.',
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      type: 'danger'
+    });
+    
+    if (confirmed) {
       try {
         await removeIntegration(id);
         setActiveGlobalIntegrationId(null);
@@ -242,9 +254,6 @@ function ProviderPanel({ onSelect }: ProviderPanelProps) {
             ))}
           </ul>
         </nav>
-        <div className="flex-1 overflow-y-auto rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-100">
-          <p className="text-slate-400">Select an integration or add a new one.</p>
-        </div>
       </div>
 
       {showCreateModal && integrationDraft && activeProviderConfig && (
@@ -352,6 +361,9 @@ function ProviderPanel({ onSelect }: ProviderPanelProps) {
           </div>
         </Modal>
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog />
     </div>
   );
 }

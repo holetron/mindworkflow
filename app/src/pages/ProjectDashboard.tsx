@@ -179,7 +179,7 @@ function ProjectDashboard() {
           ))}
         </div>
       </main>
-      <aside className="hidden w-96 flex-shrink-0 border-l border-slate-900/80 bg-slate-950/70 p-6 lg:block">
+      <aside className="hidden w-72 flex-shrink-0 border-l border-slate-900/80 bg-slate-950/70 p-6 lg:block">
         <ErrorBoundary fallback={IntegrationErrorFallback}>
           <ProviderPanel />
         </ErrorBoundary>

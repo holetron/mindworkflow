@@ -27,6 +27,7 @@ const getNodeTypeColor = (type: string): string => {
     case 'video': return '#06b6d4'; // cyan
     case 'audio': return '#84cc16'; // lime
     case 'html': return '#f97316'; // orange
+    case 'transformer': return '#3b82f6'; // blue
     default: return '#6b7280'; // gray
   }
 };

@@ -19,6 +19,36 @@ __pycache__/
 .idea/
 .vscode/
 
+# Database files
+*.db
+*.db-shm
+*.db-wal
+data/
+*.sqlite
+*.sqlite3
+
+# Project specific sensitive data
+server/projects/
+drive/
+projects/
+*.tar.gz
+backup-*.tar.gz
+*.jpeg
+*.jpg
+*.png
+*.gif
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
 # Data
 data/
 drive/

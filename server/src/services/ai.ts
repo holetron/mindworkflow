@@ -102,12 +102,8 @@ export class AiService {
     const apiKey = typeof openaiConfig.api_key === 'string' ? openaiConfig.api_key.trim() : '';
     if (!apiKey) {
       console.log('[AI Service] OpenAI API key not configured, using stub response');
-      // Fallback to stub if no API key is configured
-      if (context.schemaRef === 'TEXT_RESPONSE' || context.schemaRef === 'text_response') {
-        return this.generateStubTextResponse(context, context.node.content || '');
-      } else {
-        return this.generateStubPlan(context);
-      }
+      // Fallback to stub - всегда возвращаем план
+      return this.generateStubPlan(context);
     }
 
     const baseUrl =
@@ -119,16 +115,19 @@ export class AiService {
     const model =
       typeof aiConfig.model === 'string' && aiConfig.model.trim().length > 0
         ? aiConfig.model.trim()
-        : 'gpt-4o-mini';
+        : 'gpt-3.5-turbo';  // Более безопасная модель по умолчанию
     const temperature = this.parseNumeric(aiConfig.temperature, 0.7);
 
     // Check if model supports structured outputs (json_schema response_format)
-    const supportsStructuredOutputs = model.includes('gpt-4o') || model.includes('gpt-4-turbo') || 
-                                     (model.includes('gpt-4') && !model.includes('gpt-3.5'));
+    // Только gpt-4o и gpt-4-turbo поддерживают structured outputs
+    const supportsStructuredOutputs = model.includes('gpt-4o') || model.includes('gpt-4-turbo');
     
     console.log(`[AI Service] Using model: ${model}, supports structured outputs: ${supportsStructuredOutputs}`);
 
     const schema = this.ajv.getSchema(context.schemaRef)?.schema ?? this.ajv.getSchema(context.schemaRef.toUpperCase())?.schema;
+    
+    // Теперь все AI агенты используют PLAN_SCHEMA, TEXT_RESPONSE больше не используется
+    const isTextResponse = false;
     const responseFormat = schema && typeof schema === 'object' && supportsStructuredOutputs
       ? {
           type: 'json_schema',
@@ -137,16 +136,27 @@ export class AiService {
             schema,
           },
         }
-      : undefined;
+      : undefined;  // Полностью отключаем response_format для старых моделей
 
     let systemPrompt =
       typeof aiConfig.system_prompt === 'string' && aiConfig.system_prompt.trim().length > 0
         ? aiConfig.system_prompt.trim()
-        : 'You are an assistant that produces JSON strictly matching the provided schema.';
+        : 'Ты ассистент, который всегда возвращает результат в виде JSON с одной или несколькими нодами. Каждая нода должна иметь type, title и content. Для простых задач создавай одну ноду с type="text", для сложных - план из нескольких нод.';
     
-    // For models without structured outputs, add explicit JSON instruction
+    // Добавляем пример вывода в системный промпт, если он есть
+    const outputExample = typeof aiConfig.output_example === 'string' && aiConfig.output_example.trim().length > 0
+      ? aiConfig.output_example.trim()
+      : '';
+    
+    if (outputExample) {
+      systemPrompt += `\n\nПример ожидаемого формата ответа:\n${outputExample}`;
+    }
+    
+    // For models without structured outputs and complex schemas, add explicit JSON instruction
     if (!supportsStructuredOutputs && schema) {
-      systemPrompt += ' Always respond with valid JSON only, no additional text or explanation.';
+      systemPrompt += '\n\n🚨 КРИТИЧЕСКИ ВАЖНО: Ты ОБЯЗАН отвечать ТОЛЬКО валидным JSON. Никакого текста до или после JSON. Только чистый JSON объект, соответствующий схеме.';
+      systemPrompt += `\n\nТребуемая JSON схема (строго соблюдай!):\n${JSON.stringify(schema, null, 2)}`;
+      systemPrompt += '\n\nПример правильного ответа:\n{"nodes": [{"type": "text", "title": "Заголовок", "content": "Текст ответа"}]}';
     }
     
     const providerFieldsConfig = Array.isArray(openaiConfig.input_fields)
@@ -207,19 +217,28 @@ export class AiService {
       throw new Error('OpenAI returned an empty response.');
     }
 
+    // For TEXT_RESPONSE, return the raw content without JSON parsing or validation
+    if (context.schemaRef === 'TEXT_RESPONSE' || context.schemaRef === 'text_response') {
+      console.log(`[AI Service] TEXT_RESPONSE schema - returning raw text without JSON processing`);
+      const logs = [
+        `OpenAI model ${model} responded successfully`,
+        `Prompt tokens: ${payload.usage?.prompt_tokens ?? 'n/a'}, completion tokens: ${payload.usage?.completion_tokens ?? 'n/a'}`,
+        'Plain text response (no JSON validation)',
+      ];
+
+      return {
+        output: rawContent.trim(),
+        contentType: 'text/plain',
+        logs,
+      };
+    }
+
+    // For other schemas, parse and validate JSON
     let parsed: unknown;
     try {
       parsed = JSON.parse(rawContent);
     } catch (error) {
-      // If JSON parsing fails, try to wrap the response in appropriate schema structure
-      if (context.schemaRef === 'TEXT_RESPONSE' || context.schemaRef === 'text_response') {
-        // For TEXT_RESPONSE schema, wrap the raw content in the expected format
-        console.log(`[AI Service] OpenAI returned plain text instead of JSON, wrapping in TEXT_RESPONSE format`);
-        parsed = { response: rawContent.trim() };
-      } else {
-        // For other schemas, still throw the error
-        throw new Error(`OpenAI response is not valid JSON: ${(error as Error).message}`);
-      }
+      throw new Error(`OpenAI response is not valid JSON: ${(error as Error).message}`);
     }
 
     const validator = this.ajv.getSchema(context.schemaRef) ?? this.ajv.getSchema(context.schemaRef.toUpperCase());
