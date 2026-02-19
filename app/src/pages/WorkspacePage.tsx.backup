@@ -1,0 +1,1394 @@
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { MessageCircle, MoreVertical } from 'lucide-react';
+import GraphCanvas from '../features/graph/GraphCanvas';
+import NodeSidebar from '../features/workspace/NodeSidebar';
+import NodePalette from '../features/workspace/NodePalette';
+import { TokenDisplay } from '../ui/TokenDisplay';
+import { NODE_PALETTE } from '../data/nodePalette';
+import { DEFAULT_STICKY_NOTE } from '../data/stickyNoteDefault';
+import {
+  fetchProject,
+  fetchNodeLogs,
+  runNode,
+  rerunNode,
+  deleteProject,
+  deleteNode,
+  updateNode,
+  updateProjectMeta,
+  createEdge,
+  deleteEdge,
+  createNode,
+  syncProjectDrive,
+  exportProjectArchive,
+  type RunLog,
+  type NodeUpdatePayload,
+  type EdgeListResponse,
+  type CreateNodePayload,
+  type NodeUI,
+  type ProjectFlow,
+  type ProjectRole,
+  type FlowNode,
+} from '../state/api';
+import {
+  useProjectStore,
+  selectNodeById,
+  findPreviousNodes,
+  findNextNodes,
+  type NodeTemplate,
+} from '../state/store';
+import { useGlobalIntegrationsStore } from '../state/globalIntegrationsStore';
+import { AI_PROVIDER_PRESETS } from '../data/aiProviders';
+import type { AiProviderOption } from '../features/nodes/FlowNodeCard';
+import type { IntegrationFieldConfig } from '../state/api';
+import {
+  DEFAULT_NODE_BBOX,
+  NODE_DEFAULT_COLOR,
+  NODE_DEFAULT_HEIGHT,
+  NODE_DEFAULT_WIDTH,
+} from '../constants/nodeDefaults';
+import { useAuth } from '../contexts/AuthContext';
+import { FeedbackModal } from '../ui/FeedbackModal';
+
+interface ValidationIdle {
+  status: 'idle';
+}
+
+interface ValidationSuccess {
+  status: 'success';
+  message: string;
+}
+
+interface ValidationError {
+  status: 'error';
+  message: string;
+}
+
+type ValidationState = ValidationIdle | ValidationSuccess | ValidationError;
+
+const SIDEBAR_MIN_WIDTH = 220;
+const SIDEBAR_MAX_WIDTH = 400;
+const SIDEBAR_DEFAULT_WIDTH = 300;
+const PALETTE_MIN_WIDTH = 220;
+const PALETTE_MAX_WIDTH = 420;
+const PALETTE_DEFAULT_WIDTH = 320;
+
+function WorkspacePage() {
+  const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId: string }>();
+  const { user, logout } = useAuth();
+  const {
+    project,
+    setProject,
+    clearProject,
+    loading,
+    setLoading,
+    error,
+    setError,
+    selectedNodeId,
+    selectNode,
+    runs,
+    setRuns,
+    upsertNodeContent,
+    addNodeFromServer,
+    removeNode,
+    setEdges,
+  } = useProjectStore();
+
+  const { integrations: globalIntegrations, fetchIntegrations } = useGlobalIntegrationsStore();
+
+  const projectRole: ProjectRole = (project?.role ?? 'owner') as ProjectRole;
+  const canEditProject = projectRole === 'owner' || projectRole === 'editor';
+  const canManageProject = projectRole === 'owner';
+
+  const [runningNodes, setRunningNodes] = useState<string[]>([]);
+
+  const [validation, setValidation] = useState<ValidationState>({ status: 'idle' });
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
+  const [paletteWidth, setPaletteWidth] = useState(PALETTE_DEFAULT_WIDTH);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  const [paletteCollapsed, setPaletteCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showNodeModal, setShowNodeModal] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const pendingUiRef = useRef<Map<string, NodeUI>>(new Map());
+  const pendingUiTimersRef = useRef<Map<string, number>>(new Map());
+
+  const markNodeRunning = useCallback((nodeId: string, running: boolean) => {
+    setRunningNodes((prev) => {
+      if (running) {
+        if (prev.includes(nodeId)) return prev;
+        return [...prev, nodeId];
+      }
+      return prev.filter((id) => id !== nodeId);
+    });
+  }, []);
+
+  const generatingNodeSet = useMemo(() => new Set(runningNodes), [runningNodes]);
+
+  // Предупреждение о несохраненных изменениях при закрытии страницы
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'У вас есть несохраненные изменения. Вы уверены, что хотите покинуть страницу?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  const selectedNode = useMemo(() => selectNodeById(project, selectedNodeId), [project, selectedNodeId]);
+  const previousNodes = useMemo(
+    () => (selectedNode ? findPreviousNodes(project, selectedNode.node_id) : []),
+    [project, selectedNode],
+  );
+
+  const nextNodes = useMemo(
+    () => (selectedNode ? findNextNodes(project, selectedNode.node_id) : []),
+    [project, selectedNode],
+  );
+
+  const paletteMap = useMemo(() => {
+    const map = new Map<string, NodeTemplate>();
+    NODE_PALETTE.forEach((item) => {
+      const template =
+        item.slug === 'text'
+          ? {
+              ...item.template,
+              content:
+                item.template.content && item.template.content.length > 0
+                  ? item.template.content
+                  : DEFAULT_STICKY_NOTE,
+              content_type: 'text/markdown',
+            }
+          : item.template;
+      map.set(item.slug, template);
+    });
+    return map;
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const mq = window.matchMedia('(max-width: 768px)');
+    const applyCollapse = (matches: boolean) => {
+      if (matches) {
+        setSidebarCollapsed(true);
+        setPaletteCollapsed(true);
+      }
+    };
+    applyCollapse(mq.matches);
+    const listener = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        setSidebarCollapsed(true);
+        setPaletteCollapsed(true);
+      }
+    };
+    mq.addEventListener('change', listener);
+    return () => mq.removeEventListener('change', listener);
+  }, []);
+
+  const providerOptions = useMemo<AiProviderOption[]>(() => {
+    try {
+      const options: AiProviderOption[] = [];
+      
+      // Добавляем stub провайдер всегда
+      options.push({
+        id: 'stub',
+        name: 'Local Stub',
+        models: ['local-llm-7b-q5'],
+        defaultModel: 'local-llm-7b-q5',
+        available: true,
+        description: 'Встроенный оффлайн движок для тестовых запусков.',
+        inputFields: [],
+      });
+
+      if (!globalIntegrations || !Array.isArray(globalIntegrations)) return options;
+
+      // Преобразуем глобальные интеграции в провайдеры
+      globalIntegrations.forEach((integration) => {
+        if (!integration) return;
+
+        const hasApiKey = !!(integration.apiKey && integration.apiKey.trim());
+        
+        let models: string[] = [];
+        let defaultModel = '';
+        
+        // Определяем модели в зависимости от провайдера
+        if (integration.providerId === 'openai_gpt') {
+          models = ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'];
+          defaultModel = 'gpt-4o-mini';
+        } else if (integration.providerId === 'anthropic') {
+          models = ['claude-3-haiku', 'claude-3-sonnet', 'claude-3-opus'];
+          defaultModel = 'claude-3-haiku';
+        } else {
+          // Fallback для других провайдеров
+          models = ['default-model'];
+          defaultModel = 'default-model';
+        }
+
+        options.push({
+          id: integration.providerId,
+          name: integration.name,
+          models,
+          defaultModel,
+          available: hasApiKey,
+          description: integration.description || `${integration.name} integration`,
+          reason: hasApiKey ? undefined : 'Добавьте API ключ в интеграциях, чтобы использовать провайдера.',
+          config: {
+            api_key: integration.apiKey,
+            base_url: integration.baseUrl,
+            organization: integration.organization,
+          },
+          systemPromptTemplate: integration.systemPrompt,
+          inputFields: integration.inputFields || [],
+        });
+      });
+
+      return options;
+    } catch (error) {
+      console.error('Error in providerOptions:', error);
+      return [];
+    }
+  }, [globalIntegrations]);
+
+  useEffect(() => {
+    return () => {
+      pendingUiTimersRef.current.forEach((timer) => {
+        window.clearTimeout(timer);
+      });
+      pendingUiTimersRef.current.clear();
+      pendingUiRef.current.clear();
+      clearProject();
+    };
+  }, [clearProject]);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+    const handlePointerDown = (event: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuOpen]);
+
+  // Загружаем глобальные интеграции при инициализации
+  useEffect(() => {
+    fetchIntegrations();
+  }, [fetchIntegrations]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        setLocalError(null);
+        const projectFlow = await fetchProject(projectId);
+        setProject(projectFlow);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
+        setLocalError(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load().catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+      setLocalError(message);
+    });
+  }, [projectId, setProject, setError, setLoading]);
+
+  useEffect(() => {
+    const loadRuns = async () => {
+      if (!project || !selectedNode) return;
+      try {
+        const logs = await fetchNodeLogs(project.project_id, selectedNode.node_id);
+        setRuns(selectedNode.node_id, logs);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    loadRuns();
+  }, [project, selectedNode, setRuns]);
+
+  const createNodeFromTemplate = useCallback(
+    async (template: NodeTemplate, slug: string, position?: { x: number; y: number }) => {
+      if (!project || !canManageProject) return;
+      const width = NODE_DEFAULT_WIDTH;
+      const height = NODE_DEFAULT_HEIGHT;
+      const x1 = position ? Math.round(position.x) : 0;
+      const y1 = position ? Math.round(position.y) : 0;
+      const payload: CreateNodePayload = {
+        slug,
+        type: template.type,
+        title: template.title,
+        content_type: template.content_type,
+        content: template.content,
+        meta: template.meta,
+        ai: template.ai,
+        parser: template.parser,
+        python: template.python,
+        visibility_rules: template.visibility_rules,
+        position,
+        ui: {
+          color: NODE_DEFAULT_COLOR,
+          bbox: {
+            x1,
+            y1,
+            x2: x1 + width,
+            y2: y1 + height,
+          },
+        },
+        ai_visible: true,
+        connections: { incoming: [], outgoing: [] },
+      };
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await createNode(project.project_id, payload);
+        addNodeFromServer(response.node, response.project_updated_at);
+
+        // Auto-connect AI generation nodes to the selected node
+        if ((template.type === 'ai' || slug.includes('agent')) && selectedNodeId) {
+          try {
+            const edgeResponse = await createEdge(project.project_id, {
+              from: selectedNodeId,
+              to: response.node.node_id,
+              label: 'auto-connected',
+            });
+            setEdges(edgeResponse.edges, edgeResponse.updated_at);
+          } catch (edgeErr) {
+            console.warn('Failed to auto-connect nodes:', edgeErr);
+            // Don't throw here, node creation was successful
+          }
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [project, canManageProject, selectedNodeId, setLoading, setError, addNodeFromServer, setEdges],
+  );
+
+  const handlePaletteCreate = useCallback(
+    (template: NodeTemplate, slug: string) => {
+      if (!canManageProject) return;
+      void createNodeFromTemplate(template, slug);
+    },
+    [canManageProject, createNodeFromTemplate],
+  );
+
+  const handlePaletteDrop = useCallback(
+    (slug: string, position: { x: number; y: number }) => {
+      if (!canManageProject) return;
+      const template = paletteMap.get(slug);
+      if (!template) return;
+      void createNodeFromTemplate(template, slug, position);
+    },
+    [canManageProject, createNodeFromTemplate, paletteMap],
+  );
+
+  // Функция для копирования ноды из NodeSidebar
+  const handleNodeCopy = useCallback(
+    async (node: FlowNode, position: { x: number; y: number }) => {
+      if (!project || !canManageProject) return;
+      
+      // Создаем копию ноды с новыми координатами
+      const copyPayload: CreateNodePayload = {
+        type: node.type,
+        title: `${node.title} (копия)`,
+        content_type: node.content_type,
+        content: node.content,
+        meta: node.meta ? { ...node.meta } : undefined,
+        ai: node.ai ? { ...node.ai } : undefined,
+        parser: node.parser ? { ...node.parser } : undefined,
+        python: node.python ? { ...node.python } : undefined,
+        visibility_rules: node.visibility_rules,
+        position,
+        ui: {
+          color: node.ui?.color || NODE_DEFAULT_COLOR,
+          bbox: {
+            x1: Math.round(position.x),
+            y1: Math.round(position.y),
+            x2: Math.round(position.x) + NODE_DEFAULT_WIDTH,
+            y2: Math.round(position.y) + NODE_DEFAULT_HEIGHT,
+          },
+        },
+        ai_visible: node.ai_visible,
+        connections: { incoming: [], outgoing: [] },
+      };
+
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await createNode(project.project_id, copyPayload);
+        addNodeFromServer(response.node, response.project_updated_at);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [project, canManageProject, setLoading, setError, addNodeFromServer],
+  );
+
+  const persistNodeUpdate = useCallback(
+    async (nodeId: string, patch: NodeUpdatePayload) => {
+      if (!project || !canEditProject) return;
+      try {
+        const updated = await updateNode(project.project_id, nodeId, patch);
+        upsertNodeContent(nodeId, updated);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (/not found/i.test(message)) {
+          console.warn('[Workspace] Skipping persist, node missing:', message);
+          removeNode(nodeId);
+          return;
+        }
+        setError(message);
+      }
+    },
+    [project, canEditProject, setError, upsertNodeContent, removeNode],
+  );
+
+  const handleRunNode = useCallback(
+    async (nodeId: string) => {
+      if (!project || !canEditProject) return;
+      try {
+        markNodeRunning(nodeId, true);
+        selectNode(nodeId);
+        const response = await runNode(project.project_id, nodeId);
+        
+        const sourceNode = selectNodeById(project, nodeId);
+        const targetNodeId = response.targetNodeId ?? response.nodeId ?? nodeId;
+        if (response.content !== undefined) {
+          upsertNodeContent(targetNodeId, {
+            content: response.content ?? undefined,
+            content_type: response.contentType ?? undefined,
+          });
+        }
+
+        const logNodeId =
+          sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved')
+            ? nodeId
+            : targetNodeId;
+        const refreshedLogs = await fetchNodeLogs(project.project_id, logNodeId);
+        setRuns(logNodeId, refreshedLogs);
+
+        if (response.isMultiNodeResult || (response.createdNodes && response.createdNodes.length > 0)) {
+          const refreshedProject = await fetchProject(project.project_id);
+          setProject(refreshedProject);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (/not found/i.test(message)) {
+          console.warn('[Workspace] Run aborted, node missing:', message);
+          removeNode(nodeId);
+        } else {
+          setError(message);
+        }
+      } finally {
+        // Clear selection after node execution to prevent sticking
+        selectNode(null);
+        markNodeRunning(nodeId, false);
+      }
+    },
+    [
+      project,
+      canEditProject,
+      selectNode,
+      upsertNodeContent,
+      setRuns,
+      setError,
+      removeNode,
+      markNodeRunning,
+      setProject,
+    ],
+  );
+
+  const handleRegenerateNode = useCallback(
+    async (nodeId: string) => {
+      if (!project || !canEditProject) return;
+      try {
+        markNodeRunning(nodeId, true);
+        selectNode(nodeId);
+        const response = await rerunNode(project.project_id, nodeId, { clone: false });
+        const targetNodeId = response.targetNodeId ?? response.nodeId;
+        const sourceNode = selectNodeById(project, nodeId);
+        if (response.content !== undefined) {
+          upsertNodeContent(targetNodeId, {
+            content: response.content ?? undefined,
+            content_type: response.contentType ?? undefined,
+          });
+        }
+
+        const logNodeId =
+          sourceNode && (sourceNode.type === 'ai' || sourceNode.type === 'ai_improved')
+            ? nodeId
+            : targetNodeId;
+        const refreshedLogs = await fetchNodeLogs(project.project_id, logNodeId);
+        setRuns(logNodeId, refreshedLogs);
+
+        if (response.isMultiNodeResult || (response.createdNodes && response.createdNodes.length > 0)) {
+          const refreshedProject = await fetchProject(project.project_id);
+          setProject(refreshedProject);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (/not found/i.test(message)) {
+          console.warn('[Workspace] Regenerate aborted, node missing:', message);
+          removeNode(nodeId);
+        } else {
+          setError(message);
+        }
+      } finally {
+        // Clear selection after node execution to prevent sticking
+        selectNode(null);
+        markNodeRunning(nodeId, false);
+      }
+    },
+    [
+      project,
+      canEditProject,
+      selectNode,
+      upsertNodeContent,
+      setRuns,
+      setError,
+      removeNode,
+      markNodeRunning,
+      setProject,
+    ],
+  );
+
+  const handleDeleteNode = useCallback(
+    async (nodeId: string) => {
+      if (!project || !canManageProject) return;
+      try {
+        setLoading(true);
+        console.log('Deleting node:', nodeId);
+        
+        // Clear any pending operations for this node to prevent update conflicts
+        if (pendingUiTimersRef.current.has(nodeId)) {
+          clearTimeout(pendingUiTimersRef.current.get(nodeId));
+          pendingUiTimersRef.current.delete(nodeId);
+        }
+        pendingUiRef.current.delete(nodeId);
+        
+        // Call API to delete node on server
+        const updatedProject = await deleteNode(project.project_id, nodeId);
+        
+        // Update local state by removing the node
+        removeNode(nodeId);
+        
+        // Update project timestamp
+        setProject(updatedProject);
+        
+        console.log('Node deleted successfully:', nodeId);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('Failed to delete node:', message);
+        if (/not found/i.test(message)) {
+          removeNode(nodeId);
+        } else {
+          setError(message);
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [project, canManageProject, removeNode, setLoading, setError, setProject],
+  );
+
+  const handleUpdateNodeMeta = useCallback(
+    (nodeId: string, metaPatch: Record<string, unknown>) => {
+      if (!project || !canEditProject) return;
+      const node = selectNodeById(project, nodeId);
+      if (!node) return;
+      const mergedMeta = { ...(node.meta ?? {}), ...metaPatch };
+      upsertNodeContent(nodeId, { meta: mergedMeta });
+      void persistNodeUpdate(nodeId, { meta: mergedMeta });
+      setHasUnsavedChanges(true);
+    },
+    [project, canEditProject, upsertNodeContent, persistNodeUpdate],
+  );
+
+  const handleUpdateNodeUi = useCallback(
+    (nodeId: string, patch: Partial<NodeUI>) => {
+      if (!project || !canEditProject) return;
+      const node = selectNodeById(project, nodeId);
+      if (!node) return;
+      const current = node.ui ?? { color: NODE_DEFAULT_COLOR, bbox: { ...DEFAULT_NODE_BBOX } };
+      const nextUi: NodeUI = {
+        color: typeof patch.color === 'string' && patch.color.trim().length > 0 ? patch.color : current.color,
+        bbox: patch.bbox
+          ? {
+              x1: patch.bbox.x1 ?? current.bbox.x1,
+              y1: patch.bbox.y1 ?? current.bbox.y1,
+              x2: patch.bbox.x2 ?? current.bbox.x2,
+              y2: patch.bbox.y2 ?? current.bbox.y2,
+            }
+          : current.bbox,
+      };
+      upsertNodeContent(nodeId, { ui: nextUi });
+      setHasUnsavedChanges(true);
+      pendingUiRef.current.set(nodeId, nextUi);
+      const existingTimer = pendingUiTimersRef.current.get(nodeId);
+      if (existingTimer) {
+        window.clearTimeout(existingTimer);
+      }
+      const timer = window.setTimeout(() => {
+        pendingUiTimersRef.current.delete(nodeId);
+        const payload = pendingUiRef.current.get(nodeId);
+        if (!payload) return;
+        pendingUiRef.current.delete(nodeId);
+        void persistNodeUpdate(nodeId, { ui: payload });
+      }, 200);
+      pendingUiTimersRef.current.set(nodeId, timer);
+    },
+    [project, canEditProject, upsertNodeContent, persistNodeUpdate],
+  );
+
+  const handleUpdateNodeContent = useCallback(
+    (nodeId: string, content: string) => {
+      if (!canEditProject) return;
+      upsertNodeContent(nodeId, {
+        content,
+        content_type: 'text/markdown',
+      });
+      void persistNodeUpdate(nodeId, { content, content_type: 'text/markdown' });
+      setHasUnsavedChanges(true);
+    },
+    [canEditProject, upsertNodeContent, persistNodeUpdate],
+  );
+
+  const handleUpdateNodeTitle = useCallback(
+    (nodeId: string, title: string) => {
+      if (!canEditProject) return;
+      upsertNodeContent(nodeId, { title });
+      void persistNodeUpdate(nodeId, { title });
+      setHasUnsavedChanges(true);
+    },
+    [canEditProject, upsertNodeContent, persistNodeUpdate],
+  );
+
+  const handleUpdateNodeAi = useCallback(
+    (nodeId: string, aiPatch: Record<string, unknown>, options?: { replace?: boolean }) => {
+      if (!canEditProject) return;
+      if (options?.replace) {
+        upsertNodeContent(nodeId, { ai: aiPatch });
+        void persistNodeUpdate(nodeId, { ai: aiPatch });
+        setHasUnsavedChanges(true);
+        return;
+      }
+      const current = selectNodeById(project, nodeId)?.ai as Record<string, unknown> | undefined;
+      const nextAi = { ...(current ?? {}), ...aiPatch };
+      upsertNodeContent(nodeId, { ai: nextAi });
+      void persistNodeUpdate(nodeId, { ai: nextAi });
+      setHasUnsavedChanges(true);
+    },
+    [project, canEditProject, persistNodeUpdate, upsertNodeContent],
+  );
+
+  const handleConnectEdge = useCallback(
+    async ({ from, to }: { from: string; to: string }) => {
+      if (!project || !canManageProject) return;
+      try {
+        const response = await createEdge(project.project_id, { from, to });
+        setEdges(response.edges, response.updated_at);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
+      }
+    },
+    [project, canManageProject, setEdges, setError],
+  );
+
+  const handleRemoveEdges = useCallback(
+    async (edgesToRemove: Array<{ from: string; to: string }>) => {
+      if (!project || !canManageProject || edgesToRemove.length === 0) return;
+      try {
+        let latest: EdgeListResponse | null = null;
+        for (const edge of edgesToRemove) {
+          const response = await deleteEdge(project.project_id, edge.from, edge.to);
+          latest = response;
+        }
+        if (latest) {
+          setEdges(latest.edges, latest.updated_at);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
+      }
+    },
+    [project, canManageProject, setEdges, setError],
+  );
+
+  const handleSaveWorkspace = useCallback(async () => {
+    if (!project || !canManageProject) return;
+    try {
+      setIsSaving(true);
+      setValidation({ status: 'idle' });
+      await syncProjectDrive(project.project_id);
+      setValidation({ status: 'success', message: 'Воркфлоу сохранён' });
+      setHasUnsavedChanges(false);
+      setLastSavedTime(new Date());
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setValidation({ status: 'error', message: `Не удалось сохранить: ${message}` });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [project, canManageProject]);
+
+  const handleExportWorkspace = useCallback(async () => {
+    if (!project) {
+      setMenuOpen(false);
+      return;
+    }
+    try {
+      const blob = await exportProjectArchive(project.project_id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${project.project_id}.lcfz`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+    } finally {
+      setMenuOpen(false);
+    }
+  }, [project, setError]);
+
+  const handleImportWorkspace = useCallback(() => {
+    setMenuOpen(false);
+    navigate('/projects/import');
+  }, [navigate]);
+
+  const handleLogoutClick = useCallback(() => {
+    setMenuOpen(false);
+    logout();
+    navigate('/login');
+  }, [logout, navigate]);
+
+  const handleDeleteWorkspace = useCallback(async () => {
+    if (!project || !canManageProject) return;
+    const confirmed = window.confirm('Удалить весь воркспейс? Действие необратимо.');
+    if (!confirmed) return;
+    try {
+      setLoading(true);
+      await deleteProject(project.project_id);
+      clearProject();
+      navigate('/');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [project, canManageProject, setLoading, clearProject, navigate, setError]);
+
+  const handleStartEditTitle = useCallback(() => {
+    if (!project || !canEditProject) return;
+    setEditTitle(project.title || '');
+    setIsEditingTitle(true);
+  }, [project, canEditProject]);
+
+  const handleSaveTitle = useCallback(async () => {
+    if (!project || !canEditProject || !editTitle.trim()) return;
+    try {
+      const updatedProject = await updateProjectMeta(project.project_id, { title: editTitle.trim() });
+      setProject(updatedProject);
+      setIsEditingTitle(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+    }
+  }, [project, canEditProject, editTitle, setProject, setError]);
+
+  const handleCancelEditTitle = useCallback(() => {
+    setIsEditingTitle(false);
+    setEditTitle('');
+  }, []);
+
+  const handleStartEditDescription = useCallback(() => {
+    if (!project || !canEditProject) return;
+    setEditDescription(project.description || '');
+    setIsEditingDescription(true);
+  }, [project, canEditProject]);
+
+  const handleSaveDescription = useCallback(async () => {
+    if (!project || !canEditProject) return;
+    try {
+      const updatedProject = await updateProjectMeta(project.project_id, { description: editDescription.trim() });
+      setProject(updatedProject);
+      setIsEditingDescription(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+    }
+  }, [project, canEditProject, editDescription, setProject, setError]);
+
+  const handleCancelEditDescription = useCallback(() => {
+    setIsEditingDescription(false);
+    setEditDescription('');
+  }, []);
+
+  if (!projectId) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-900 text-slate-200">
+        <div className="text-center">
+          <p className="text-lg">Project ID is missing.</p>
+          <button
+            type="button"
+            className="mt-4 rounded bg-primary px-4 py-2 text-sm text-white"
+            onClick={() => navigate('/')}
+          >
+            Back to projects
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (localError) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-900 text-slate-200">
+        <div className="max-w-lg text-center">
+          <h1 className="text-2xl font-semibold">Project unavailable</h1>
+          <p className="mt-2 text-sm text-slate-400">{localError}</p>
+        </div>
+        <button
+          type="button"
+          className="rounded bg-primary px-4 py-2 text-sm text-white"
+          onClick={() => navigate('/')}
+        >
+          Back to project list
+        </button>
+      </div>
+    );
+  }
+
+  // Force a resize event to ensure ReactFlow dimensions are correct
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="relative" style={{ width: '100vw', height: '100vh' }}>
+      {/* Workflow canvas - full screen background */}
+      <div 
+        className="absolute inset-0 bg-slate-800/80"
+        style={{ zIndex: 0 }}
+      >
+        <GraphCanvas
+          project={project}
+          selectedNodeId={selectedNodeId}
+          onSelectNode={selectNode}
+          onRunNode={handleRunNode}
+          onRegenerateNode={handleRegenerateNode}
+          onDeleteNode={handleDeleteNode}
+          onChangeNodeMeta={handleUpdateNodeMeta}
+          onChangeNodeContent={handleUpdateNodeContent}
+          onChangeNodeTitle={handleUpdateNodeTitle}
+          onChangeNodeAi={handleUpdateNodeAi}
+          onChangeNodeUi={handleUpdateNodeUi}
+          onAddNodeFromPalette={handlePaletteDrop}
+          onCopyNode={canManageProject ? handleNodeCopy : undefined}
+          onCreateEdge={handleConnectEdge}
+          onRemoveEdges={handleRemoveEdges}
+          providerOptions={providerOptions}
+          loading={loading}
+          sidebarCollapsed={sidebarCollapsed}
+          sidebarWidth={sidebarWidth}
+          readOnly={!canEditProject}
+          generatingNodes={generatingNodeSet}
+        />
+      </div>
+
+      {/* Header - positioned over canvas */}
+      <header className="absolute top-6 left-6 right-6 flex w-auto items-center justify-center gap-6 rounded-2xl border border-slate-700/60 bg-slate-900/80 px-6 py-3 shadow-lg backdrop-blur-sm z-50">
+        <button
+          onClick={() => setShowFeedbackModal(true)}
+          className="rounded-full bg-gray-600 p-3 text-white hover:bg-gray-700 transition-colors shadow-lg"
+          title="Сообщить о проблеме или предложить улучшение"
+        >
+          <MessageCircle size={20} />
+        </button>
+      </div>
+      {/* Sidebar positioned absolutely over the workflow */}
+      <aside
+        className="absolute left-6 z-20 flex flex-col"
+        style={{
+          top: '100px',
+          width: sidebarCollapsed ? 48 : sidebarWidth,
+          height: 'calc(100vh - 116px)',
+        }}
+      >
+        <div className="flex-1 overflow-auto">
+          <NodeSidebar 
+            project={project} 
+            selectedNodeId={selectedNodeId} 
+            onSelectNode={selectNode} 
+            onCopyNode={handleNodeCopy}
+            onOpenNodeModal={setShowNodeModal}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
+        </div>
+      </aside>
+      
+      {/* Resize handle positioned absolutely */}
+      {!sidebarCollapsed && (
+        <div
+          className="absolute z-20"
+          style={{
+            left: sidebarWidth + 22,
+            top: '80px',
+            height: 'calc(100vh - 96px)'
+          }}
+        >
+          <ResizeHandle orientation="vertical" ariaLabel="Изменить ширину меню нод" onResize={(delta: number) => setSidebarWidth((prev: number) => clamp(prev + delta, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH))} />
+        </div>
+      )}
+      
+      {/* Main content area - full width */}
+      <div className="flex h-full min-h-0 flex-col gap-4">
+        <header className="flex w-full items-center justify-center gap-6 rounded-2xl border border-slate-700/60 bg-slate-900/80 px-6 py-3 shadow-lg backdrop-blur-sm z-30">
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-600/70 bg-slate-800/70 px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700 hover:text-white"
+              onClick={() => navigate('/')}
+            >
+              ← Projects
+            </button>
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+              {isEditingTitle ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveTitle();
+                      if (e.key === 'Escape') handleCancelEditTitle();
+                    }}
+                    className="h-9 w-full min-w-[220px] max-w-sm rounded border border-slate-600 bg-slate-800 px-3 text-base font-semibold text-white focus:border-amber-400 focus:outline-none"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSaveTitle}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-semibold text-white transition hover:bg-emerald-500"
+                    title="Подтвердить"
+                  >
+                    ✓
+                  </button>
+                  <button
+                    onClick={handleCancelEditTitle}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-600 bg-slate-800 text-xs text-slate-200 transition hover:bg-slate-700"
+                    title="Отменить"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="flex min-w-0 items-center gap-2">
+                  <h1 className="truncate text-lg font-semibold text-white md:text-xl">
+                    {project?.title ?? 'Loading...'}
+                  </h1>
+                  <button
+                    onClick={handleStartEditTitle}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-800/80 text-sm text-slate-300 transition hover:bg-slate-700 hover:text-white"
+                    title="Редактировать название"
+                  >
+                    ✏️
+                  </button>
+                </div>
+              )}
+
+              <div className="flex min-w-0 items-center gap-2 text-xs text-slate-400 sm:text-sm">
+                <span className="font-mono text-slate-500">ID: {project?.project_id ?? '—'}</span>
+                <span className="hidden sm:inline">•</span>
+                {isEditingDescription ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveDescription();
+                        if (e.key === 'Escape') handleCancelEditDescription();
+                      }}
+                      className="h-8 min-w-[200px] max-w-[320px] rounded border border-slate-600 bg-slate-800 px-2 text-xs text-slate-100 focus:border-amber-400 focus:outline-none"
+                      placeholder="Добавить описание..."
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleSaveDescription}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-semibold text-white transition hover:bg-emerald-500"
+                      title="Сохранить"
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={handleCancelEditDescription}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-600 bg-slate-800 text-[11px] text-slate-200 transition hover:bg-slate-700"
+                      title="Отменить"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex min-w-0 items-center gap-1">
+                    <span className="truncate max-w-[30ch] text-slate-300">{project?.description || 'Нет описания'}</span>
+                    <button
+                      onClick={handleStartEditDescription}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-800/80 text-sm text-slate-300 transition hover:bg-slate-700 hover:text-white"
+                      title="Редактировать описание"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-shrink-0 items-center gap-3">
+            <div className="hidden lg:flex">
+              <TokenDisplay project={project} compact={true} />
+            </div>
+            <button
+              onClick={handleSaveWorkspace}
+              disabled={!project || isSaving}
+              className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                isSaving || hasUnsavedChanges
+                  ? 'bg-amber-500 hover:bg-amber-400 focus-visible:outline-amber-300'
+                  : 'bg-emerald-600 hover:bg-emerald-500 focus-visible:outline-emerald-300'
+              }`}
+            >
+              {isSaving ? (
+                <>
+                  <span className="animate-spin text-white/80">⟳</span>
+                  Сохраняю…
+                </>
+              ) : hasUnsavedChanges ? (
+                <>
+                  <span className="text-white/80">●</span>
+                  Сохранить*
+                </>
+              ) : (
+                <>
+                  <span className="text-emerald-200">✓</span>
+                  Сохранено
+                </>
+              )}
+            </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((prev) => !prev)}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-200 transition hover:bg-slate-700"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                title="Дополнительные действия"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+              {menuOpen && (
+                <div className="fixed right-6 top-16 z-[1001] mt-2 w-44 rounded-md border border-slate-700 bg-slate-900/95 p-1 text-sm text-slate-200 shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      handleDeleteWorkspace();
+                    }}
+                    className="flex w-full items-center justify-between rounded px-3 py-2 text-left hover:bg-rose-600/20 hover:text-rose-200"
+                  >
+                    Удалить
+                    <span>⌫</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportWorkspace}
+                    className="flex w-full items-center justify-between rounded px-3 py-2 text-left hover:bg-emerald-600/20 hover:text-emerald-200"
+                  >
+                    Экспорт
+                    <span>⇩</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleImportWorkspace}
+                    className="flex w-full items-center justify-between rounded px-3 py-2 text-left hover:bg-amber-500/20 hover:text-amber-200"
+                  >
+                    Импорт
+                    <span>⇧</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogoutClick}
+                    className="flex w-full items-center justify-between rounded px-3 py-2 text-left hover:bg-slate-700/60"
+                  >
+                    Выход
+                    <span>↩</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+        {error && <div className="rounded bg-red-500/20 p-3 text-sm text-red-200">{error}</div>}
+        {validation.status !== 'idle' && (
+          <div
+            className={`rounded p-2 text-sm ${
+              validation.status === 'success'
+                ? 'bg-emerald-500/20 text-emerald-200'
+                : 'bg-amber-500/20 text-amber-100'
+            }`}
+          >
+            {validation.message}
+          </div>
+        )}
+        
+        {/* Main workflow area */}
+        <div
+          className="flex w-full flex-1 overflow-hidden rounded-2xl bg-slate-800/80 shadow"
+          style={{
+            minHeight: '500px',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            zIndex: 1
+          }}
+        >
+          <GraphCanvas
+            project={project}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={selectNode}
+            onRunNode={handleRunNode}
+            onRegenerateNode={handleRegenerateNode}
+            onDeleteNode={handleDeleteNode}
+            onChangeNodeMeta={handleUpdateNodeMeta}
+            onChangeNodeContent={handleUpdateNodeContent}
+            onChangeNodeTitle={handleUpdateNodeTitle}
+            onChangeNodeAi={handleUpdateNodeAi}
+          onChangeNodeUi={handleUpdateNodeUi}
+          onAddNodeFromPalette={handlePaletteDrop}
+          onCopyNode={canManageProject ? handleNodeCopy : undefined}
+          onCreateEdge={handleConnectEdge}
+          onRemoveEdges={handleRemoveEdges}
+          providerOptions={providerOptions}
+          loading={loading}
+          sidebarCollapsed={sidebarCollapsed}
+          sidebarWidth={sidebarWidth}
+          readOnly={!canEditProject}
+          generatingNodes={generatingNodeSet}
+        />
+        </div>
+        
+        {/* Right palette positioned absolutely over the workflow */}
+        <aside
+          className="absolute right-6 z-10 flex flex-col"
+          style={{
+            top: '100px',
+            width: paletteCollapsed ? 48 : 320,
+            height: 'calc(100vh - 116px)',
+          }}
+        >
+          <div className="flex-1 overflow-auto">
+            <NodePalette 
+              onCreateNode={handlePaletteCreate} 
+              disabled={loading || !project || !canManageProject}
+              collapsed={paletteCollapsed}
+              onToggleCollapse={() => setPaletteCollapsed(!paletteCollapsed)}
+            />
+          </div>
+        </aside>
+      </div>
+      
+      {/* Node Modal */}
+      {showNodeModal && project && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="max-w-4xl max-h-[80vh] w-full mx-4 bg-slate-800 rounded-lg shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h2 className="text-lg font-semibold text-white">
+                {project.nodes.find(n => n.node_id === showNodeModal)?.title || 'Node'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowNodeModal(null)}
+                className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition rounded"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {(() => {
+                const node = project.nodes.find(n => n.node_id === showNodeModal);
+                if (!node) return <div>Node not found</div>;
+                
+                return (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">ID:</label>
+                      <div className="text-sm text-slate-400 font-mono">{node.node_id}</div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">Тип:</label>
+                      <div className="text-sm text-slate-400">{node.type}</div>
+                    </div>
+                    {node.content && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Содержимое:</label>
+                        <div className="text-sm text-slate-200 bg-slate-900 p-3 rounded max-h-40 overflow-y-auto">
+                          <pre className="whitespace-pre-wrap">{node.content}</pre>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex gap-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          selectNode(showNodeModal);
+                          setShowNodeModal(null);
+                        }}
+                        className="px-4 py-2 rounded bg-emerald-600 text-white transition hover:bg-emerald-500"
+                      >
+                        Выбрать на поле
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowNodeModal(null)}
+                        className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded transition"
+                      >
+                        Закрыть
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Feedback Modal */}
+      {showFeedbackModal && (
+        <FeedbackModal 
+          onClose={() => setShowFeedbackModal(false)} 
+        />
+      )}
+    </div>
+  );
+}
+
+export default WorkspacePage;
+
+function ResizeHandle({ orientation, onResize, ariaLabel }: ResizeHandleProps) {
+  const isVertical = orientation === 'vertical';
+
+  const handlePointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+
+      const target = event.currentTarget;
+      target.setPointerCapture(event.pointerId);
+
+      let previous = isVertical ? event.clientX : event.clientY;
+
+      const handleMove = (moveEvent: PointerEvent) => {
+        const current = isVertical ? moveEvent.clientX : moveEvent.clientY;
+        const delta = current - previous;
+        if (delta !== 0) {
+          onResize(delta);
+          previous = current;
+        }
+      };
+
+      const handleUp = () => {
+        if (target.hasPointerCapture(event.pointerId)) {
+          target.releasePointerCapture(event.pointerId);
+        }
+        window.removeEventListener('pointermove', handleMove);
+      };
+
+      window.addEventListener('pointermove', handleMove);
+      window.addEventListener('pointerup', handleUp, { once: true });
+      window.addEventListener('pointercancel', handleUp, { once: true });
+    },
+    [isVertical, onResize],
+  );
+
+  const baseClasses = isVertical
+    ? 'w-3 cursor-ew-resize'
+    : 'h-3 cursor-ns-resize';
+
+  return (
+    <div
+      role="separator"
+      aria-label={ariaLabel}
+      className={`group relative flex flex-none items-center justify-center ${baseClasses}`}
+      onPointerDown={handlePointerDown}
+    >
+      <span
+        className={`pointer-events-none rounded-full bg-slate-600/40 transition group-hover:bg-slate-400/70 ${
+          isVertical ? 'h-[70%] w-px' : 'h-px w-[70%]'
+        }`}
+      />
+      <span
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] text-slate-300 opacity-0 transition group-hover:opacity-100"
+      >
+        {isVertical ? '↔' : '↕'}
+      </span>
+    </div>
+  );
+}
+
+interface ResizeHandleProps {
+  orientation: 'vertical' | 'horizontal';
+  onResize: (delta: number) => void;
+  ariaLabel: string;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}

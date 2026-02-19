@@ -1,0 +1,83 @@
+{
+  "common": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "add": "Добавить",
+    "edit": "Редактировать",
+    "close": "Закрыть",
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "success": "Успешно",
+    "settings": "Настройки"
+  },
+  "menu": {
+    "file": "Файл",
+    "edit": "Редактор",
+    "view": "Вид",
+    "help": "Помощь",
+    "settings": "Настройки",
+    "logout": "Выход"
+  },
+  "nodes": {
+    "ai": "AI Нода",
+    "text": "Текст",
+    "image": "Изображение",
+    "video": "Видео",
+    "file": "Файл",
+    "folder": "Папка",
+    "markdown": "Markdown",
+    "code": "Код"
+  },
+  "ai_settings": {
+    "title": "Настройки AI",
+    "configuration": "Конфигурация",
+    "settings": "Параметры",
+    "routing": "Роутинг",
+    "context": "Контекст",
+    "request": "Запрос",
+    "system_prompt": "Системный промпт",
+    "output_example": "Пример вывода",
+    "temperature": "Температура",
+    "model": "Модель",
+    "provider": "Провайдер",
+    "save_preset": "Сохранить пресет",
+    "delete_preset": "Удалить пресет",
+    "load_preset": "Загрузить пресет",
+    "simple_mode": "Упрощённый",
+    "clean_mode": "Чистый",
+    "simple_json": "Упрощённый JSON",
+    "full_json": "Полный JSON",
+    "max_tokens": "Макс. токенов",
+    "top_p": "Top P",
+    "frequency_penalty": "Штраф за частоту",
+    "presence_penalty": "Штраф за присутствие",
+    "stream": "Потоковый режим",
+    "output_format": "Формат вывода"
+  },
+  "chat": {
+    "title": "Чат с агентом",
+    "mode_agent": "Агент (полный доступ)",
+    "mode_edit": "Редактор (ноды)",
+    "mode_ask": "Вопрос (только чтение)",
+    "new_chat": "Новый чат",
+    "send": "Отправить",
+    "type_message": "Введите сообщение...",
+    "settings": "Настройки",
+    "to_workflow": "→ На workflow",
+    "select_model": "Выбрать модель",
+    "chat_settings": "Настройки чата",
+    "current_chat": "Текущий чат",
+    "no_chats_yet": "Пока нет чатов"
+  },
+  "feedback": {
+    "title": "Отправить отзыв",
+    "type": "Тип",
+    "message": "Сообщение",
+    "bug": "Баг",
+    "feature": "Фича",
+    "performance": "Производительность",
+    "ui_ux": "Дизайн/UI",
+    "other": "Другое"
+  }
+}

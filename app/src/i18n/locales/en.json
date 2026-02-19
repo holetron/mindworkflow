@@ -1,0 +1,83 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "add": "Add",
+    "edit": "Edit",
+    "close": "Close",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "settings": "Settings"
+  },
+  "menu": {
+    "file": "File",
+    "edit": "Edit",
+    "view": "View",
+    "help": "Help",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "nodes": {
+    "ai": "AI Node",
+    "text": "Text",
+    "image": "Image",
+    "video": "Video",
+    "file": "File",
+    "folder": "Folder",
+    "markdown": "Markdown",
+    "code": "Code"
+  },
+  "ai_settings": {
+    "title": "AI Settings",
+    "configuration": "Configuration",
+    "settings": "Settings",
+    "routing": "Routing",
+    "context": "Context",
+    "request": "Request",
+    "system_prompt": "System Prompt",
+    "output_example": "Output Example",
+    "temperature": "Temperature",
+    "model": "Model",
+    "provider": "Provider",
+    "save_preset": "Save Preset",
+    "delete_preset": "Delete Preset",
+    "load_preset": "Load Preset",
+    "simple_mode": "Simple",
+    "clean_mode": "Clean",
+    "simple_json": "Simple JSON",
+    "full_json": "Full JSON",
+    "max_tokens": "Max Tokens",
+    "top_p": "Top P",
+    "frequency_penalty": "Frequency Penalty",
+    "presence_penalty": "Presence Penalty",
+    "stream": "Stream",
+    "output_format": "Output Format"
+  },
+  "chat": {
+    "title": "Chat with Agent",
+    "mode_agent": "Agent (Full Access)",
+    "mode_edit": "Edit (Node Editing)",
+    "mode_ask": "Ask (Read-Only)",
+    "new_chat": "New Chat",
+    "send": "Send",
+    "type_message": "Type your message...",
+    "settings": "Settings",
+    "to_workflow": "→ Workflow",
+    "select_model": "Select Model",
+    "chat_settings": "Chat Settings",
+    "current_chat": "Current Chat",
+    "no_chats_yet": "No chats yet"
+  },
+  "feedback": {
+    "title": "Send Feedback",
+    "type": "Type",
+    "message": "Message",
+    "bug": "Bug Report",
+    "feature": "Feature Request",
+    "performance": "Performance",
+    "ui_ux": "UI/UX",
+    "other": "Other"
+  }
+}

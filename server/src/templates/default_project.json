@@ -1,0 +1,66 @@
+{
+  "title": "",
+  "description": "",
+  "settings": {
+    "language": "ru",
+    "ai_default_model": "local-llm-7b-q5",
+    "ai_temperature": 0.3,
+    "max_parallel_workers": 4,
+    "auto_save_interval_sec": 60,
+    "allow_network": false,
+    "integrations": {}
+  },
+  "nodes": [
+    {
+      "node_id": "start",
+      "type": "text",
+      "title": "Начало",
+      "content": "# Начало проекта\n\nЭто стартовая нода вашего проекта. Добавьте описание или начните работу.",
+      "content_type": "text/markdown",
+      "meta": {
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "edges": [],
+  "schemas": {
+    "PLAN_SCHEMA": {
+      "type": "object",
+      "required": [
+        "overview",
+        "phases",
+        "nodes"
+      ],
+      "properties": {
+        "overview": {
+          "type": "object",
+          "required": [
+            "goal",
+            "target_audience",
+            "tone",
+            "duration_sec"
+          ],
+          "properties": {
+            "goal": {
+              "type": "string"
+            },
+            "target_audience": {
+              "type": "string"
+            },
+            "tone": {
+              "type": "string"
+            },
+            "duration_sec": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 180
+            }
+          }
+        }
+      }
+    }
+  }
+}

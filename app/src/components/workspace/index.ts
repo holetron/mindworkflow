@@ -1,0 +1,12 @@
+export { WorkspaceHeader } from './WorkspaceHeader';
+export { WorkspaceCanvas } from './WorkspaceCanvas';
+export { WorkspaceSidebar } from './WorkspaceSidebar';
+export { NodeModal } from './NodeModal';
+export { AiSettingsModalWrapper } from './AiSettingsModalWrapper';
+export { ShareModal } from './ShareModal';
+export { ResizeHandle, clamp } from './ResizeHandle';
+export { useWorkspaceState } from './hooks/useWorkspaceState';
+export { useWorkspaceActions } from './hooks/useWorkspaceActions';
+export { useWorkspaceEffects } from './hooks/useWorkspaceEffects';
+export type { WorkspaceState } from './hooks/useWorkspaceState';
+export type { WorkspaceActions } from './hooks/useWorkspaceActions';

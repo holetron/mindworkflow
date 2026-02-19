@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  install:
+    name: Install dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache node_modules
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            node_modules
+            server/node_modules
+            app/node_modules
+          key: modules-${{ hashFiles('package-lock.json') }}
+
+  test:
+    name: Run tests
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            server/node_modules
+            app/node_modules
+          key: modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Run vitest
+        run: npm test -- --run
+
+  typecheck:
+    name: Type checking
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            server/node_modules
+            app/node_modules
+          key: modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Typecheck server
+        run: npx tsc --noEmit -p server/tsconfig.json
+
+      - name: Typecheck app
+        run: npx tsc --noEmit -p app/tsconfig.json
+
+  build:
+    name: Build
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            server/node_modules
+            app/node_modules
+          key: modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Build server
+        run: npm --prefix server run build
+
+      - name: Build app
+        run: npm --prefix app run build
+
+  quality:
+    name: Code quality
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Check : any usage"
+        run: bash scripts/count-any.sh

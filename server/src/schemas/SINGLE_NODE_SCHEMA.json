@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SINGLE_NODE_SCHEMA",
+  "type": "object",
+  "required": ["type", "title", "content"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "text",
+      "description": "Тип ноды, всегда text для простых ответов"
+    },
+    "title": {
+      "type": "string",
+      "description": "Короткое название для ноды с ответом",
+      "maxLength": 100
+    },
+    "content": {
+      "type": "string",
+      "description": "Основной ответ AI агента"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Схема для создания одной текстовой ноды с ответом AI агента. Используется когда нужно создать отдельную ноду с результатом работы AI."
+}

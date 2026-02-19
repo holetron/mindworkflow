@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MindWorkflow — Visual AI Workflow Builder</title>
+  <meta name="description" content="Build, connect, and execute AI workflows visually. Offline-first, multi-provider, open-source.">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="MindWorkflow — Visual AI Workflow Builder">
+  <meta property="og:description" content="Build, connect, and execute AI workflows visually. Offline-first, multi-provider, open-source.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://holetron.github.io/mindworkflow/">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Favicon (inline SVG data URL) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+</head>
+<body>
+
+  <!-- ========== NAVIGATION ========== -->
+  <nav class="nav" id="nav">
+    <div class="container">
+      <a href="#" class="nav-brand">
+        <div class="nav-brand-icon">M</div>
+        MindWorkflow
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#techstack">Tech Stack</a></li>
+        <li><a href="#quickstart">Quick Start</a></li>
+        <li><a href="https://github.com/holetron/mindworkflow" target="_blank" rel="noopener" class="nav-cta">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a></li>
+      </ul>
+      <button class="nav-mobile-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ========== HERO SECTION ========== -->
+  <section class="hero" id="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-glow hero-glow--blue"></div>
+    <div class="hero-glow hero-glow--purple"></div>
+
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        Open Source &middot; Free Forever
+      </div>
+
+      <h1 class="hero-title">
+        <span class="gradient-text">MindWorkflow</span>
+      </h1>
+
+      <p class="hero-subtitle">Visual AI Workflow Builder</p>
+
+      <p class="hero-description">
+        Build, connect, and execute AI workflows visually. Offline-first,
+        multi-provider, and fully open-source. Design powerful AI pipelines
+        without writing a single line of code.
+      </p>
+
+      <div class="hero-actions">
+        <a href="https://m.hltrn.cc" target="_blank" rel="noopener" class="btn btn-primary">
+          Try Live Demo
+          <span class="btn-arrow">&rarr;</span>
+        </a>
+        <a href="https://github.com/holetron/mindworkflow" target="_blank" rel="noopener" class="btn btn-secondary">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FEATURES SECTION ========== -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="features-header fade-in">
+        <span class="section-label">Features</span>
+        <h2 class="section-title">Everything you need to build<br><span class="gradient-text">AI workflows</span></h2>
+        <p class="section-description">
+          A complete toolkit for designing, connecting, and executing
+          intelligent workflows with a visual node-based editor.
+        </p>
+      </div>
+
+      <div class="features-grid stagger-children">
+
+        <div class="feature-card fade-in">
+          <div class="feature-icon">&#128279;</div>
+          <h3 class="feature-card-title">Visual Node Editor</h3>
+          <p class="feature-card-desc">Build workflows by connecting nodes visually on an infinite canvas. Drag, drop, and wire up complex AI pipelines with ease.</p>
+        </div>
+
+        <div class="feature-card fade-in">
+          <div class="feature-icon">&#129302;</div>
+          <h3 class="feature-card-title">Multi-AI Provider</h3>
+          <p class="feature-card-desc">Connect to OpenAI, Gemini, Replicate, Midjourney, Google AI Studio, and more. Switch providers without changing your workflow.</p>
+        </div>
+
+        <div class="feature-card fade-in">
+          <div class="feature-icon">&#128190;</div>
+          <h3 class="feature-card-title">Offline-First</h3>
+          <p class="feature-card-desc">Works without internet connection. All data is stored locally with SQLite. Your workflows and data stay on your machine.</p>
+        </div>
+
+        <div class="feature-card fade-in">
+          <div class="feature-icon">&#9889;</div>
+          <h3 class="feature-card-title">Execution Engine</h3>
+          <p class="feature-card-desc">Run workflows with parallel and sequential execution modes. Monitor progress in real-time with detailed execution logs.</p>
+        </div>
+
+        <div class="feature-card fade-in">
+          <div class="feature-icon">&#127912;</div>
+          <h3 class="feature-card-title">Image Generation</h3>
+          <p class="feature-card-desc">Create and process images with AI directly within your workflows. Support for multiple image generation providers.</p>
+        </div>
+
+        <div class="feature-card fade-in">
+          <div class="feature-icon">&#128295;</div>
+          <h3 class="feature-card-title">Agent System</h3>
+          <p class="feature-card-desc">Automate workflows with intelligent agents that can reason, plan, and execute multi-step tasks autonomously.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== ARCHITECTURE SECTION ========== -->
+  <section class="architecture" id="architecture">
+    <div class="container">
+      <div class="architecture-header fade-in">
+        <span class="section-label">Architecture</span>
+        <h2 class="section-title">Clean, <span class="gradient-text">modular design</span></h2>
+        <p class="section-description">
+          A modern full-stack architecture with a clear separation of concerns,
+          built for extensibility and performance.
+        </p>
+      </div>
+
+      <div class="arch-diagram fade-in">
+
+        <!-- Frontend -->
+        <div class="arch-layer">
+          <div class="arch-box">
+            <div class="arch-box-label">Frontend</div>
+            <div class="arch-box-title">React App</div>
+            <div class="arch-box-tech">React + Vite + ReactFlow</div>
+          </div>
+        </div>
+
+        <!-- Connector -->
+        <div class="arch-connector">
+          <div class="arch-connector-line"></div>
+        </div>
+
+        <!-- API Layer -->
+        <div class="arch-layer">
+          <div class="arch-box">
+            <div class="arch-box-label">API Layer</div>
+            <div class="arch-box-title">REST API</div>
+            <div class="arch-box-tech">Express + TypeScript</div>
+          </div>
+        </div>
+
+        <!-- Connector -->
+        <div class="arch-connector">
+          <div class="arch-connector-line"></div>
+        </div>
+
+        <!-- Backend -->
+        <div class="arch-layer">
+          <div class="arch-box">
+            <div class="arch-box-label">Backend</div>
+            <div class="arch-box-title">Data + AI</div>
+            <div class="arch-box-tech">SQLite + AI Providers</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== TECH STACK SECTION ========== -->
+  <section class="techstack" id="techstack">
+    <div class="container">
+      <div class="techstack-header fade-in">
+        <span class="section-label">Tech Stack</span>
+        <h2 class="section-title">Built with <span class="gradient-text">modern tools</span></h2>
+        <p class="section-description">
+          Carefully chosen technologies for reliability, developer experience, and performance.
+        </p>
+      </div>
+
+      <div class="techstack-grid stagger-children">
+
+        <div class="tech-item fade-in">
+          <div class="tech-icon">R</div>
+          <div class="tech-info">
+            <div class="tech-name">React</div>
+            <div class="tech-desc">UI component library</div>
+          </div>
+        </div>
+
+        <div class="tech-item fade-in">
+          <div class="tech-icon">TS</div>
+          <div class="tech-info">
+            <div class="tech-name">TypeScript</div>
+            <div class="tech-desc">Type-safe JavaScript</div>
+          </div>
+        </div>
+
+        <div class="tech-item fade-in">
+          <div class="tech-icon">V</div>
+          <div class="tech-info">
+            <div class="tech-name">Vite</div>
+            <div class="tech-desc">Next-gen build tool</div>
+          </div>
+        </div>
+
+        <div class="tech-item fade-in">
+          <div class="tech-icon">Ex</div>
+          <div class="tech-info">
+            <div class="tech-name">Express</div>
+            <div class="tech-desc">Node.js web framework</div>
+          </div>
+        </div>
+
+        <div class="tech-item fade-in">
+          <div class="tech-icon">SQ</div>
+          <div class="tech-info">
+            <div class="tech-name">SQLite</div>
+            <div class="tech-desc">Embedded database</div>
+          </div>
+        </div>
+
+        <div class="tech-item fade-in">
+          <div class="tech-icon">Z</div>
+          <div class="tech-info">
+            <div class="tech-name">Zustand</div>
+            <div class="tech-desc">Lightweight state management</div>
+          </div>
+        </div>
+
+        <div class="tech-item fade-in">
+          <div class="tech-icon">RF</div>
+          <div class="tech-info">
+            <div class="tech-name">ReactFlow</div>
+            <div class="tech-desc">Node-based graph editor</div>
+          </div>
+        </div>
+
+        <div class="tech-item fade-in">
+          <div class="tech-icon">TW</div>
+          <div class="tech-info">
+            <div class="tech-name">Tailwind CSS</div>
+            <div class="tech-desc">Utility-first CSS framework</div>
+          </div>
+        </div>
+
+        <div class="tech-item fade-in">
+          <div class="tech-icon">Vi</div>
+          <div class="tech-info">
+            <div class="tech-name">Vitest</div>
+            <div class="tech-desc">Fast unit testing</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== QUICK START SECTION ========== -->
+  <section class="quickstart" id="quickstart">
+    <div class="container">
+      <div class="quickstart-header fade-in">
+        <span class="section-label">Quick Start</span>
+        <h2 class="section-title">Up and running in <span class="gradient-text">seconds</span></h2>
+        <p class="section-description">
+          Clone, install, and start building AI workflows in just four commands.
+        </p>
+      </div>
+
+      <div class="code-window fade-in">
+        <div class="code-titlebar">
+          <div class="code-dot code-dot--red"></div>
+          <div class="code-dot code-dot--yellow"></div>
+          <div class="code-dot code-dot--green"></div>
+          <div class="code-titlebar-text">terminal</div>
+        </div>
+        <div class="code-body">
+          <pre><span class="code-comment"># Clone the repository</span>
+<span class="code-prompt">$</span> <span class="code-command">git clone https://github.com/holetron/mindworkflow.git</span>
+
+<span class="code-comment"># Navigate to the project</span>
+<span class="code-prompt">$</span> <span class="code-command">cd mindworkflow</span>
+
+<span class="code-comment"># Install dependencies</span>
+<span class="code-prompt">$</span> <span class="code-command">npm install</span>
+
+<span class="code-comment"># Start the development server</span>
+<span class="code-prompt">$</span> <span class="code-command">npm run dev</span></pre>
+        </div>
+      </div>
+
+      <button class="code-copy-btn fade-in" id="copyBtn" aria-label="Copy commands">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+          <path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"/>
+        </svg>
+        Copy commands
+      </button>
+    </div>
+  </section>
+
+  <!-- ========== CTA SECTION ========== -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-card fade-in">
+        <div class="cta-glow"></div>
+        <h2 class="cta-title">Ready to build your <span class="gradient-text">AI workflows</span>?</h2>
+        <p class="cta-desc">
+          Start building powerful AI pipelines visually. No configuration needed — just clone, install, and create.
+        </p>
+        <div class="cta-actions">
+          <a href="https://m.hltrn.cc" target="_blank" rel="noopener" class="btn btn-primary">
+            Launch App
+            <span class="btn-arrow">&rarr;</span>
+          </a>
+          <a href="https://github.com/holetron/mindworkflow" target="_blank" rel="noopener" class="btn btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            Star on GitHub
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-left">
+        Built with &#10084;&#65039; by <a href="https://github.com/holetron" target="_blank" rel="noopener">Holetron</a> &middot; &copy; 2025 MindWorkflow
+      </div>
+      <div class="footer-right">
+        <a href="https://github.com/holetron/mindworkflow" target="_blank" rel="noopener" class="footer-link">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+        <a href="https://m.hltrn.cc" target="_blank" rel="noopener" class="footer-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          Live App
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========== MINIMAL VANILLA JS ========== -->
+  <script>
+    // --- Scroll-triggered fade-in animations ---
+    (function () {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+            }
+          });
+        },
+        { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+      );
+
+      document.querySelectorAll('.fade-in').forEach((el) => observer.observe(el));
+    })();
+
+    // --- Navbar scroll effect ---
+    (function () {
+      const nav = document.getElementById('nav');
+      let ticking = false;
+
+      window.addEventListener('scroll', function () {
+        if (!ticking) {
+          window.requestAnimationFrame(function () {
+            if (window.scrollY > 60) {
+              nav.classList.add('scrolled');
+            } else {
+              nav.classList.remove('scrolled');
+            }
+            ticking = false;
+          });
+          ticking = true;
+        }
+      });
+    })();
+
+    // --- Copy button ---
+    (function () {
+      const btn = document.getElementById('copyBtn');
+      if (!btn) return;
+
+      btn.addEventListener('click', function () {
+        const commands = [
+          'git clone https://github.com/holetron/mindworkflow.git',
+          'cd mindworkflow',
+          'npm install',
+          'npm run dev'
+        ].join('\n');
+
+        navigator.clipboard.writeText(commands).then(function () {
+          btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 8.5 6.5 11.5 12.5 4.5"/></svg> Copied!';
+          setTimeout(function () {
+            btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"/></svg> Copy commands';
+          }, 2000);
+        });
+      });
+    })();
+
+    // --- Mobile nav toggle (simple) ---
+    (function () {
+      const toggle = document.getElementById('navToggle');
+      const links = document.querySelector('.nav-links');
+      if (!toggle || !links) return;
+
+      toggle.addEventListener('click', function () {
+        const expanded = links.style.display === 'flex';
+        if (expanded) {
+          links.style.display = 'none';
+        } else {
+          links.style.display = 'flex';
+          links.style.flexDirection = 'column';
+          links.style.position = 'absolute';
+          links.style.top = '100%';
+          links.style.left = '0';
+          links.style.right = '0';
+          links.style.background = 'rgba(10, 10, 10, 0.95)';
+          links.style.backdropFilter = 'blur(20px)';
+          links.style.padding = '16px 24px';
+          links.style.gap = '16px';
+          links.style.borderBottom = '1px solid #222';
+        }
+      });
+
+      // Close on link click
+      links.querySelectorAll('a').forEach(function (a) {
+        a.addEventListener('click', function () {
+          if (window.innerWidth <= 640) {
+            links.style.display = 'none';
+          }
+        });
+      });
+
+      // Reset on resize
+      window.addEventListener('resize', function () {
+        if (window.innerWidth > 640) {
+          links.removeAttribute('style');
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>
