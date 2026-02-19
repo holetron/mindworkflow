@@ -138,16 +138,16 @@ export async function executeNodeByType(
       );
 
       return {
-        content: `Создано ${transformResult.createdNodes.length} нод: ${transformResult.createdNodes.map(n => n.title).join(', ')}`,
+        content: `Created ${transformResult.createdNodes.length} nodes: ${transformResult.createdNodes.map(n => n.title).join(', ')}`,
         contentType: 'text/plain',
         logs: transformResult.logs,
         createdNodes: transformResult.createdNodes,
         isMultiNodeResult: true,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
-        content: `Ошибка трансформации: ${errorMessage}`,
+        content: `Transformation error: ${errorMessage}`,
         contentType: 'text/plain',
         logs: [`Transformer error: ${errorMessage}`],
       };

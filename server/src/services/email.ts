@@ -96,62 +96,62 @@ const EMAIL_TEMPLATES = {
   welcome: (name: string, email: string) => {
     const frontendUrl = currentFrontendUrl;
     return {
-      subject: '🎉 Добро пожаловать в MindWorkflow!',
+      subject: 'Welcome to MindWorkflow!',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #4f46e5; margin: 0;">🧠 MindWorkflow</h1>
-            <p style="color: #6b7280; margin: 5px 0;">Платформа для творческих AI-workflows</p>
+            <h1 style="color: #4f46e5; margin: 0;">MindWorkflow</h1>
+            <p style="color: #6b7280; margin: 5px 0;">Platform for creative AI workflows</p>
           </div>
-          
+
           <div style="background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); padding: 30px; border-radius: 10px; color: white; text-align: center; margin-bottom: 30px;">
-            <h2 style="margin: 0 0 10px 0;">Добро пожаловать, ${name}! 🎉</h2>
-            <p style="margin: 0; opacity: 0.9;">Ваш аккаунт успешно создан</p>
+            <h2 style="margin: 0 0 10px 0;">Welcome, ${name}!</h2>
+            <p style="margin: 0; opacity: 0.9;">Your account has been successfully created</p>
           </div>
 
           <div style="background: #f9fafb; padding: 25px; border-radius: 8px; margin-bottom: 30px;">
-            <h3 style="color: #111827; margin: 0 0 15px 0;">🚀 Что вас ждет:</h3>
+            <h3 style="color: #111827; margin: 0 0 15px 0;">What awaits you:</h3>
             <ul style="color: #374151; margin: 0; padding-left: 20px;">
-              <li style="margin-bottom: 8px;">🧠 <strong>AI Node Generation</strong> - Создавайте контент с помощью ИИ</li>
-              <li style="margin-bottom: 8px;">🗺️ <strong>Mind Mapping</strong> - Визуализируйте свои идеи</li>
-              <li style="margin-bottom: 8px;">🔗 <strong>Node Connections</strong> - Стройте сложные workflows</li>
-              <li style="margin-bottom: 8px;">📊 <strong>Project Management</strong> - Управляйте проектами</li>
+              <li style="margin-bottom: 8px;"><strong>AI Node Generation</strong> - Create content with AI</li>
+              <li style="margin-bottom: 8px;"><strong>Mind Mapping</strong> - Visualize your ideas</li>
+              <li style="margin-bottom: 8px;"><strong>Node Connections</strong> - Build complex workflows</li>
+              <li style="margin-bottom: 8px;"><strong>Project Management</strong> - Manage your projects</li>
             </ul>
           </div>
 
           <div style="text-align: center; margin-bottom: 30px;">
-            <a href="${frontendUrl}" 
+            <a href="${frontendUrl}"
                style="display: inline-block; background: #4338ca; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-              🌟 Начать работу
+              Get Started
             </a>
           </div>
 
           <div style="background: #e0e7ff; border: 1px solid #4338ca; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
             <p style="margin: 0; color: #312e81; font-size: 14px;">
-              <strong>💡 Совет:</strong> Начните с создания вашего первого проекта и экспериментируйте с различными типами узлов!
+              <strong>Tip:</strong> Start by creating your first project and experiment with different node types!
             </p>
           </div>
 
           <div style="text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; color: #6b7280; font-size: 14px;">
-            <p style="margin: 0;">Ваш email: <strong>${email}</strong></p>
-            <p style="margin: 5px 0 0 0;">Если у вас есть вопросы, мы всегда готовы помочь!</p>
+            <p style="margin: 0;">Your email: <strong>${email}</strong></p>
+            <p style="margin: 5px 0 0 0;">If you have any questions, we are always happy to help!</p>
           </div>
         </div>
       `,
       text: `
-Добро пожаловать в MindWorkflow, ${name}!
+Welcome to MindWorkflow, ${name}!
 
-Ваш аккаунт успешно создан. Теперь вы можете:
-- Создавать AI-узлы для генерации контента
-- Строить mind maps и сложные workflows  
-- Управлять проектами
-- И многое другое!
+Your account has been successfully created. Now you can:
+- Create AI nodes for content generation
+- Build mind maps and complex workflows
+- Manage projects
+- And much more!
 
-Начните работу: ${frontendUrl}
-Ваш email: ${email}
+Get started: ${frontendUrl}
+Your email: ${email}
 
-Удачи в творчестве!
-Команда MindWorkflow
+Good luck with your creative work!
+The MindWorkflow Team
       `,
     };
   },
@@ -159,34 +159,34 @@ const EMAIL_TEMPLATES = {
   resetPassword: (name: string, resetToken: string, email: string) => {
     const frontendUrl = currentFrontendUrl;
     return {
-      subject: '🔐 Восстановление пароля MindWorkflow',
+      subject: 'Password Reset - MindWorkflow',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #4f46e5; margin: 0;">🧠 MindWorkflow</h1>
-            <p style="color: #6b7280; margin: 5px 0;">Восстановление пароля</p>
+            <h1 style="color: #4f46e5; margin: 0;">MindWorkflow</h1>
+            <p style="color: #6b7280; margin: 5px 0;">Password Reset</p>
           </div>
-          
+
           <div style="background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); padding: 30px; border-radius: 10px; color: white; text-align: center; margin-bottom: 30px;">
-            <h2 style="margin: 0 0 10px 0;">🔐 Восстановление пароля</h2>
-            <p style="margin: 0; opacity: 0.9;">Привет, ${name}!</p>
+            <h2 style="margin: 0 0 10px 0;">Password Reset</h2>
+            <p style="margin: 0; opacity: 0.9;">Hello, ${name}!</p>
           </div>
 
           <div style="background: #f9fafb; padding: 25px; border-radius: 8px; margin-bottom: 30px;">
             <p style="color: #374151; margin: 0 0 20px 0;">
-              Мы получили запрос на восстановление пароля для вашего аккаунта.<br>
-              Если это были не вы, просто проигнорируйте это письмо.
+              We received a request to reset the password for your account.<br>
+              If this was not you, simply ignore this email.
             </p>
-            
+
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${frontendUrl}/reset-password?token=${resetToken}" 
+              <a href="${frontendUrl}/reset-password?token=${resetToken}"
                  style="display: inline-block; background: #4338ca; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                🔑 Сбросить пароль
+                Reset Password
               </a>
             </div>
 
             <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">
-              Или скопируйте эту ссылку в браузер:<br>
+              Or copy this link into your browser:<br>
               <code style="background: #e0e7ff; padding: 2px 4px; border-radius: 3px; font-size: 12px; color: #312e81;">
                 ${frontendUrl}/reset-password?token=${resetToken}
               </code>
@@ -195,33 +195,33 @@ const EMAIL_TEMPLATES = {
 
           <div style="background: #e0e7ff; border: 1px solid #4338ca; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
             <p style="margin: 0; color: #312e81; font-size: 14px;">
-              <strong>⚠️ Важно:</strong> Ссылка действительна только 1 час. После этого нужно будет запросить новую.
+              <strong>Important:</strong> This link is valid for 1 hour only. After that, you will need to request a new one.
             </p>
           </div>
 
           <div style="text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; color: #6b7280; font-size: 14px;">
-            <p style="margin: 0;">Ваш email: <strong>${email}</strong></p>
-            <p style="margin: 5px 0 0 0;">Если у вас проблемы с восстановлением, обратитесь в поддержку.</p>
+            <p style="margin: 0;">Your email: <strong>${email}</strong></p>
+            <p style="margin: 5px 0 0 0;">If you have trouble resetting your password, please contact support.</p>
           </div>
         </div>
       `,
       text: `
-Восстановление пароля MindWorkflow
+Password Reset - MindWorkflow
 
-Привет, ${name}!
+Hello, ${name}!
 
-Мы получили запрос на восстановление пароля для вашего аккаунта.
-Если это были не вы, просто проигнорируйте это письмо.
+We received a request to reset the password for your account.
+If this was not you, simply ignore this email.
 
-Для сброса пароля перейдите по ссылке:
+To reset your password, follow this link:
 ${frontendUrl}/reset-password?token=${resetToken}
 
-⚠️ Ссылка действительна только 1 час.
+Important: This link is valid for 1 hour only.
 
-Ваш email: ${email}
+Your email: ${email}
 
-С уважением,
-Команда MindWorkflow
+Best regards,
+The MindWorkflow Team
       `,
     };
   },
@@ -285,11 +285,11 @@ export const emailService = {
   async testEmailConfig(): Promise<{ ok: boolean; error?: string }> {
     const mailer = getTransporter();
     if (!mailer) {
-      return { ok: false, error: 'SMTP не настроен' };
+      return { ok: false, error: 'SMTP is not configured' };
     }
     if (typeof mailer.verify !== 'function') {
       log.warn('⚠️ mailer.verify unavailable; skipping SMTP verification.');
-      return { ok: false, error: 'SMTP транспорт не поддерживает проверку' };
+      return { ok: false, error: 'SMTP transport does not support verification' };
     }
 
     let timeoutId: NodeJS.Timeout | undefined;
@@ -314,13 +314,13 @@ export const emailService = {
       if (error instanceof Error && error.message === 'SMTP_VERIFY_TIMEOUT') {
         return {
           ok: false,
-          error: `Проверка SMTP превысила ${Number(process.env.SMTP_VERIFY_TIMEOUT_MS || 8000) / 1000} секунд`,
+          error: `SMTP verification exceeded ${Number(process.env.SMTP_VERIFY_TIMEOUT_MS || 8000) / 1000} seconds`,
         };
       }
       log.error({ err: error }, '❌ Gmail SMTP connection failed');
       return {
         ok: false,
-        error: error instanceof Error ? error.message : 'Не удалось подключиться к SMTP',
+        error: error instanceof Error ? error.message : 'Failed to connect to SMTP',
       };
     }
   },

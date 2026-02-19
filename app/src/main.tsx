@@ -8,7 +8,7 @@ import './styles/index.css';
 import 'reactflow/dist/style.css';
 import '@reactflow/node-resizer/dist/style.css';
 
-// Глобальный обработчик неперехваченных ошибок
+// Global handler for uncaught errors
 window.addEventListener('error', (event) => {
   const fallbackMessage =
     event.message ||
@@ -19,7 +19,7 @@ window.addEventListener('error', (event) => {
     fallbackMessage?.includes('ResizeObserver loop limit exceeded') ||
     fallbackMessage?.includes('ResizeObserver loop completed with undelivered notifications')
   ) {
-    // Игнорируем известное предупреждение браузера, не влияющее на работу приложения
+    // Ignore a known browser warning that does not affect the application
     return;
   }
 
@@ -28,7 +28,7 @@ window.addEventListener('error', (event) => {
 
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason);
-  // Предотвращаем показ ошибки в консоли браузера
+  // Prevent showing the error in the browser console
   event.preventDefault();
 });
 

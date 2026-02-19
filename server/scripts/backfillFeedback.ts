@@ -6,6 +6,15 @@ type FeedbackType = 'problem' | 'suggestion' | 'unknown';
 type FeedbackStatus = 'new' | 'in_progress' | 'resolved' | 'archived';
 
 const STATUS_MAP: Record<string, FeedbackStatus> = {
+  'awaiting review': 'new',
+  pending: 'new',
+  'in progress': 'in_progress',
+  processing: 'in_progress',
+  resolved: 'resolved',
+  done: 'resolved',
+  archive: 'archived',
+  archived: 'archived',
+  // Legacy Russian labels
   'ожидает рассмотрения': 'new',
   ожидание: 'new',
   'в работе': 'in_progress',
@@ -38,16 +47,16 @@ function parseMarkdownFeedback(filePath: string, filename: string) {
   const raw = fs.readFileSync(filePath, 'utf8');
   const lines = raw.split(/\r?\n/);
   const titleLine = lines.find((line) => line.trim().startsWith('#'));
-  const title = titleLine ? titleLine.replace(/^#+\s*/, '').trim() || 'Обратная связь' : 'Обратная связь';
+  const title = titleLine ? titleLine.replace(/^#+\s*/, '').trim() || 'Feedback' : 'Feedback';
 
-  const contactLine = lines.find((line) => line.trim().startsWith('**Контакт:**'));
+  const contactLine = lines.find((line) => line.trim().startsWith('**Contact:**') || line.trim().startsWith('**Контакт:**'));
   const contact = contactLine
-    ? contactLine.replace(/\*\*Контакт:\*\*\s*/i, '').trim().replace(/^Не указан$/i, '')
+    ? contactLine.replace(/\*\*(Contact|Контакт):\*\*\s*/i, '').trim().replace(/^(Not specified|Не указан)$/i, '')
     : '';
 
-  const statusSectionIndex = lines.findIndex((line) => line.trim().toLowerCase() === '## статус');
-  const resolutionSectionIndex = lines.findIndex((line) => line.trim().toLowerCase() === '## решение');
-  const descriptionSectionIndex = lines.findIndex((line) => line.trim().toLowerCase() === '## описание');
+  const statusSectionIndex = lines.findIndex((line) => line.trim().toLowerCase() === '## status' || line.trim().toLowerCase() === '## статус');
+  const resolutionSectionIndex = lines.findIndex((line) => line.trim().toLowerCase() === '## resolution' || line.trim().toLowerCase() === '## решение');
+  const descriptionSectionIndex = lines.findIndex((line) => line.trim().toLowerCase() === '## description' || line.trim().toLowerCase() === '## описание');
 
   const descriptionStart = descriptionSectionIndex >= 0 ? descriptionSectionIndex + 1 : 1;
   const descriptionEnd = statusSectionIndex > descriptionStart ? statusSectionIndex : lines.length;
@@ -81,7 +90,7 @@ function parseMarkdownFeedback(filePath: string, filename: string) {
     feedback_id: filename.replace(/\.md$/i, ''),
     type: detectTypeFromFilename(filename),
     title,
-    description: description || 'Описание не указано.',
+    description: description || 'No description provided.',
     status: normalizeStatus(statusLine),
     contact: contact || null,
     resolution: resolutionLines || null,

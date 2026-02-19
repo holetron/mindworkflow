@@ -33,20 +33,20 @@ export function ProviderFileWarningModal({
   const suggestedProviderName = providerNames[suggestedProvider] || suggestedProvider;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="⚠️ Обнаружены файлы">
+    <Modal isOpen={isOpen} onClose={onClose} title="⚠️ Files detected">
       <div className="space-y-4">
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
           <h3 className="text-amber-400 font-medium mb-2">
-            Внимание: Файлы не будут обработаны
+            Warning: Files will not be processed
           </h3>
           <p className="text-white/80 text-sm">
-            Выбранный провайдер <strong>{currentProviderName}</strong> не поддерживает обработку файлов.
-            Обнаружено файлов: <strong>{fileCount}</strong>
+            The selected provider <strong>{currentProviderName}</strong> does not support file processing.
+            Files detected: <strong>{fileCount}</strong>
           </p>
           
           {fileTypes.length > 0 && (
             <div className="mt-2">
-              <p className="text-white/60 text-xs">Типы файлов:</p>
+              <p className="text-white/60 text-xs">File types:</p>
               <div className="flex flex-wrap gap-1 mt-1">
                 {fileTypes.map((type, index) => (
                   <span 
@@ -63,11 +63,11 @@ export function ProviderFileWarningModal({
 
         <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
           <h4 className="text-green-400 font-medium mb-2">
-            💡 Рекомендация
+            💡 Recommendation
           </h4>
           <p className="text-white/80 text-sm">
-            Для обработки файлов рекомендуется использовать <strong>{suggestedProviderName}</strong> - 
-            он поддерживает нативную обработку изображений, PDF и документов.
+            For file processing, it is recommended to use <strong>{suggestedProviderName}</strong> - 
+            it supports native processing of images, PDF and documents.
           </p>
         </div>
 
@@ -76,19 +76,19 @@ export function ProviderFileWarningModal({
             onClick={onContinue}
             className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm transition-colors"
           >
-            Продолжить без файлов
+            Continue without files
           </button>
           <button
             onClick={onSwitchProvider}
             className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors"
           >
-            Заменить на {suggestedProviderName}
+            Switch to {suggestedProviderName}
           </button>
           <button
             onClick={onClose}
             className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm transition-colors"
           >
-            Отмена
+            Cancel
           </button>
         </div>
       </div>

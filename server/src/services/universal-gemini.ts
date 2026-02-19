@@ -1,16 +1,16 @@
-// Универсальный конфиг для поддержки обеих опций
+// Universal config to support both options
 import { AiContext, AiResult } from './ai';
 
 export interface GeminiConfig {
-  // Для Gemini API
+  // For Gemini API
   api_key?: string;
   
-  // Для Vertex AI
+  // For Vertex AI
   project_id?: string;
   location?: string;
-  credentials?: string; // JSON ключ service account
-  
-  // Общие настройки
+  credentials?: string; // Service account JSON key
+
+  // Common settings
   model?: string;
   temperature?: number;
   max_tokens?: number;
@@ -36,15 +36,15 @@ export class UniversalGeminiService {
   }
 
   private async useGeminiAPI(context: AiContext): Promise<AiResult> {
-    // Уже реализованный код для Gemini API
+    // Already implemented code for Gemini API
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(this.config.api_key!);
-    // ... существующая логика
+    // ... existing logic
     throw new Error('Gemini API not implemented yet');
   }
 
   private async useVertexAI(context: AiContext): Promise<AiResult> {
-    // Для будущего использования Vertex AI
+    // For future Vertex AI implementation
     throw new Error('Vertex AI not implemented yet');
   }
 }

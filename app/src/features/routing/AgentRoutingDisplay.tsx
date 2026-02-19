@@ -26,7 +26,7 @@ export function AgentRoutingDisplay({
   if (compact) {
     return (
       <div className="flex items-center gap-1">
-        <span className="text-xs text-slate-500">Выходы:</span>
+        <span className="text-xs text-slate-500">Outputs:</span>
         <div className="flex gap-1">
           {enabledRoutes.map(route => (
             <span
@@ -43,12 +43,12 @@ export function AgentRoutingDisplay({
           ))}
         </div>
         {config.autoRouting.enabled && (
-          <span className="text-xs text-amber-400" title="Автоматический роутинг включен">
+          <span className="text-xs text-amber-400" title="Automatic routing enabled">
             🔀
           </span>
         )}
         {config.multiOutput.enabled && (
-          <span className="text-xs text-green-400" title="Множественные выходы">
+          <span className="text-xs text-green-400" title="Multiple outputs">
             ⭐
           </span>
         )}
@@ -59,22 +59,22 @@ export function AgentRoutingDisplay({
   return (
     <div className="bg-slate-800/50 rounded-lg p-3 space-y-3">
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-slate-300">🔀 Роутинг агента</span>
+        <span className="text-sm font-medium text-slate-300">🔀 Agent routing</span>
         {config.autoRouting.enabled && (
           <span className="text-xs bg-amber-600 text-white px-2 py-0.5 rounded">
-            Авто
+            Auto
           </span>
         )}
         {config.multiOutput.enabled && (
           <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded">
-            Мульти
+            Multi
           </span>
         )}
       </div>
 
       <div className="space-y-2">
         <div className="text-xs text-slate-500">
-          Активные выходы ({enabledRoutes.length}):
+          Active outputs ({enabledRoutes.length}):
         </div>
         
         <div className="grid grid-cols-1 gap-1">
@@ -107,7 +107,7 @@ export function AgentRoutingDisplay({
               </div>
               
               {route.id === config.defaultOutput && (
-                <span className="text-blue-400 text-xs" title="Выход по умолчанию">
+                <span className="text-blue-400 text-xs" title="Default output">
                   ⭐
                 </span>
               )}
@@ -117,12 +117,12 @@ export function AgentRoutingDisplay({
 
         {config.autoRouting.enabled && (
           <div className="mt-2 p-2 bg-amber-600/10 border border-amber-600/20 rounded">
-            <div className="text-xs text-amber-400 font-medium">Правила авто-роутинга:</div>
+            <div className="text-xs text-amber-400 font-medium">Auto-routing rules:</div>
             <div className="text-xs text-slate-400 mt-1 space-y-1">
-              {config.autoRouting.rules.detectJson && <div>✓ JSON контент</div>}
-              {config.autoRouting.rules.detectCode && <div>✓ Код и скрипты</div>}
-              {config.autoRouting.rules.detectMarkdown && <div>✓ Markdown форматирование</div>}
-              {config.autoRouting.rules.detectHtml && <div>✓ HTML разметка</div>}
+              {config.autoRouting.rules.detectJson && <div>✓ JSON content</div>}
+              {config.autoRouting.rules.detectCode && <div>✓ Code and scripts</div>}
+              {config.autoRouting.rules.detectMarkdown && <div>✓ Markdown formatting</div>}
+              {config.autoRouting.rules.detectHtml && <div>✓ HTML markup</div>}
             </div>
           </div>
         )}

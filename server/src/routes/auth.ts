@@ -24,10 +24,10 @@ const getGoogleClient = (): OAuth2Client | null => {
   return new OAuth2Client(clientId);
 };
 
-// In-memory storage для OAuth state (валиден 10 минут)
+// In-memory storage for OAuth state (valid for 10 minutes)
 const oauthStates = new Map<string, { userId: string; expiresAt: number }>();
 
-// Очищаем истекшие states каждые 5 минут
+// Clean up expired states every 5 minutes
 setInterval(() => {
   const now = Date.now();
   for (const [state, data] of oauthStates.entries()) {
@@ -72,7 +72,7 @@ export function createAuthRouter() {
     try {
       const existing = db.prepare('SELECT user_id FROM users WHERE email = ?').get(email);
       if (existing) {
-        return res.status(409).json({ error: 'Пользователь с таким email уже существует' });
+        return res.status(409).json({ error: 'User with this email already exists' });
       }
 
       const passwordHash = await bcrypt.hash(password, 10);
@@ -97,13 +97,13 @@ export function createAuthRouter() {
 router.post('/password/request', async (req, res) => {
   const { email } = req.body as { email?: string };
   if (!email || typeof email !== 'string') {
-    return res.status(400).json({ error: 'Введите корректный email' });
+    return res.status(400).json({ error: 'Please enter a valid email' });
   }
 
   try {
     const user = db.prepare('SELECT user_id, name FROM users WHERE email = ?').get(email) as { user_id: string; name: string | null } | undefined;
     if (!user) {
-      // Не раскрываем существует ли аккаунт
+      // Do not reveal whether the account exists
       return res.json({ status: 'ok' });
     }
 
@@ -121,21 +121,21 @@ router.post('/password/request', async (req, res) => {
 router.post('/password/reset', async (req, res) => {
   const { token, password } = req.body as { token?: string; password?: string };
   if (!token || typeof token !== 'string' || !password || typeof password !== 'string' || password.length < 6) {
-    return res.status(400).json({ error: 'Некорректные данные' });
+    return res.status(400).json({ error: 'Invalid data' });
   }
 
   try {
     const tokenRecord = getPasswordResetToken(token);
     if (!tokenRecord) {
-      return res.status(400).json({ error: 'Токен не найден или уже использован' });
+      return res.status(400).json({ error: 'Token not found or already used' });
     }
 
     if (tokenRecord.used_at) {
-      return res.status(400).json({ error: 'Токен уже использован' });
+      return res.status(400).json({ error: 'Token already used' });
     }
 
     if (new Date(tokenRecord.expires_at).getTime() < Date.now()) {
-      return res.status(400).json({ error: 'Ссылка устарела, запросите новую' });
+      return res.status(400).json({ error: 'Link expired, please request a new one' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -165,12 +165,12 @@ router.post('/password/reset', async (req, res) => {
         is_admin?: number;
       } | undefined;
       if (!user) {
-        return res.status(401).json({ error: 'Неверный email или пароль' });
+        return res.status(401).json({ error: 'Invalid email or password' });
       }
 
       const isValid = await bcrypt.compare(password, user.password_hash);
       if (!isValid) {
-        return res.status(401).json({ error: 'Неверный email или пароль' });
+        return res.status(401).json({ error: 'Invalid email or password' });
       }
 
       const payload: AuthTokenPayload = {
@@ -200,21 +200,21 @@ router.post('/google', async (req, res) => {
   const googleClient = getGoogleClient();
   const clientId = getGoogleClientId();
   if (!googleClient || !clientId) {
-    return res.status(503).json({ error: 'Google OAuth не настроен' });
+    return res.status(503).json({ error: 'Google OAuth is not configured' });
   }
   if (!idToken || typeof idToken !== 'string') {
-    return res.status(400).json({ error: 'ID token отсутствует' });
+    return res.status(400).json({ error: 'ID token is missing' });
   }
 
   try {
     const ticket = await googleClient.verifyIdToken({ idToken, audience: clientId });
     const payload = ticket.getPayload();
     if (!payload || !payload.email) {
-      return res.status(400).json({ error: 'Не удалось получить данные пользователя Google' });
+      return res.status(400).json({ error: 'Failed to retrieve Google user data' });
     }
 
     if (payload.email_verified === false) {
-      return res.status(400).json({ error: 'Email в Google аккаунте не подтвержден' });
+      return res.status(400).json({ error: 'Email in Google account is not verified' });
     }
 
     const email = payload.email.toLowerCase();
@@ -256,7 +256,7 @@ router.post('/google', async (req, res) => {
     });
   } catch (error) {
     log.error({ err: error }, 'Google auth error');
-    res.status(401).json({ error: 'Не удалось подтвердить Google аккаунт' });
+    res.status(401).json({ error: 'Failed to verify Google account' });
   }
 });
 
@@ -294,7 +294,7 @@ router.post('/google', async (req, res) => {
       const { googleDriveService } = require('../services/googleDrive');
       const state = crypto.randomBytes(16).toString('hex');
       
-      // Сохраняем state на 10 минут
+      // Save state for 10 minutes
       oauthStates.set(state, {
         userId: authReq.user.user_id,
         expiresAt: Date.now() + 600000,
@@ -316,7 +316,7 @@ router.post('/google', async (req, res) => {
         return res.status(400).json({ error: 'Missing code or state parameter' });
       }
 
-      // Верифицируем state
+      // Verify state
       const stateData = oauthStates.get(state);
       if (!stateData || stateData.expiresAt < Date.now()) {
         oauthStates.delete(state);
@@ -326,11 +326,11 @@ router.post('/google', async (req, res) => {
       const { googleDriveService } = require('../services/googleDrive');
       const userId = stateData.userId;
       
-      // Обменяем code на токены
+      // Exchange code for tokens
       await googleDriveService.exchangeCodeForTokens(code, userId);
       oauthStates.delete(state);
       
-      // Редиректим на /admin с success сообщением
+      // Redirect to /admin with success message
       res.redirect('/admin?google_drive=connected');
     } catch (error) {
       log.error({ err: error }, '[GoogleDrive] OAuth callback error');
@@ -379,7 +379,7 @@ router.post('/google', async (req, res) => {
 
   /**
    * PUT /api/auth/update-profile
-   * Обновить имя пользователя
+   * Update user name
    */
   router.put('/update-profile', async (req, res) => {
     try {
@@ -418,7 +418,7 @@ router.post('/google', async (req, res) => {
 
   /**
    * PUT /api/auth/change-password
-   * Изменить пароль пользователя
+   * Change user password
    */
   router.put('/change-password', async (req, res) => {
     try {
@@ -440,7 +440,7 @@ router.post('/google', async (req, res) => {
         return res.status(400).json({ error: 'Password must be at least 6 characters' });
       }
 
-      // Проверяем текущий пароль
+      // Verify current password
       const user = db.prepare('SELECT password_hash FROM users WHERE user_id = ?').get(userId) as {
         password_hash: string;
       } | undefined;
@@ -454,7 +454,7 @@ router.post('/google', async (req, res) => {
         return res.status(401).json({ error: 'Current password is incorrect' });
       }
 
-      // Обновляем пароль
+      // Update password
       const newPasswordHash = await bcrypt.hash(newPassword, 10);
       const now = new Date().toISOString();
       
@@ -474,8 +474,8 @@ router.post('/google', async (req, res) => {
   // Dev endpoint for quick token generation (only in development!)
   if (process.env.NODE_ENV !== 'production') {
     router.get('/dev-token', (_req, res) => {
-      const userId = '099e921d-cbf3-44f0-b497-5fd20ce0d8a8';
-      const email = 'geramonnn@gmail.com';
+      const userId = 'dev-user-0000-0000-000000000000';
+      const email = 'dev@localhost';
       const token = jwt.sign({ userId, email, isAdmin: true }, config.jwtSecret, { expiresIn: '7d' });
       res.json({
         token,

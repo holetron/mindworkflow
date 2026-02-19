@@ -67,9 +67,9 @@ const GROUPS: Array<{
   title: string;
   collapsible: boolean;
 }> = [
-  { key: 'basic', title: 'Базовые ноды', collapsible: false },
-  { key: 'agents', title: 'Встроенные агенты', collapsible: true },
-  { key: 'personal_agents', title: 'Личные агенты', collapsible: true },
+  { key: 'basic', title: 'Basic nodes', collapsible: false },
+  { key: 'agents', title: 'Built-in agents', collapsible: true },
+  { key: 'personal_agents', title: 'Personal agents', collapsible: true },
 ];
 
 function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollapse }: NodePaletteProps) {
@@ -84,7 +84,7 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
   const [personalAgents, setPersonalAgents] = useState<AgentPreset[]>([]);
   const [loadingPresets, setLoadingPresets] = useState(false);
 
-  // Загружаем личные пресеты агентов при монтировании (только избранные)
+  // Load personal agent presets on mount (favorites only)
   useEffect(() => {
     const loadPresets = async () => {
       setLoadingPresets(true);
@@ -92,7 +92,7 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
         const response = await fetch('/api/agent-presets');
         if (response.ok) {
           const presets = await response.json();
-          // Показываем только избранных агентов
+          // Show only favorite agents
           const favoritePresets = presets.filter((p: AgentPreset) => p.is_favorite);
           setPersonalAgents(favoritePresets);
         }
@@ -184,12 +184,12 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
           type="button"
           onClick={onToggleCollapse}
           className="flex h-12 w-12 items-center justify-center rounded-t-lg bg-slate-800/90 backdrop-blur-sm border-b border-slate-600/50 text-slate-300 transition-all duration-200 hover:bg-slate-700/90 hover:text-white hover:border-slate-500 flex-shrink-0"
-          title="Развернуть палитру нод"
+          title="Expand nodes palette"
         >
           ☰
         </button>
         
-        {/* Базовые ноды - без скролла */}
+        {/* Basic nodes - no scroll */}
         <div className="flex-shrink-0 flex flex-col items-center py-1 gap-1 overflow-x-hidden">
           {filteredItems
             .filter(item => item.category !== 'agents')
@@ -217,12 +217,12 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
             })}
         </div>
 
-        {/* Разделитель */}
+        {/* Separator */}
         {personalAgents.length > 0 && (
           <div className="flex-shrink-0 w-full border-t border-slate-600/50 my-1" />
         )}
 
-        {/* Личные агенты - со скроллом */}
+        {/* Personal agents - with scroll */}
         {personalAgents.length > 0 && (
           <div className="flex-1 flex flex-col items-center py-1 gap-1 overflow-y-auto overflow-x-hidden no-scrollbar">
             {personalAgents.map((preset) => {
@@ -268,7 +268,7 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
     <section className="flex h-full w-full flex-col overflow-hidden rounded-lg bg-slate-800 p-4 shadow">
       <header className="mb-3 space-y-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Магазин нод</h2>
+          <h2 className="text-lg font-semibold">Node Store</h2>
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -278,7 +278,7 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
               backgroundImage: 'none',
               boxShadow: 'none',
             }}
-            title="Свернуть панель"
+            title="Collapse panel"
           >
             ☰
           </button>
@@ -287,15 +287,15 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Поиск нод..."
+          placeholder="Search nodes..."
           className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 focus:border-primary focus:outline-none"
         />
-        <p className="text-xs text-slate-400">Перетащите или кликните, чтобы добавить</p>
+        <p className="text-xs text-slate-400">Drag or click to add</p>
       </header>
       <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar pr-1 text-sm">
         {groups.length === 0 && (
           <p className="rounded border border-dashed border-slate-700 bg-slate-900/40 p-4 text-center text-xs text-slate-400">
-            Ничего не найдено.
+            Nothing found.
           </p>
         )}
         {groups.map((group) => {
@@ -363,14 +363,14 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
                     loadingPresets ? (
                       <div className="px-3 py-4 text-center text-sm text-slate-400">
                         <div className="mb-2">⏳</div>
-                        <div>Загрузка личных агентов...</div>
+                        <div>Loading personal agents...</div>
                       </div>
                     ) : personalAgents.length === 0 ? (
                       <div className="px-3 py-4 text-center text-sm text-slate-400">
                         <div className="mb-2 text-slate-500">⭐</div>
-                        <div>Избранные агенты отсутствуют</div>
+                        <div>No favorite agents</div>
                         <div className="mt-1 text-xs text-slate-500">
-                          Откройте AI Settings и нажмите "⭐ Сохранить агента"
+                          Open AI Settings and click "⭐ Save agent"
                         </div>
                       </div>
                     ) : (
@@ -386,14 +386,14 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
                               draggable={!disabled}
                               onDragStart={(e) => {
                                 if (disabled) return;
-                                // Используем тот же формат, что и NodeSidebar для копирования
+                                // Using the same format as NodeSidebar for copying
                                 const nodeData = JSON.stringify(preset.node_template);
                                 e.dataTransfer.setData('application/reactflow-node-copy', nodeData);
                                 e.dataTransfer.effectAllowed = 'copy';
                               }}
                               onClick={() => {
                                 if (disabled) return;
-                                // Создаём ноду из шаблона пресета
+                                // Creating a node from preset template
                                 void onCreateNode(preset.node_template, agentSlug);
                               }}
                               className={`flex cursor-move items-start gap-3 rounded-lg p-3 transition h-20 w-full ${
@@ -411,7 +411,7 @@ function NodePalette({ onCreateNode, disabled, collapsed = false, onToggleCollap
                                   {preset.title}
                                 </p>
                                 <p className="text-xs opacity-70 line-clamp-2 overflow-hidden text-left leading-tight">
-                                  {preset.description || 'Личный агент'}
+                                  {preset.description || 'Personal agent'}
                                 </p>
                               </div>
                               <span className="text-xl flex-shrink-0 mt-1">{preset.icon}</span>

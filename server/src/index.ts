@@ -198,8 +198,8 @@ function createApp(): express.Express {
         typeof title === 'string' && title.trim().length > 0
           ? title.trim()
           : normalizedType === 'problem'
-          ? 'Проблема'
-          : 'Предложение улучшения';
+          ? 'Problem'
+          : 'Improvement Suggestion';
 
       const dateStr = createdDate.toISOString().split('T')[0];
       const timeStr = createdDate.toTimeString().split(' ')[0].replace(/:/g, '');
@@ -215,20 +215,20 @@ function createApp(): express.Express {
 
         const content = `# ${displayTitle}
 
-**Дата:** ${createdDate.toLocaleString('ru-RU')}
-**Тип:** ${normalizedType === 'problem' ? 'Проблема' : 'Предложение'}
-**Контакт:** ${
-          typeof contact === 'string' && contact.trim().length > 0 ? contact : 'Не указан'
+**Date:** ${createdDate.toLocaleString('en-US')}
+**Type:** ${normalizedType === 'problem' ? 'Problem' : 'Suggestion'}
+**Contact:** ${
+          typeof contact === 'string' && contact.trim().length > 0 ? contact : 'Not specified'
         }
 
-## Описание
+## Description
 ${description}
 
-## Статус
-Ожидает рассмотрения
+## Status
+Awaiting review
 
-## Решение
-*Решение будет добавлено после рассмотрения*
+## Resolution
+*Resolution will be added after review*
 `;
 
         fs.writeFileSync(filepath, content, 'utf8');

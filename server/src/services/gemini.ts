@@ -91,20 +91,20 @@ export class GeminiService {
 
   constructor(apiKey: string, model?: string, baseUrl?: string) {
     this.apiKey = apiKey;
-    this.model = model || 'gemini-2.5-flash'; // Обновленная модель по умолчанию
+    this.model = model || 'gemini-2.5-flash'; // Default model
     this.baseUrl =
       baseUrl && baseUrl.trim().length > 0
         ? baseUrl.trim().replace(/\/+$/, '')
         : 'https://generativelanguage.googleapis.com';
 
-    // Инициализируем GoogleGenerativeAI
+    // Initialize GoogleGenerativeAI
     this.genAI = new GoogleGenerativeAI(apiKey);
   }
 
   async generateContent(context: AiContext, options: GeminiGenerationOptions = {}): Promise<AiResult> {
     log.info(`[Gemini] Using model: ${this.model} via ${this.baseUrl}`);
     
-    // Используем выбранную модель напрямую
+    // Use the selected model directly
     const model = this.genAI.getGenerativeModel({ model: this.model });
 
     const safetySettings = [
@@ -122,7 +122,7 @@ export class GeminiService {
     const basePrompt =
       options.systemPrompt && options.systemPrompt.trim().length > 0
         ? options.systemPrompt.trim()
-        : 'Ты полезный ИИ-ассистент, который умеет работать с файлами и изображениями.';
+        : 'You are a helpful AI assistant capable of working with files and images.';
     const systemPrompt = this.buildSystemPrompt(basePrompt, schemaInfo?.instructions ?? null);
     const userParts = await this.buildUserParts(context);
 
@@ -195,10 +195,10 @@ export class GeminiService {
         ? context.node.content.trim()
         : '';
     if (prompt) {
-      parts.push({ text: `Пользовательский запрос:\n${prompt}` });
+      parts.push({ text: `User request:\n${prompt}` });
     } else {
       parts.push({
-        text: 'Сформируй ответ, следуя системным инструкциям и учитывая контекст проекта.',
+        text: 'Generate a response following the system instructions and considering the project context.',
       });
     }
 
@@ -216,7 +216,7 @@ export class GeminiService {
           const response = await fetch(imageUrl);
           if (!response.ok) {
             log.error(`[Gemini] Failed to fetch image: ${imageUrl}`);
-            parts.push({ text: `\n\n[Изображение "${img.url}" недоступно]` });
+            parts.push({ text: `\n\n[Image "${img.url}" is unavailable]` });
             continue;
           }
           
@@ -233,12 +233,12 @@ export class GeminiService {
           log.info(`[Gemini] Added image: ${img.url} (${img.mimetype})`);
         } catch (error) {
           log.error({ err: error }, '`[Gemini] Error processing image ${img.url}:`');
-          parts.push({ text: `\n\n[Ошибка загрузки изображения "${img.url}"]` });
+          parts.push({ text: `\n\n[Error loading image "${img.url}"]` });
         }
       }
     }
 
-    // Файлы - Gemini поддерживает их нативно!
+    // Files - Gemini supports them natively!
     if (context.files && context.files.length > 0) {
       for (const file of context.files) {
         await this.processFileForGemini(file, parts);
@@ -257,9 +257,9 @@ export class GeminiService {
       return {
         schema: TEXT_RESPONSE_SCHEMA,
         instructions: [
-          'Верни JSON объект вида {"response": "..."} с финальным ответом.',
-          'Поле response должно содержать готовый ответ в виде обычного текста без Markdown, HTML или дополнительных полей.',
-          'Не добавляй комментарии, пояснения или дополнительные свойства.',
+          'Return a JSON object of the form {"response": "..."} with the final answer.',
+          'The response field must contain the completed answer as plain text without Markdown, HTML, or additional fields.',
+          'Do not add comments, explanations, or extra properties.',
         ].join('\n'),
       };
     }
@@ -267,13 +267,13 @@ export class GeminiService {
       return {
         schema: PLAN_RESPONSE_SCHEMA,
         instructions: [
-          'Верни JSON объект, строго соответствующий PLAN_SCHEMA с полями overview, phases и nodes.',
-          'overview должен включать goal, target_audience, tone и duration_sec (целое число от 5 до 180 секунд).',
-          'phases — массив объектов с name и массивом steps (минимум один шаг).',
-          'nodes — массив из минимум трёх объектов. Каждый объект содержит node_id, type, title, description и массив outputs.',
-          'Поле type допускает только значения: text, ai, parser, python, image_gen, audio_gen, video_gen.',
-          'Поле outputs перечисляет создаваемые артефакты (например, ["structured_json"]).',
-          'Не добавляй дополнительные поля, не используйте Markdown и не включай поясняющий текст вне JSON.',
+          'Return a JSON object strictly conforming to PLAN_SCHEMA with the fields overview, phases, and nodes.',
+          'overview must include goal, target_audience, tone, and duration_sec (an integer from 5 to 180 seconds).',
+          'phases is an array of objects with name and an array of steps (at least one step).',
+          'nodes is an array of at least three objects. Each object contains node_id, type, title, description, and an outputs array.',
+          'The type field only accepts the values: text, ai, parser, python, image_gen, audio_gen, video_gen.',
+          'The outputs field lists the artifacts to be created (e.g., ["structured_json"]).',
+          'Do not add extra fields, do not use Markdown, and do not include explanatory text outside the JSON.',
         ].join('\n'),
       };
     }
@@ -283,33 +283,33 @@ export class GeminiService {
   private buildSystemPrompt(basePrompt: string, schemaInstructions?: string | null): string {
     const segments = [
       basePrompt.trim(),
-      'Всегда соблюдай системные требования и отвечай на русском языке, если пользователь не указал иное.',
+      'Always follow the system requirements and respond in the language requested by the user.',
     ];
     if (schemaInstructions && schemaInstructions.trim().length > 0) {
       segments.push(schemaInstructions.trim());
     }
-    segments.push('Ответ должен строго соответствовать указанному формату без пояснений и вспомогательного текста.');
+    segments.push('The response must strictly conform to the specified format without explanations or auxiliary text.');
     return segments.join('\n\n');
   }
 
   private async processFileForGemini(file: { name: string; type: string; content: string; source_node_id?: string }, parts: any[]): Promise<void> {
-    // Текстовые файлы
+    // Text files
     if (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('markdown')) {
-      parts.push({ 
-        text: `\n\nФайл "${file.name}" (${file.type}):\n${file.content}` 
+      parts.push({
+        text: `\n\nFile "${file.name}" (${file.type}):\n${file.content}`
       });
       return;
     }
 
-    // Изображения - Gemini поддерживает нативно
+    // Images - Gemini supports natively
     if (file.type.startsWith('image/')) {
       if (file.type === 'image/url') {
-        // Для URL изображений нужно скачать и конвертировать
-        parts.push({ 
-          text: `\n\nИзображение "${file.name}": ${file.content}` 
+        // For image URLs we need to download and convert
+        parts.push({
+          text: `\n\nImage "${file.name}": ${file.content}`
         });
       } else if (file.type === 'image/base64') {
-        // Base64 изображения Gemini принимает напрямую
+        // Gemini accepts Base64 images directly
         const base64Data = file.content.replace(/^data:image\/[a-z]+;base64,/, '');
         parts.push({
           inlineData: {
@@ -321,18 +321,18 @@ export class GeminiService {
       return;
     }
 
-    // PDF файлы - Gemini поддерживает через upload API
+    // PDF files - Gemini supports via upload API
     if (file.type === 'application/pdf') {
-      // TODO: Реализовать загрузку PDF через Files API
-      parts.push({ 
-        text: `\n\nPDF файл "${file.name}" требует специальной обработки.` 
+      // TODO: Implement PDF upload via Files API
+      parts.push({
+        text: `\n\nPDF file "${file.name}" requires special processing.`
       });
       return;
     }
 
-    // Для других типов файлов - обрабатываем как текст
-    parts.push({ 
-      text: `\n\nФайл "${file.name}" (${file.type}):\n${file.content}` 
+    // For other file types - process as text
+    parts.push({
+      text: `\n\nFile "${file.name}" (${file.type}):\n${file.content}`
     });
   }
 

@@ -58,7 +58,7 @@ function NodeSidebar({
   const [search, setSearch] = useState('');
   const [agents, setAgents] = useState<AgentPreset[]>([]);
 
-  // Загрузка агентов
+  // Loading agents
   useEffect(() => {
     const loadAgents = async () => {
       try {
@@ -150,7 +150,7 @@ function NodeSidebar({
           type="button"
           onClick={onToggleCollapse}
           className="flex h-12 w-12 items-center justify-center rounded-t-lg bg-slate-800/90 backdrop-blur-sm border-b border-slate-600/50 text-slate-300 transition-all duration-200 hover:bg-slate-700/90 hover:text-white hover:border-slate-500 flex-shrink-0"
-          title="Развернуть панель нод"
+          title="Expand nodes panel"
         >
           ☰
         </button>
@@ -176,7 +176,7 @@ function NodeSidebar({
                     : `0 2px 6px ${nodeColor}15`,
                   backgroundColor: `${nodeColor}20`,
                 }}
-                title={node.title || 'Без названия'}
+                title={node.title || 'Untitled'}
               >
                 {icon}
               </button>
@@ -191,7 +191,7 @@ function NodeSidebar({
     <section className="flex h-full w-full flex-col overflow-hidden rounded-lg bg-slate-800 p-4 shadow">
       <header className="mb-3 space-y-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Ноды проекта</h2>
+          <h2 className="text-lg font-semibold">Project Nodes</h2>
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -201,7 +201,7 @@ function NodeSidebar({
               backgroundImage: 'none',
               boxShadow: 'none',
             }}
-            title="Свернуть панель"
+            title="Collapse panel"
           >
             ☰
           </button>
@@ -210,18 +210,18 @@ function NodeSidebar({
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Поиск нод..."
+          placeholder="Search nodes..."
           className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 focus:border-primary focus:outline-none"
         />
         <p className="text-xs text-slate-400">
-          {filteredNodes.length} из {nodes.length} • связей: {edges.length}
+          {filteredNodes.length} of {nodes.length} • connections: {edges.length}
         </p>
       </header>
 
       <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar pr-1 text-sm">
         {filteredNodes.length === 0 && (
           <div className="rounded border border-dashed border-slate-700 bg-slate-900/40 p-4 text-center text-xs text-slate-400">
-            Ничего не найдено.
+            Nothing found.
           </div>
         )}
 
@@ -259,7 +259,7 @@ function NodeSidebar({
 
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-white text-sm truncate leading-tight mb-1">
-                    {node.title || 'Без названия'}
+                    {node.title || 'Untitled'}
                   </div>
                   
                   <div className="text-[10px] opacity-70 space-y-0.5">
@@ -294,7 +294,7 @@ function NodeSidebar({
                         handleCopyNode(node);
                       }}
                       className="flex h-6 w-6 items-center justify-center rounded bg-slate-700/50 text-xs text-slate-300 transition hover:bg-slate-600/50 hover:text-white focus:outline-none"
-                      title="Копировать"
+                      title="Copy"
                     >
                       ⧉
                     </button>
@@ -307,7 +307,7 @@ function NodeSidebar({
                         toggleNodeExpanded(node.node_id);
                       }}
                       className="flex h-6 w-6 items-center justify-center rounded bg-slate-700/50 text-xs text-slate-300 transition hover:bg-slate-600/50 hover:text-white focus:outline-none"
-                      title={isExpanded ? 'Скрыть связи' : 'Показать связи'}
+                      title={isExpanded ? 'Hide connections' : 'Show connections'}
                     >
                       {isExpanded ? '−' : '+'}
                     </button>
@@ -319,7 +319,7 @@ function NodeSidebar({
                 <div className="mt-3 border-t border-slate-700/50 pt-3 text-xs space-y-2">
                   {connections.incoming.length > 0 && (
                     <div>
-                      <div className="text-slate-400 mb-1 font-semibold">↙ Входящие:</div>
+                      <div className="text-slate-400 mb-1 font-semibold">↙ Incoming:</div>
                       <div className="space-y-1">
                         {connections.incoming.map((inNode) => (
                           <button
@@ -344,7 +344,7 @@ function NodeSidebar({
                   
                   {connections.outgoing.length > 0 && (
                     <div>
-                      <div className="text-slate-400 mb-1 font-semibold">↗ Исходящие:</div>
+                      <div className="text-slate-400 mb-1 font-semibold">↗ Outgoing:</div>
                       <div className="space-y-1">
                         {connections.outgoing.map((outNode) => (
                           <button

@@ -29,15 +29,15 @@ export function SettingsPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Ошибка обновления профиля');
+        throw new Error(data.error || 'Profile update error');
       }
 
-      setSuccess('✅ Профиль обновлён');
+      setSuccess('✅ Profile updated');
       
-      // Обновляем данные пользователя в контексте
+      // Update user data in context
       window.location.reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка обновления');
+      setError(err instanceof Error ? err.message : 'Update error');
     } finally {
       setLoading(false);
     }
@@ -47,12 +47,12 @@ export function SettingsPage() {
     e.preventDefault();
     
     if (newPassword !== confirmPassword) {
-      setError('Новые пароли не совпадают');
+      setError('New passwords do not match');
       return;
     }
 
     if (newPassword.length < 6) {
-      setError('Пароль должен быть минимум 6 символов');
+      setError('Password must be at least 6 characters');
       return;
     }
 
@@ -72,15 +72,15 @@ export function SettingsPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Ошибка смены пароля');
+        throw new Error(data.error || 'Password change error');
       }
 
-      setSuccess('✅ Пароль изменён');
+      setSuccess('✅ Password changed');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка смены пароля');
+      setError(err instanceof Error ? err.message : 'Password change error');
     } finally {
       setLoading(false);
     }
@@ -95,11 +95,11 @@ export function SettingsPage() {
             <button
               onClick={() => navigate('/')}
               className="text-slate-400 hover:text-white transition-colors"
-              title="Назад к проектам"
+              title="Back to projects"
             >
-              ← Назад
+              ← Back
             </button>
-            <h1 className="text-2xl font-bold">⚙️ Настройки аккаунта</h1>
+            <h1 className="text-2xl font-bold">⚙️ Account Settings</h1>
           </div>
         </div>
       </header>
@@ -120,7 +120,7 @@ export function SettingsPage() {
 
         {/* Profile Section */}
         <section className="mb-8 bg-slate-800 rounded-lg border border-slate-700 p-6">
-          <h2 className="text-xl font-semibold mb-4">Профиль</h2>
+          <h2 className="text-xl font-semibold mb-4">Profile</h2>
           <form onSubmit={handleUpdateProfile} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -132,12 +132,12 @@ export function SettingsPage() {
                 disabled
                 className="w-full px-4 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-slate-400 cursor-not-allowed"
               />
-              <p className="mt-1 text-xs text-slate-500">Email нельзя изменить</p>
+              <p className="mt-1 text-xs text-slate-500">Email cannot be changed</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Имя
+                Name
               </label>
               <input
                 type="text"
@@ -153,18 +153,18 @@ export function SettingsPage() {
               disabled={loading || name === user?.name}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg transition-colors"
             >
-              {loading ? 'Сохранение...' : 'Сохранить профиль'}
+              {loading ? 'Saving...' : 'Save profile'}
             </button>
           </form>
         </section>
 
         {/* Password Section */}
         <section className="bg-slate-800 rounded-lg border border-slate-700 p-6">
-          <h2 className="text-xl font-semibold mb-4">Изменить пароль</h2>
+          <h2 className="text-xl font-semibold mb-4">Change Password</h2>
           <form onSubmit={handleChangePassword} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Текущий пароль
+                Current Password
               </label>
               <input
                 type="password"
@@ -177,7 +177,7 @@ export function SettingsPage() {
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Новый пароль
+                New Password
               </label>
               <input
                 type="password"
@@ -191,7 +191,7 @@ export function SettingsPage() {
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Подтвердите новый пароль
+                Confirm new password
               </label>
               <input
                 type="password"
@@ -208,7 +208,7 @@ export function SettingsPage() {
               disabled={loading || !currentPassword || !newPassword || !confirmPassword}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg transition-colors"
             >
-              {loading ? 'Изменение...' : 'Изменить пароль'}
+              {loading ? 'Changing...' : 'Change Password'}
             </button>
           </form>
         </section>

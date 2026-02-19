@@ -112,13 +112,13 @@ export async function runReplicate(
 
       const connectedEdge = nodeEdges.find((e) => e.targetHandle === portId || (!e.targetHandle && portId === 'prompt'));
       if (!connectedEdge) {
-        if (portRequired) throw new Error(`Обязательный порт "${portId}" не подключен! Подключите ${portType}-ноду к этому порту.`);
+        if (portRequired) throw new Error(`Required port "${portId}" is not connected! Connect a ${portType} node to this port.`);
         continue;
       }
 
       const sourceNode = context.previousNodes.find((n) => n.node_id === connectedEdge.from);
       if (!sourceNode) {
-        if (portRequired) throw new Error(`Не найдена исходная нода для обязательного порта "${portId}"`);
+        if (portRequired) throw new Error(`Source node not found for required port "${portId}"`);
         continue;
       }
 
@@ -134,7 +134,7 @@ export async function runReplicate(
             (cropSettings && typeof cropSettings.exposePort === 'boolean' && cropSettings.exposePort === true),
           );
           if (!cropEnabled) {
-            if (portRequired) throw new Error('Порт "image-crop" требует включённый вывод обрезки.');
+            if (portRequired) throw new Error('Port "image-crop" requires crop output to be enabled.');
             continue;
           }
           const cropCandidates = [meta.image_crop, meta.crop_image, meta.image_edited, meta.edited_image, meta.annotated_image];
@@ -147,7 +147,7 @@ export async function runReplicate(
             nodesProcessedViaAutoPorts.push(sourceNode.node_id);
             continue;
           }
-          if (portRequired) throw new Error('Порт "image-crop" подключён, но обрезка отсутствует.');
+          if (portRequired) throw new Error('Port "image-crop" is connected but no crop data is available.');
           continue;
         }
 
@@ -166,14 +166,14 @@ export async function runReplicate(
           const resolvedUrl = resolveAssetUrl(url.trim());
           value = await prepareAssetForDelivery(resolvedUrl, fileDeliveryFormat, portType === 'video' ? 'video' : 'image');
         } else if (portRequired) {
-          throw new Error(`Порт "${portId}" требует ${portType}, но подключенная нода не содержит ${portType}`);
+          throw new Error(`Port "${portId}" requires ${portType}, but the connected node does not contain ${portType}`);
         }
       } else if (portType === 'text') {
         value = typeof sourceNode.content === 'string' ? sourceNode.content.trim() : '';
       } else if (portType === 'number') {
         const content = typeof sourceNode.content === 'string' ? sourceNode.content.trim() : '';
         value = parseFloat(content);
-        if (isNaN(value as number) && portRequired) throw new Error(`Порт "${portId}" требует число, но получен некорректный формат: "${content}"`);
+        if (isNaN(value as number) && portRequired) throw new Error(`Port "${portId}" requires a number, but received an invalid format: "${content}"`);
       } else {
         value = sourceNode.content || '';
       }

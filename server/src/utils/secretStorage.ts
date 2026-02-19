@@ -18,8 +18,11 @@ function getSecretKey(): Buffer {
     process.env.GLOBAL_INTEGRATIONS_SECRET_KEY ||
     process.env.INTEGRATION_SECRET_KEY ||
     process.env.JWT_SECRET ||
-    'mindworkflow_dev_fallback_secret';
-  const normalized = raw.trim().length > 0 ? raw.trim() : 'mindworkflow_dev_fallback_secret';
+    '';
+  if (!raw.trim()) {
+    log.warn('No encryption secret configured! Set GLOBAL_INTEGRATIONS_SECRET_KEY or JWT_SECRET env var.');
+  }
+  const normalized = raw.trim().length > 0 ? raw.trim() : 'change-me-' + crypto.randomBytes(16).toString('hex');
   cachedKey = crypto.createHash('sha256').update(normalized).digest();
   return cachedKey;
 }

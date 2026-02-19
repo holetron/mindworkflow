@@ -29,10 +29,10 @@ export function FeedbackModal({ onClose }: FeedbackModalProps) {
     });
 
     try {
-      // Отправляем обратную связь на сервер
+      // Sending feedback to the server
       const title = type === 'problem' 
-        ? `Проблема: ${description.slice(0, 50)}...`
-        : `Предложение: ${description.slice(0, 50)}...`;
+        ? `Problem: ${description.slice(0, 50)}...`
+        : `Suggestion: ${description.slice(0, 50)}...`;
       
       await submitFeedback({
         type,
@@ -45,14 +45,14 @@ export function FeedbackModal({ onClose }: FeedbackModalProps) {
       
       setSubmitted(true);
       
-      // Автоматически закрываем через 2 секунды
+      // Auto-close after 2 seconds
       setTimeout(() => {
         onClose();
       }, 2000);
 
     } catch (error) {
       console.error('❌ Error sending feedback:', error);
-      alert('Ошибка при отправке обратной связи. Попробуйте еще раз.');
+      alert('Error sending feedback. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -68,13 +68,13 @@ export function FeedbackModal({ onClose }: FeedbackModalProps) {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (!file.type.startsWith('image/')) {
-        alert('Можно прикреплять только изображения (PNG, JPG, WEBP).');
+        alert('Only images can be attached (PNG, JPG, WEBP).');
         event.target.value = '';
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        alert('Размер файла не должен превышать 5 МБ.');
+        alert('File size must not exceed 5 MB.');
         event.target.value = '';
         return;
       }
@@ -110,19 +110,19 @@ export function FeedbackModal({ onClose }: FeedbackModalProps) {
   };
 
   return (
-    <Modal onClose={onClose} title="Обратная связь">
+    <Modal onClose={onClose} title="Feedback">
       {submitted ? (
           <div className="text-center py-8">
             <div className="text-green-600 text-lg font-medium mb-2">
-              ✓ Спасибо за обратную связь!
+              ✓ Thank you for your feedback!
             </div>
-            <p className="text-slate-300">Ваше сообщение сохранено локально.</p>
+            <p className="text-slate-300">Your message has been saved locally.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-2">
-                Тип обращения
+                Request type
               </label>
               <div className="flex gap-4">
                 <label className="flex items-center">
@@ -133,7 +133,7 @@ export function FeedbackModal({ onClose }: FeedbackModalProps) {
                     onChange={(e) => setType(e.target.value as 'problem')}
                     className="mr-2"
                   />
-                  <span className="text-slate-300">Проблема</span>
+                  <span className="text-slate-300">Problem</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -143,19 +143,19 @@ export function FeedbackModal({ onClose }: FeedbackModalProps) {
                     onChange={(e) => setType(e.target.value as 'suggestion')}
                     className="mr-2"
                   />
-                  <span className="text-slate-300">Предложение</span>
+                  <span className="text-slate-300">Suggestion</span>
                 </label>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-2">
-                Описание <span className="text-red-500">*</span>
+                Description <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Опишите проблему или предложение..."
+                placeholder="Describe the issue or suggestion..."
                 className="w-full h-32 p-3 border border-slate-700 bg-slate-800 rounded-md resize-none text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 required
               />
@@ -163,20 +163,20 @@ export function FeedbackModal({ onClose }: FeedbackModalProps) {
 
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-2">
-                Контакты (необязательно)
+                Contact info (optional)
               </label>
               <input
                 type="text"
                 value={contact}
                 onChange={(e) => setContact(e.target.value)}
-                placeholder="Email или другие контакты для связи"
+                placeholder="Email or other contact info"
                 className="w-full p-3 border border-slate-700 bg-slate-800 rounded-md text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-2">
-                Прикрепить изображения (необязательно)
+                Attach images (optional)
               </label>
               <input
                 type="file"
@@ -187,14 +187,14 @@ export function FeedbackModal({ onClose }: FeedbackModalProps) {
                 className="w-full p-2 border border-slate-700 bg-slate-800 rounded-md text-sm text-slate-300"
               />
               <p className="text-xs text-slate-400 mt-1">
-                Можно прикрепить несколько изображений (до 5 МБ каждое)
+                You can attach multiple images (up to 5 MB each)
               </p>
             </div>
 
             {attachmentPreview.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-2">
-                  Прикрепленные изображения:
+                  Attached images:
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {attachmentPreview.map((preview, index) => (
@@ -223,14 +223,14 @@ export function FeedbackModal({ onClose }: FeedbackModalProps) {
                 disabled={loading || !description.trim()}
                 className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Сохранение...' : 'Отправить'}
+                {loading ? 'Saving...' : 'Submit'}
               </button>
               <button
                 type="button"
                 onClick={onClose}
                 className="rounded bg-slate-800 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700"
               >
-                Отмена
+                Cancel
               </button>
             </div>
           </form>

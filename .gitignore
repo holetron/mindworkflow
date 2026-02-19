@@ -58,6 +58,7 @@ logs/
 *.mp4
 
 # Backups and archives
+*.backup
 *.tar.gz
 backup-*.tar.gz
 backups/
@@ -99,3 +100,7 @@ start-dev-direct.sh
 start-frontend.sh
 detect-cycles.js
 test-fetch.html
+*.conf
+server/feedback/
+translate*.py
+translate*.sh

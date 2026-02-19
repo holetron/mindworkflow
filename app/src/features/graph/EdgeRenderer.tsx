@@ -114,7 +114,7 @@ export const SmartBezierEdge = memo(
             <button
               onClick={handleDelete}
               className="w-7 h-7 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-full text-sm font-bold flex items-center justify-center shadow-xl border-2 border-white transition-all duration-200 hover:scale-110"
-              title="Удалить соединение"
+              title="Delete connection"
               style={{
                 backdropFilter: 'blur(4px)',
                 boxShadow: '0 4px 12px rgba(239, 68, 68, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.8)',

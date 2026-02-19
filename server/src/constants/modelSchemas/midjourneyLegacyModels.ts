@@ -1,0 +1,358 @@
+/**
+ * Midjourney legacy model schemas (V5.x, V6.x)
+ */
+
+import { ModelInfo } from '../../types/models';
+
+export const MIDJOURNEY_LEGACY_MODELS: Record<string, ModelInfo> = {
+  'midjourney-v6.1': {
+    name: 'Midjourney V6.1',
+    description: 'Version 6.1 with improved coherence and prompt following',
+    version: '6.1',
+    provider: 'midjourney',
+    limits: {
+      context_tokens: 4096,
+      output_tokens: 0,
+      rate_limit: 'Depends on relay configuration',
+    },
+    inputs: [
+      {
+        name: 'prompt',
+        type: 'string',
+        required: true,
+        description: 'Primary prompt with scene description',
+      },
+      {
+        name: 'mode',
+        type: 'string',
+        required: false,
+        description: 'Generation mode',
+        default: 'standard',
+        options: [
+          { value: 'standard', label: 'Standard' },
+          { value: 'raw', label: 'Raw' },
+        ],
+      },
+      {
+        name: 'aspect_ratio',
+        type: 'string',
+        required: false,
+        description: 'Image aspect ratio',
+        default: 'square',
+        options: [
+          { value: 'portrait', label: 'Portrait (2:3)' },
+          { value: 'square', label: 'Square (1:1)' },
+          { value: 'landscape', label: 'Landscape (3:2)' },
+        ],
+      },
+      {
+        name: 'stylization',
+        type: 'number',
+        required: false,
+        description: 'Stylization level (0-1000)',
+        default: 100,
+        min: 0,
+        max: 1000,
+      },
+      {
+        name: 'speed',
+        type: 'string',
+        required: false,
+        description: 'Generation speed',
+        default: 'fast',
+        options: [
+          { value: 'relax', label: 'Relax' },
+          { value: 'fast', label: 'Fast' },
+          { value: 'turbo', label: 'Turbo' },
+        ],
+      },
+      {
+        name: 'image_prompt',
+        type: 'image',
+        required: false,
+        description: 'Image Prompts - Visual references to guide composition and palette',
+      },
+      {
+        name: 'style_reference',
+        type: 'image',
+        required: false,
+        description: 'Style References - Use the aesthetic of an image to guide generation',
+      },
+      {
+        name: 'character_reference',
+        type: 'image',
+        required: false,
+        description: 'Omni Reference - Ensure consistent character likeness across generations',
+      },
+    ],
+    file_format: 'url',
+    documentation_url: 'https://docs.midjourney.com/docs/quick-start',
+  },
+
+  'midjourney-v6': {
+    name: 'Midjourney V6',
+    description: 'Version 6 with enhanced realism',
+    version: '6',
+    provider: 'midjourney',
+    limits: {
+      context_tokens: 4096,
+      output_tokens: 0,
+      rate_limit: 'Depends on relay configuration',
+    },
+    inputs: [
+      {
+        name: 'prompt',
+        type: 'string',
+        required: true,
+        description: 'Primary prompt',
+      },
+      {
+        name: 'mode',
+        type: 'string',
+        required: false,
+        description: 'Generation mode',
+        default: 'standard',
+        options: [
+          { value: 'standard', label: 'Standard' },
+          { value: 'raw', label: 'Raw' },
+        ],
+      },
+      {
+        name: 'aspect_ratio',
+        type: 'string',
+        required: false,
+        description: 'Image aspect ratio',
+        default: 'square',
+        options: [
+          { value: 'portrait', label: 'Portrait (2:3)' },
+          { value: 'square', label: 'Square (1:1)' },
+          { value: 'landscape', label: 'Landscape (3:2)' },
+        ],
+      },
+      {
+        name: 'stylization',
+        type: 'number',
+        required: false,
+        description: 'Stylization level (0-1000)',
+        default: 100,
+        min: 0,
+        max: 1000,
+      },
+      {
+        name: 'speed',
+        type: 'string',
+        required: false,
+        description: 'Generation speed',
+        default: 'fast',
+        options: [
+          { value: 'relax', label: 'Relax' },
+          { value: 'fast', label: 'Fast' },
+          { value: 'turbo', label: 'Turbo' },
+        ],
+      },
+      {
+        name: 'image_prompt',
+        type: 'image',
+        required: false,
+        description: 'Image Prompts - Visual references to guide composition and palette',
+      },
+      {
+        name: 'style_reference',
+        type: 'image',
+        required: false,
+        description: 'Style References - Use the aesthetic of an image to guide generation',
+      },
+      {
+        name: 'character_reference',
+        type: 'image',
+        required: false,
+        description: 'Omni Reference - Ensure consistent character likeness across generations',
+      },
+    ],
+    file_format: 'url',
+    documentation_url: 'https://docs.midjourney.com/docs/quick-start',
+  },
+
+  'midjourney-v5.2': {
+    name: 'Midjourney V5.2',
+    description: 'Version 5.2 - refined aesthetics',
+    version: '5.2',
+    provider: 'midjourney',
+    limits: {
+      context_tokens: 4096,
+      output_tokens: 0,
+      rate_limit: 'Depends on relay configuration',
+    },
+    inputs: [
+      {
+        name: 'prompt',
+        type: 'string',
+        required: true,
+        description: 'Primary prompt',
+      },
+      {
+        name: 'aspect_ratio',
+        type: 'string',
+        required: false,
+        description: 'Image aspect ratio',
+        default: 'square',
+        options: [
+          { value: 'portrait', label: 'Portrait (2:3)' },
+          { value: 'square', label: 'Square (1:1)' },
+          { value: 'landscape', label: 'Landscape (3:2)' },
+        ],
+      },
+      {
+        name: 'stylization',
+        type: 'number',
+        required: false,
+        description: 'Stylization level (0-1000)',
+        default: 100,
+        min: 0,
+        max: 1000,
+      },
+      {
+        name: 'speed',
+        type: 'string',
+        required: false,
+        description: 'Generation speed',
+        default: 'fast',
+        options: [
+          { value: 'relax', label: 'Relax' },
+          { value: 'fast', label: 'Fast' },
+          { value: 'turbo', label: 'Turbo' },
+        ],
+      },
+      {
+        name: 'reference_image',
+        type: 'image',
+        required: false,
+        description: 'Reference image URL',
+      },
+    ],
+    file_format: 'url',
+    documentation_url: 'https://docs.midjourney.com/docs/quick-start',
+  },
+
+  'midjourney-v5.1': {
+    name: 'Midjourney V5.1',
+    description: 'Version 5.1',
+    version: '5.1',
+    provider: 'midjourney',
+    limits: {
+      context_tokens: 4096,
+      output_tokens: 0,
+      rate_limit: 'Depends on relay configuration',
+    },
+    inputs: [
+      {
+        name: 'prompt',
+        type: 'string',
+        required: true,
+        description: 'Primary prompt',
+      },
+      {
+        name: 'aspect_ratio',
+        type: 'string',
+        required: false,
+        description: 'Image aspect ratio',
+        default: 'square',
+        options: [
+          { value: 'portrait', label: 'Portrait (2:3)' },
+          { value: 'square', label: 'Square (1:1)' },
+          { value: 'landscape', label: 'Landscape (3:2)' },
+        ],
+      },
+      {
+        name: 'stylization',
+        type: 'number',
+        required: false,
+        description: 'Stylization level (0-1000)',
+        default: 100,
+        min: 0,
+        max: 1000,
+      },
+      {
+        name: 'speed',
+        type: 'string',
+        required: false,
+        description: 'Generation speed',
+        default: 'fast',
+        options: [
+          { value: 'relax', label: 'Relax' },
+          { value: 'fast', label: 'Fast' },
+          { value: 'turbo', label: 'Turbo' },
+        ],
+      },
+      {
+        name: 'reference_image',
+        type: 'image',
+        required: false,
+        description: 'Reference image URL',
+      },
+    ],
+    file_format: 'url',
+    documentation_url: 'https://docs.midjourney.com/docs/quick-start',
+  },
+
+  'midjourney-v5': {
+    name: 'Midjourney V5',
+    description: 'Version 5',
+    version: '5',
+    provider: 'midjourney',
+    limits: {
+      context_tokens: 4096,
+      output_tokens: 0,
+      rate_limit: 'Depends on relay configuration',
+    },
+    inputs: [
+      {
+        name: 'prompt',
+        type: 'string',
+        required: true,
+        description: 'Primary prompt',
+      },
+      {
+        name: 'aspect_ratio',
+        type: 'string',
+        required: false,
+        description: 'Image aspect ratio',
+        default: 'square',
+        options: [
+          { value: 'portrait', label: 'Portrait (2:3)' },
+          { value: 'square', label: 'Square (1:1)' },
+          { value: 'landscape', label: 'Landscape (3:2)' },
+        ],
+      },
+      {
+        name: 'stylization',
+        type: 'number',
+        required: false,
+        description: 'Stylization level (0-1000)',
+        default: 100,
+        min: 0,
+        max: 1000,
+      },
+      {
+        name: 'speed',
+        type: 'string',
+        required: false,
+        description: 'Generation speed',
+        default: 'fast',
+        options: [
+          { value: 'relax', label: 'Relax' },
+          { value: 'fast', label: 'Fast' },
+          { value: 'turbo', label: 'Turbo' },
+        ],
+      },
+      {
+        name: 'reference_image',
+        type: 'image',
+        required: false,
+        description: 'Reference image URL',
+      },
+    ],
+    file_format: 'url',
+    documentation_url: 'https://docs.midjourney.com/docs/quick-start',
+  },
+};

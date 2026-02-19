@@ -250,8 +250,8 @@ const Login: React.FC = () => {
     fetch('/api/auth/google/config', { signal: controller.signal })
       .then(async (res) => {
         if (!res.ok) {
-          const data = await res.json().catch(() => ({ error: 'Не удалось загрузить конфигурацию Google' }));
-          throw new Error(data.error || 'Не удалось загрузить конфигурацию Google');
+          const data = await res.json().catch(() => ({ error: 'Failed to load Google configuration' }));
+          throw new Error(data.error || 'Failed to load Google configuration');
         }
         return res.json();
       })
@@ -272,7 +272,7 @@ const Login: React.FC = () => {
   const handleGoogleCredential = useCallback(
     async (response: { credential?: string }) => {
       if (!response.credential) {
-        setGoogleError('Не удалось получить токен Google');
+        setGoogleError('Failed to get Google token');
         setGoogleLoading(false);
         return;
       }
@@ -284,7 +284,7 @@ const Login: React.FC = () => {
         localStorage.removeItem('loginReturnTo');
         navigate(returnTo);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Не удалось войти через Google';
+        const message = err instanceof Error ? err.message : 'Failed to sign in with Google';
         setGoogleError(message);
       } finally {
         setGoogleLoading(false);
@@ -313,7 +313,7 @@ const Login: React.FC = () => {
     if (!googleClientId) return;
     const initialize = () => {
       if (!window.google?.accounts?.id) {
-        setGoogleError('Google Identity Services недоступны');
+        setGoogleError('Google Identity Services unavailable');
         return;
       }
       window.google.accounts.id.initialize({
@@ -341,7 +341,7 @@ const Login: React.FC = () => {
         script?.setAttribute('data-loaded', 'true');
         initialize();
       };
-      script.onerror = () => setGoogleError('Не удалось загрузить Google Identity Services');
+      script.onerror = () => setGoogleError('Failed to load Google Identity Services');
       document.body.appendChild(script);
     } else if (script && script.getAttribute('data-loaded') === 'true') {
       initialize();
@@ -364,7 +364,7 @@ const Login: React.FC = () => {
     if (nextMode === 'register') setName('');
   }, []);
 
-  const submitButtonLabel = useMemo(() => (isRegisterMode ? 'Зарегистрироваться' : 'Войти'), [isRegisterMode]);
+  const submitButtonLabel = useMemo(() => (isRegisterMode ? 'Sign Up' : 'Sign In'), [isRegisterMode]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -375,7 +375,7 @@ const Login: React.FC = () => {
     try {
       if (isRegisterMode) {
         const nameTrimmed = name.trim();
-        if (!nameTrimmed) throw new Error('Укажите имя');
+        if (!nameTrimmed) throw new Error('Enter name');
         await register(emailTrimmed, nameTrimmed, password);
         navigate('/');
         return;
@@ -385,9 +385,9 @@ const Login: React.FC = () => {
       localStorage.removeItem('loginReturnTo');
       navigate(returnTo);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Произошла ошибка';
+      const message = err instanceof Error ? err.message : 'An error occurred';
       setError(message);
-      if (/неверн/i.test(message)) setShowResetPrompt(true);
+      if (/incorrect/i.test(message)) setShowResetPrompt(true);
     } finally {
       setSubmitting(false);
     }
@@ -395,7 +395,7 @@ const Login: React.FC = () => {
 
   const handlePasswordReset = async () => {
     if (!email.trim()) {
-      setError('Сначала укажите email, чтобы отправить ссылку на восстановление.');
+      setError('Please enter your email first to send a recovery link.');
       return;
     }
     setResetSubmitting(true);
@@ -408,13 +408,13 @@ const Login: React.FC = () => {
         body: JSON.stringify({ email: email.trim() }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: 'Не удалось отправить письмо' }));
-        throw new Error(data.error || 'Не удалось отправить письмо');
+        const data = await res.json().catch(() => ({ error: 'Failed to send email' }));
+        throw new Error(data.error || 'Failed to send email');
       }
-      setInfo('Если аккаунт существует, мы отправили ссылку для восстановления пароля.');
+      setInfo('If the account exists, we will send a password recovery link.');
       setShowResetPrompt(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Произошла ошибка при отправке письма');
+      setError(err instanceof Error ? err.message : 'An error occurred while sending the email');
     } finally {
       setResetSubmitting(false);
     }
@@ -428,7 +428,7 @@ const Login: React.FC = () => {
           <header className="mb-6 sm:mb-8 text-center">
             <h1 className="text-3xl sm:text-4xl font-bold text-primary">MindWorkFlow</h1>
             <p className="mt-2 text-sm text-slate-400">
-              {isRegisterMode ? 'Создайте новый аккаунт для команды' : 'Войдите, чтобы продолжить работу'}
+              {isRegisterMode ? 'Create a new team account' : 'Sign in to continue'}
             </p>
           </header>
 
@@ -439,7 +439,7 @@ const Login: React.FC = () => {
                   htmlFor="name"
                   className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400 text-center"
                 >
-                  Имя
+                  Name
                 </label>
                 <input
                   id="name"
@@ -448,7 +448,7 @@ const Login: React.FC = () => {
                   onChange={(event) => setName(event.target.value)}
                   required
                   className="w-full sm:w-80 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  placeholder="Ваше имя"
+                  placeholder="Your name"
                 />
               </div>
             )}
@@ -476,7 +476,7 @@ const Login: React.FC = () => {
                 htmlFor="password"
                 className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400 text-center"
               >
-                Пароль
+                Password
               </label>
               <input
                 id="password"
@@ -504,14 +504,14 @@ const Login: React.FC = () => {
 
             {showResetPrompt && !isRegisterMode && (
               <div className="mx-auto flex w-full sm:w-80 flex-col gap-2 rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-200 text-center">
-                <span>Неверный пароль? Можем отправить письмо для восстановления.</span>
+                <span>Wrong password? We can send a recovery email.</span>
                 <button
                   type="button"
                   onClick={handlePasswordReset}
                   disabled={resetSubmitting}
                   className="inline-flex w-full items-center justify-center rounded-md border border-primary px-3 py-1 text-xs font-semibold text-white transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500"
                 >
-                  {resetSubmitting ? 'Отправляем…' : 'Восстановить пароль'}
+                  {resetSubmitting ? 'Sending...' : 'Recover password'}
                 </button>
               </div>
             )}
@@ -521,22 +521,22 @@ const Login: React.FC = () => {
               disabled={submitting}
               className="w-full sm:w-80 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/80 focus:outline-none focus:ring-2 focus:ring-primary/60 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-60"
             >
-              {submitting ? 'Подождите…' : submitButtonLabel}
+              {submitting ? 'Please wait...' : submitButtonLabel}
             </button>
           </form>
 
           <div className="mt-8 flex flex-col items-center gap-3">
             <div className="flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-slate-500">
               <span className="h-px w-10 bg-slate-700" />
-              <span>Или</span>
+              <span>Or</span>
               <span className="h-px w-10 bg-slate-700" />
             </div>
             <div className="flex flex-col items-center gap-2">
               <div ref={googleButtonRef} className="flex w-full max-w-full sm:max-w-[320px] justify-center" />
-              {googleLoading && <div className="text-xs text-slate-400">Выполняется вход через Google…</div>}
+              {googleLoading && <div className="text-xs text-slate-400">Signing in with Google…</div>}
               {googleError && <div className="text-xs text-rose-300 text-center">{googleError}</div>}
               {!googleClientId && !googleError && (
-                <div className="text-xs text-slate-500">Загрузка параметров Google входа…</div>
+                <div className="text-xs text-slate-500">Loading Google sign-in parameters…</div>
               )}
             </div>
           </div>
@@ -544,24 +544,24 @@ const Login: React.FC = () => {
           <div className="mt-10 flex flex-col items-center gap-3 text-sm text-slate-400">
             {isRegisterMode ? (
               <>
-                <span className="text-slate-500">Уже есть аккаунт?</span>
+                <span className="text-slate-500">Already have an account?</span>
                 <button
                   type="button"
                   onClick={() => switchMode('login')}
                   className="text-sm font-medium text-slate-300 underline-offset-4 transition hover:text-primary hover:underline"
                 >
-                  Войти
+                  Sign In
                 </button>
               </>
             ) : (
               <>
-                <span className="text-slate-500">Еще не с нами?</span>
+                <span className="text-slate-500">Not with us yet?</span>
                 <button
                   type="button"
                   onClick={() => switchMode('register')}
                   className="mx-auto w-full sm:w-80 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/80 focus:outline-none focus:ring-2 focus:ring-primary/60 focus:ring-offset-2 focus:ring-offset-slate-900"
                 >
-                  Создать аккаунт
+                  Create Account
                 </button>
               </>
             )}

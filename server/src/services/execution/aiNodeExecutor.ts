@@ -36,9 +36,9 @@ function edgesForAi(edges: StoredEdge[]) {
 function buildArtifactSummary(nodes: CreatedNodeSummary[]): string {
   const byType = new Map<string, number>();
   nodes.forEach((n) => byType.set(n.type, (byType.get(n.type) ?? 0) + 1));
-  const totalLabel = selectRussianPlural(nodes.length, ['артефакт', 'артефакта', 'артефактов']);
+  const totalLabel = selectRussianPlural(nodes.length, ['artifact', 'artifacts', 'artifacts']);
   const fragments = Array.from(byType.entries()).map(([t, c]) => `${c} ${describeArtifactPlural(t, c)}`);
-  return `Создано ${nodes.length} ${totalLabel}: ${fragments.join(', ')}.`;
+  return `Created ${nodes.length} ${totalLabel}: ${fragments.join(', ')}.`;
 }
 
 // Helper: resolve provider string
@@ -95,10 +95,10 @@ async function aiTreeMode(
       const m2 = json.match(/\{[\s\S]*\}/); if (m2 && !m1) json = m2[0];
     }
     const tr = await svc.transformerService.transformJsonToNodes(projectId, node.node_id, json, node.ui.bbox.x2 + 100, node.ui.bbox.y1);
-    const modeText = responseType === 'mindmap' ? 'mindmap' : 'дерево';
-    return { content: `Создан ${modeText} из ${tr.createdNodes.length} нод: ${tr.createdNodes.map(n => n.title).join(', ')}`, contentType: 'text/plain', logs: [...aiResult.logs, ...tr.logs], createdNodes: tr.createdNodes, isMultiNodeResult: true, predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig) };
+    const modeText = responseType === 'mindmap' ? 'mindmap' : 'tree';
+    return { content: `Created ${modeText} from ${tr.createdNodes.length} nodes: ${tr.createdNodes.map(n => n.title).join(', ')}`, contentType: 'text/plain', logs: [...aiResult.logs, ...tr.logs], createdNodes: tr.createdNodes, isMultiNodeResult: true, predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig) };
   } catch (error) {
-    return { content: `Ошибка создания дерева нод: ${error instanceof Error ? error.message : 'Unknown error'}\n\nОтвет ИИ:\n${aiResult.output}`, contentType: 'text/plain', logs: [...aiResult.logs, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`], predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig) };
+    return { content: `Error creating node tree: ${error instanceof Error ? error.message : 'Unknown error'}\n\nAI response:\n${aiResult.output}`, contentType: 'text/plain', logs: [...aiResult.logs, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`], predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig) };
   }
 }
 
@@ -121,7 +121,7 @@ async function aiNodeMode(
   if (outputType === 'mindmap' && typeof aiResult.output === 'string') {
     const delimiter = (node.meta?.mindmap_delimiter as string) || '---';
     const sr = await svc.transformerService.splitTextNode(projectId, node.node_id, { content: aiResult.output, config: { separator: delimiter, subSeparator: '', namingMode: 'auto' } });
-    return { content: `Создано ${sr.createdNodes.length} ${selectRussianPlural(sr.createdNodes.length, ['нода', 'ноды', 'нод'])} из текста`, contentType: 'text/plain', logs: [...aiResult.logs, ...sr.logs], createdNodes: sr.createdNodes, createdNodeSnapshots: sr.nodeSnapshots, isMultiNodeResult: true, predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig), predictionPayload: aiResult.predictionPayload };
+    return { content: `Created ${sr.createdNodes.length} ${selectRussianPlural(sr.createdNodes.length, ['node', 'nodes', 'nodes'])} from text`, contentType: 'text/plain', logs: [...aiResult.logs, ...sr.logs], createdNodes: sr.createdNodes, createdNodeSnapshots: sr.nodeSnapshots, isMultiNodeResult: true, predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig), predictionPayload: aiResult.predictionPayload };
   }
 
   // Replicate artifacts or text response
@@ -148,10 +148,10 @@ async function aiNodeMode(
   if (isReplicate) return { content: aggText ?? aiResult.output, contentType: aiResult.contentType, logs: aiResult.logs, predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig), predictionPayload: aiResult.predictionPayload };
 
   try {
-    const cn = await svc.transformerService.createSingleTextNode(projectId, node.node_id, aiResult.output, 'Ответ AI агента');
-    return { content: `Создана нода с ответом: "${cn.title}"`, contentType: 'text/plain', logs: aiResult.logs, createdNodes: [cn], isMultiNodeResult: true, predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig) };
+    const cn = await svc.transformerService.createSingleTextNode(projectId, node.node_id, aiResult.output, 'AI Agent Response');
+    return { content: `Created node with response: "${cn.title}"`, contentType: 'text/plain', logs: aiResult.logs, createdNodes: [cn], isMultiNodeResult: true, predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig) };
   } catch (error) {
-    return { content: `Ошибка создания ноды: ${error instanceof Error ? error.message : 'Unknown error'}\n\nОтвет ИИ:\n${aiResult.output}`, contentType: 'text/plain', logs: [...aiResult.logs, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`], predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig) };
+    return { content: `Error creating node: ${error instanceof Error ? error.message : 'Unknown error'}\n\nAI response:\n${aiResult.output}`, contentType: 'text/plain', logs: [...aiResult.logs, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`], predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig) };
   }
 }
 
@@ -177,7 +177,7 @@ async function aiFolderMode(
   let targetFolderId: string, folderTitle: string, folderWasCreated = false;
   if (folderNodes.length > 0) { targetFolderId = folderNodes[0].node_id; folderTitle = folderNodes[0].title; }
   else {
-    const fn = await svc.transformerService.createSingleTextNode(projectId, node.node_id, '', 'Результаты AI', 'folder');
+    const fn = await svc.transformerService.createSingleTextNode(projectId, node.node_id, '', 'AI Results', 'folder');
     targetFolderId = fn.node_id; folderTitle = fn.title; folderWasCreated = true;
   }
 
@@ -200,7 +200,7 @@ async function aiFolderMode(
 
   if (folderWasCreated) bag.createdNodes.unshift({ node_id: targetFolderId, title: folderTitle, type: 'folder' as const });
   const aggText = bag.aggregatedText?.trim() || null;
-  const summary = bag.createdNodes.length > 0 ? buildArtifactSummary(bag.createdNodes) : 'Ответ обработан';
+  const summary = bag.createdNodes.length > 0 ? buildArtifactSummary(bag.createdNodes) : 'Response processed';
   return { content: aggText ? `${aggText}\n\n${summary}` : summary, contentType: 'text/plain', logs: [...aiResult.logs, ...bag.logs], createdNodes: bag.createdNodes, createdNodeSnapshots: bag.nodeSnapshots, isMultiNodeResult: bag.createdNodes.length > 0, predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig), predictionPayload: aiResult.predictionPayload };
 }
 
@@ -213,7 +213,7 @@ async function aiResponseFolderMode(
 ): Promise<ExecutionStepResult> {
   const contextMode = (aiConfig.context_mode || 'simple') as 'simple' | 'full_json';
   const aiResult = await svc.aiService.run({ projectId, node, previousNodes: prevNodes, nextNodes: nextMeta, schemaRef: 'TEXT_RESPONSE', settings: ctx.projectSettings, projectOwnerId: ctx.projectOwnerId, actorUserId: ctx.actorUserId, contextMode, edges: eai });
-  return { content: `Режим "папка файлов" в разработке. Ответ ИИ:\n${aiResult.output}`, contentType: 'text/plain', logs: [...aiResult.logs, 'Folder mode not yet implemented'], predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig) };
+  return { content: `"File folder" mode is under development. AI response:\n${aiResult.output}`, contentType: 'text/plain', logs: [...aiResult.logs, 'Folder mode not yet implemented'], predictionUrl: aiResult.predictionUrl, predictionId: aiResult.predictionId, provider: resolveProvider(aiResult, aiConfig) };
 }
 
 // AI default mode (single response)

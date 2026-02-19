@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 
 /**
- * Простой debounce хелпер для useCallback
- * Использование в useEffect для отложенного выполнения
+ * Simple debounce helper for useCallback
+ * Usage in useEffect for delayed execution
  */
 export function useDebounce<T>(value: T, delay: number, callback: (value: T) => void) {
   const timeoutRef = useRef<number | null>(null);
@@ -21,14 +21,14 @@ export function useDebounce<T>(value: T, delay: number, callback: (value: T) => 
 }
 
 /**
- * ✅ Хук для дебаунса updateNodeInternals вызовов
- * Предотвращает множественные вызовы updateNodeInternals в быстрой последовательности
- * Используется для оптимизации React Flow при изменении портов/размеров нод
+ * ✅ Hook for debouncing updateNodeInternals calls
+ * Prevents multiple updateNodeInternals calls in rapid succession
+ * Used for React Flow optimization when changing ports/node sizes
  * 
- * @param updateNodeInternals Функция из useUpdateNodeInternals()
- * @param nodeId ID ноды для обновления
- * @param delay Задержка в ms перед вызовом (по умолчанию 50ms)
- * @returns Дебаунсированная функция для вызова
+ * @param updateNodeInternals Function from useUpdateNodeInternals()
+ * @param nodeId Node ID to update
+ * @param delay Delay in ms before call (default 50ms)
+ * @returns Debounced function to call
  */
 export function useDebouncedUpdateNodeInternals(
   updateNodeInternals: (nodeId: string) => void,
@@ -38,14 +38,14 @@ export function useDebouncedUpdateNodeInternals(
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingRef = useRef<boolean>(false);
 
-  // ✅ Вернуть дебаунсированную функцию
+  // ✅ Return debounced function
   const debouncedUpdate = useCallback(() => {
-    // ✅ Отменить предыдущий timeout если он есть
+    // ✅ Cancel previous timeout if exists
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    // ✅ Установить новый timeout
+    // ✅ Set new timeout
     timeoutRef.current = setTimeout(() => {
       if (!pendingRef.current) {
         pendingRef.current = true;
@@ -56,7 +56,7 @@ export function useDebouncedUpdateNodeInternals(
     }, delay);
   }, [updateNodeInternals, nodeId, delay]);
 
-  // ✅ Cleanup при unmount
+  // ✅ Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -69,7 +69,7 @@ export function useDebouncedUpdateNodeInternals(
 }
 
 /**
- * Debounce wrapper для функций
+ * Debounce wrapper for functions
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,

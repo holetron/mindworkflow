@@ -276,7 +276,7 @@ export async function cropImageToDataUrl(params: {
   canvas.height = Math.max(1, Math.round(cropHeight));
   const context = canvas.getContext('2d');
   if (!context) {
-    throw new Error('Не удалось создать контекст для обрезки изображения');
+    throw new Error('Failed to create context for image cropping');
   }
 
   context.filter = buildCanvasFilter(adjustments);
@@ -334,7 +334,7 @@ export async function mergeBaseAndOverlay(params: {
   canvas.height = Math.max(1, Math.round(outputHeight));
   const context = canvas.getContext('2d');
   if (!context) {
-    throw new Error('Не удалось создать холст для объединения изображений');
+    throw new Error('Failed to create canvas for merging images');
   }
 
   if (resolvedBase) {

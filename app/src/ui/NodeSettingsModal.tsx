@@ -82,10 +82,10 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
   const handleClose = async () => {
     if (hasChanges) {
       const confirmed = await showConfirm({
-        title: 'Есть несохраненные изменения',
-        message: 'У вас есть несохраненные изменения в настройках ноды. Хотите сохранить их перед закрытием?',
-        confirmText: 'Сохранить',
-        cancelText: 'Не сохранять',
+        title: 'Unsaved changes',
+        message: 'You have unsaved changes in node settings. Do you want to save them before closing?',
+        confirmText: 'Save',
+        cancelText: 'Don't save',
         type: 'warning'
       });
       
@@ -103,7 +103,7 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
 
   return (
     <Modal
-      title={`Настройки ноды: ${node.title}`}
+      title={`Node Settings: ${node.title}`}
       onClose={handleClose}
       actions={
         <div className="flex gap-2">
@@ -112,7 +112,7 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
             className="rounded bg-slate-800 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700"
             onClick={handleClose}
           >
-            Закрыть
+            Close
           </button>
           {hasChanges && (
             <button
@@ -121,7 +121,7 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
               onClick={handleSave}
               disabled={loading}
             >
-              Сохранить изменения
+              Save changes
             </button>
           )}
         </div>
@@ -130,23 +130,23 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
       <div className="flex flex-col gap-6 p-6 max-h-[70vh] overflow-y-auto">
         {/* Node Information */}
         <div>
-          <h3 className="mb-3 font-medium text-slate-300">Информация об узле</h3>
+          <h3 className="mb-3 font-medium text-slate-300">Node Information</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-slate-400">ID:</span>
               <span className="font-mono text-slate-300">{node.node_id}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Тип:</span>
+              <span className="text-slate-400">Type:</span>
               <span className="text-slate-300">{node.type}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Символов:</span>
+              <span className="text-slate-400">Characters:</span>
               <span className="text-slate-300">{(node.content || '').length.toLocaleString()}</span>
             </div>
             {node.type === 'ai' && node.ai?.model && (
               <div className="flex justify-between">
-                <span className="text-slate-400">Модель:</span>
+                <span className="text-slate-400">Model:</span>
                 <span className="text-slate-300">{String(node.ai.model)}</span>
               </div>
             )}
@@ -154,23 +154,23 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
         </div>
         {/* Node Metadata */}
         <div>
-          <h3 className="mb-3 font-medium text-slate-300">Метаданные узла</h3>
+          <h3 className="mb-3 font-medium text-slate-300">Node Metadata</h3>
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-1">
-                Краткое описание
+                Short description
               </label>
               <input
                 type="text"
                 className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 value={String(localMeta.short_description || '')}
                 onChange={(e) => updateMeta('short_description', e.target.value)}
-                placeholder="Краткое описание узла..."
+                placeholder="Short node description..."
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-1">
-                Теги (через запятую)
+                Tags (comma-separated)
               </label>
               <input
                 type="text"
@@ -183,9 +183,9 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
           </div>
         </div>
         <div>
-          <h3 className="mb-3 font-medium text-slate-300">История ответов</h3>
+          <h3 className="mb-3 font-medium text-slate-300">Response History</h3>
           {historyEntries.length === 0 ? (
-            <p className="text-sm text-slate-500">История запусков отсутствует.</p>
+            <p className="text-sm text-slate-500">No run history.</p>
           ) : (
             <div className="space-y-2">
               {historyEntries.map((entry) => {
@@ -221,7 +221,7 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
                     <div className="mt-3 space-y-3 text-xs text-slate-300">
                       {entry.previewItems.length > 0 && (
                         <div>
-                          <p className="mb-1 font-semibold text-slate-200">Предпросмотр</p>
+                          <p className="mb-1 font-semibold text-slate-200">Preview</p>
                           <ul className="space-y-1 text-xs text-slate-300">
                             {entry.previewItems.map((item) => (
                               <li key={item.key} className="flex items-center gap-2">
@@ -249,8 +249,8 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
                         <JsonViewer
                           value={entry.predictionPayloadJson}
                           collapsible
-                          collapsedLabel="Показать ответ API (JSON)"
-                          expandedLabel="Скрыть ответ API (JSON)"
+                          collapsedLabel="Show API response (JSON)"
+                          expandedLabel="Hide API response (JSON)"
                         />
                       ) : (
                         <>
@@ -262,7 +262,7 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
                                   <div className="flex items-start gap-2">
                                     <span className="text-xl">❌</span>
                                     <div className="flex-1">
-                                      <div className="font-semibold mb-1">Ошибка выполнения:</div>
+                                      <div className="font-semibold mb-1">Execution error:</div>
                                       <div className="text-sm whitespace-pre-wrap">{errorMsg}</div>
                                     </div>
                                   </div>
@@ -271,7 +271,7 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
                             } else {
                               return (
                                 <p className="rounded border border-slate-700 bg-slate-900 p-2 text-slate-400">
-                                  Ответ не сохранён, используйте раздел «Метаданные».
+                                  Response not saved, use the 'Metadata' section.
                                 </p>
                               );
                             }
@@ -282,15 +282,15 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
                         <JsonViewer
                           value={entry.metadataJson}
                           collapsible
-                          collapsedLabel="Показать метаданные (JSON)"
-                          expandedLabel="Скрыть метаданные (JSON)"
+                          collapsedLabel="Show metadata (JSON)"
+                          expandedLabel="Hide metadata (JSON)"
                         />
                       ) : null}
                       <JsonViewer
                         value={entry.logsJson}
                         collapsible
-                        collapsedLabel="Показать журнал (JSON)"
-                        expandedLabel="Скрыть журнал (JSON)"
+                        collapsedLabel="Show log (JSON)"
+                        expandedLabel="Hide log (JSON)"
                       />
                     </div>
                     </div>
@@ -302,7 +302,7 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
         </div>
         {/* Raw metadata view */}
         <div>
-          <h3 className="mb-3 font-medium text-slate-300">Все метаданные (JSON)</h3>
+          <h3 className="mb-3 font-medium text-slate-300">All metadata (JSON)</h3>
           <pre className="text-xs bg-slate-900 p-3 rounded border border-slate-700 overflow-auto max-h-40">
             {JSON.stringify(localMeta, null, 2)}
           </pre>
@@ -395,7 +395,7 @@ function buildHeaderSegments(entry: NormalizedRunHistory): Array<{ key: string; 
     segments.push({ key: 'id', element: <span>ID: {header.predictionId}</span> });
   }
   if (header.updatedAt) {
-    segments.push({ key: 'updated', element: <span>Обновлено: {header.updatedAt}</span> });
+    segments.push({ key: 'updated', element: <span>Updated: {header.updatedAt}</span> });
   }
   if (header.predictionUrl) {
     segments.push({
@@ -412,7 +412,7 @@ function buildHeaderSegments(entry: NormalizedRunHistory): Array<{ key: string; 
       ),
     });
   }
-  // API ссылка скрыта по запросу
+  // API link hidden by request
   if (header.outputUrl) {
     segments.push({
       key: 'output',

@@ -8,7 +8,7 @@ export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Закрываем меню при клике вне его
+  // Close menu on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -34,12 +34,12 @@ export function UserMenu() {
 
   return (
     <div className="relative" ref={menuRef}>
-      {/* Кнопка меню */}
+      {/* Menu button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 rounded bg-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-600 transition-colors"
       >
-        <span>{user?.name || 'Пользователь'}</span>
+        <span>{user?.name || 'User'}</span>
         <svg 
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none" 
@@ -50,7 +50,7 @@ export function UserMenu() {
         </svg>
       </button>
 
-      {/* Выпадающее меню */}
+      {/* Dropdown menu */}
       {isOpen && (
         <div className="absolute right-0 mt-2 w-56 rounded-lg border border-slate-700 bg-slate-800 shadow-xl z-50">
           {/* User info */}
@@ -66,7 +66,7 @@ export function UserMenu() {
               className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors text-left cursor-pointer"
             >
               <span className="text-lg">🤖</span>
-              <span>Мои агенты</span>
+              <span>My agents</span>
             </div>
 
             <div
@@ -74,7 +74,7 @@ export function UserMenu() {
               className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors text-left cursor-pointer"
             >
               <span className="text-lg">⚙️</span>
-              <span>Настройки аккаунта</span>
+              <span>Account Settings</span>
             </div>
 
             {user?.is_admin && (
@@ -83,7 +83,7 @@ export function UserMenu() {
                 className="flex items-center gap-3 w-full px-4 py-2 text-sm text-amber-300 hover:bg-slate-700 transition-colors text-left cursor-pointer"
               >
                 <span className="text-lg">👑</span>
-                <span>Админ-панель</span>
+                <span>Admin Panel</span>
               </div>
             )}
           </div>
@@ -95,7 +95,7 @@ export function UserMenu() {
               className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-300 hover:bg-slate-700 transition-colors text-left cursor-pointer"
             >
               <span className="text-lg">🚪</span>
-              <span>Выход</span>
+              <span>Log out</span>
             </div>
           </div>
         </div>

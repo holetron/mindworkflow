@@ -19,7 +19,7 @@ export default defineConfig({
   server: {
     host: resolvedHost,
     port: resolvedPort,
-    allowedHosts: ['mindworkflow.com', 'www.mindworkflow.com', 'localhost', '127.0.0.1', '94.103.81.53'],
+    allowedHosts: ['mindworkflow.com', 'www.mindworkflow.com', 'localhost', '127.0.0.1'],
     proxy: {
       '/api': {
         target: apiTarget,

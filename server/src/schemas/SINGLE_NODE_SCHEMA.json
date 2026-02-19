@@ -7,18 +7,18 @@
     "type": {
       "type": "string",
       "const": "text",
-      "description": "Тип ноды, всегда text для простых ответов"
+      "description": "Node type, always text for simple responses"
     },
     "title": {
       "type": "string",
-      "description": "Короткое название для ноды с ответом",
+      "description": "Short title for the response node",
       "maxLength": 100
     },
     "content": {
       "type": "string",
-      "description": "Основной ответ AI агента"
+      "description": "Main AI agent response"
     }
   },
   "additionalProperties": false,
-  "description": "Схема для создания одной текстовой ноды с ответом AI агента. Используется когда нужно создать отдельную ноду с результатом работы AI."
+  "description": "Schema for creating a single text node with an AI agent response. Used when a separate node with AI output is needed."
 }

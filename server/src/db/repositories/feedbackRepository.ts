@@ -61,11 +61,11 @@ function normalizeFeedbackStatus(value: unknown, fallback: FeedbackStatus = 'new
 function feedbackDefaultTitle(type: FeedbackType): string {
   switch (type) {
     case 'problem':
-      return 'Проблема';
+      return 'Problem';
     case 'suggestion':
-      return 'Предложение улучшения';
+      return 'Improvement Suggestion';
     default:
-      return 'Обратная связь';
+      return 'Feedback';
   }
 }
 
@@ -82,10 +82,10 @@ function sanitizeFeedbackTitle(value: unknown, type: FeedbackType): string {
 
 function sanitizeFeedbackDescription(value: unknown): string {
   if (typeof value !== 'string') {
-    return 'Описание не указано.';
+    return 'No description provided.';
   }
   const normalized = value.trim();
-  return normalized.length > 0 ? normalized : 'Описание не указано.';
+  return normalized.length > 0 ? normalized : 'No description provided.';
 }
 
 function sanitizeFeedbackContact(value: unknown): string | null {
@@ -93,7 +93,7 @@ function sanitizeFeedbackContact(value: unknown): string | null {
     return null;
   }
   const normalized = String(value).trim();
-  if (normalized.length === 0 || /^не указан$/i.test(normalized)) {
+  if (normalized.length === 0 || /^(not specified|не указан)$/i.test(normalized)) {
     return null;
   }
   return normalized.slice(0, 200);

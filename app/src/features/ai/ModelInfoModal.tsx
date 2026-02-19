@@ -43,7 +43,7 @@ interface ModelInfoModalProps {
   inline?: boolean; // If true, render as inline content without Modal wrapper
   enabledPorts?: string[]; // List of enabled port IDs
   onTogglePort?: (portId: string, enabled: boolean, portInfo: ModelInputParameter) => void; // Callback for toggling ports with full port info
-  invalidPortsWithEdges?: string[]; // ⚠️ Порты с подключениями, но невалидные для текущей модели (красная подсветка)
+  invalidPortsWithEdges?: string[]; // ⚠️ Ports with connections but invalid for the current model (red highlight)
 }
 
 export function ModelInfoModal({
@@ -57,7 +57,7 @@ export function ModelInfoModal({
   inline = false,
   enabledPorts = [],
   onTogglePort,
-  invalidPortsWithEdges = [] // ⚠️ Невалидные порты с подключениями
+  invalidPortsWithEdges = [] // ⚠️ Invalid ports with connections
 }: ModelInfoModalProps) {
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
   const [loading, setLoading] = useState(false);
@@ -91,11 +91,8 @@ export function ModelInfoModal({
       else if (provider.includes('anthropic')) normalizedProvider = 'anthropic';
       
       // Use query parameter to avoid URL encoding issues with modelId containing slashes
-      // For Replicate, add test API token
-      let url = `/api/integrations/models/${normalizedProvider}/info?modelId=${encodeURIComponent(modelId)}`;
-      if (normalizedProvider === 'replicate') {
-        url += '&apiToken=r8_Uu6iTMDO39VM0upvBO3ogKsZG6lSJdQ2YCKQ4';
-      }
+      // Backend will use the stored API token from user's integration settings
+      const url = `/api/integrations/models/${normalizedProvider}/info?modelId=${encodeURIComponent(modelId)}`;
       
       console.log(`📡 Fetching model info: ${normalizedProvider}/${modelId}`);
       const response = await fetch(url, { headers });
@@ -137,30 +134,30 @@ export function ModelInfoModal({
           {/* Section 1: General Information */}
           <section className="space-y-3">
             <h3 className="text-lg font-semibold text-slate-200 border-b border-slate-700 pb-2">
-              Общая информация
+              General Information
             </h3>
               <div className="space-y-2 text-sm">
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-slate-400">Название:</span>
+                  <span className="text-slate-400">Name:</span>
                   <span className="col-span-2 text-slate-200 font-medium">{modelInfo.name}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-slate-400">Провайдер:</span>
+                  <span className="text-slate-400">Provider:</span>
                   <span className="col-span-2 text-slate-200">{modelInfo.provider}</span>
                 </div>
                 {modelInfo.version && (
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-slate-400">Версия:</span>
+                    <span className="text-slate-400">Version:</span>
                     <span className="col-span-2 text-slate-200 font-mono text-xs">{modelInfo.version}</span>
                   </div>
                 )}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-slate-400">Описание:</span>
+                  <span className="text-slate-400">Description:</span>
                   <span className="col-span-2 text-slate-300">{modelInfo.description}</span>
                 </div>
                 {modelInfo.documentation_url && (
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-slate-400">Документация:</span>
+                    <span className="text-slate-400">Documentation:</span>
                     <span className="col-span-2">
                       <a
                         href={modelInfo.documentation_url}
@@ -168,7 +165,7 @@ export function ModelInfoModal({
                         rel="noopener noreferrer"
                         className="text-blue-500 hover:text-blue-400 underline"
                       >
-                        Открыть →
+                        Open →
                       </a>
                     </span>
                   </div>
@@ -179,12 +176,12 @@ export function ModelInfoModal({
             {/* Section 2: Limits */}
             <section className="space-y-3">
               <h3 className="text-lg font-semibold text-slate-200 border-b border-slate-700 pb-2">
-                Лимиты
+                Limits
               </h3>
               <div className="space-y-2 text-sm">
                 {modelInfo.limits.context_tokens && (
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-slate-400">Контекст:</span>
+                    <span className="text-slate-400">Context:</span>
                     <span className="col-span-2 text-slate-200 font-medium">
                       {formatTokens(modelInfo.limits.context_tokens)} tokens
                     </span>
@@ -192,7 +189,7 @@ export function ModelInfoModal({
                 )}
                 {modelInfo.limits.output_tokens && (
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-slate-400">Вывод:</span>
+                    <span className="text-slate-400">Output:</span>
                     <span className="col-span-2 text-slate-200 font-medium">
                       {formatTokens(modelInfo.limits.output_tokens)} tokens
                     </span>
@@ -210,16 +207,16 @@ export function ModelInfoModal({
             {/* Section 3: Input Parameters */}
             <section className="space-y-3">
               <h3 className="text-lg font-semibold text-slate-200 border-b border-slate-700 pb-2">
-                Входные параметры
+                Input Parameters
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-slate-800">
                     <tr>
-                      <th className="px-3 py-2 text-left text-slate-300 font-medium">Название</th>
-                      <th className="px-3 py-2 text-left text-slate-300 font-medium">Тип</th>
-                      <th className="px-3 py-2 text-left text-slate-300 font-medium">Обязательно</th>
-                      <th className="px-3 py-2 text-left text-slate-300 font-medium w-1/3">Описание</th>
+                      <th className="px-3 py-2 text-left text-slate-300 font-medium">Name</th>
+                      <th className="px-3 py-2 text-left text-slate-300 font-medium">Type</th>
+                      <th className="px-3 py-2 text-left text-slate-300 font-medium">Required</th>
+                      <th className="px-3 py-2 text-left text-slate-300 font-medium w-1/3">Description</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700">
@@ -232,9 +229,9 @@ export function ModelInfoModal({
                           </td>
                           <td className="px-3 py-2">
                             {input.required ? (
-                              <span className="text-red-400 text-sm">✓ Да</span>
+                              <span className="text-red-400 text-sm">✓ Yes</span>
                             ) : (
-                              <span className="text-slate-500 text-sm">Нет</span>
+                              <span className="text-slate-500 text-sm">No</span>
                             )}
                           </td>
                           <td className="px-3 py-2 text-slate-400 text-xs max-w-xs">
@@ -261,7 +258,7 @@ export function ModelInfoModal({
   }
 
   return (
-    <Modal onClose={onClose} title="Информация о модели">
+    <Modal onClose={onClose} title="Model Information">
       {content}
     </Modal>
   );

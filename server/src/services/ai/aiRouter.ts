@@ -245,28 +245,28 @@ export class AiService {
   // ---- Stub generators ----
 
   inferTargetAudience(source: string): string {
-    if (/школ/i.test(source)) return 'школьники 10-16 лет';
-    if (/взросл/i.test(source)) return 'взрослая аудитория 25-45 лет';
-    return 'широкая аудитория';
+    if (/школ/i.test(source)) return 'students aged 10-16';
+    if (/взросл/i.test(source)) return 'adult audience aged 25-45';
+    return 'general audience';
   }
 
   inferGoal(source: string): string {
-    if (!source) return 'Повысить узнаваемость бренда';
-    return source.split(/[.!?]/)[0]?.trim() || 'Сформировать запоминающийся ролик';
+    if (!source) return 'Increase brand awareness';
+    return source.split(/[.!?]/)[0]?.trim() || 'Create a memorable video';
   }
 
   inferTone(source: string): string {
-    if (/серьез/i.test(source)) return 'серьёзный';
-    if (/весел/i.test(source) || /смешн/i.test(source)) return 'игривый';
-    return 'динамичный';
+    if (/серьез/i.test(source)) return 'serious';
+    if (/весел/i.test(source) || /смешн/i.test(source)) return 'playful';
+    return 'dynamic';
   }
 
   ensureMinimumNodes(nodes: AiContext['nextNodes']): AiContext['nextNodes'] {
     const result = [...nodes];
     const defaults: AiContext['nextNodes'] = [
-      { node_id: 'default_briefing', type: 'text', title: 'Дополнительный бриф', short_description: 'Структурированный бриф по итогам планирования', connection_labels: ['auto'] },
-      { node_id: 'default_storyboard', type: 'image_gen', title: 'Сториборд превью', short_description: 'Фиктивные кадры сториборда', connection_labels: ['auto'] },
-      { node_id: 'default_voiceover', type: 'audio_gen', title: 'Голосовое сопровождение', short_description: 'Синтезированный текст для озвучки', connection_labels: ['auto'] },
+      { node_id: 'default_briefing', type: 'text', title: 'Additional brief', short_description: 'Structured brief based on the planning results', connection_labels: ['auto'] },
+      { node_id: 'default_storyboard', type: 'image_gen', title: 'Storyboard preview', short_description: 'Draft storyboard frames', connection_labels: ['auto'] },
+      { node_id: 'default_voiceover', type: 'audio_gen', title: 'Voiceover', short_description: 'Synthesized text for narration', connection_labels: ['auto'] },
     ];
     let index = 0;
     while (result.length < 3 && index < defaults.length) {
@@ -292,17 +292,17 @@ export class AiService {
       const nodeId = typeof node.node_id === 'string' && node.node_id.trim().length > 0 ? node.node_id.trim() : `auto_node_${index + 1}`;
       const rawType = typeof node.type === 'string' ? node.type.trim() : 'text';
       const type = allowedTypes.has(rawType) ? rawType : 'text';
-      const title = typeof node.title === 'string' && node.title.trim().length > 0 ? node.title.trim() : `Шаг ${index + 1}`;
-      const description = typeof node.short_description === 'string' && node.short_description.trim().length > 0 ? node.short_description.trim() : 'Описание будет уточнено при выполнении шага.';
+      const title = typeof node.title === 'string' && node.title.trim().length > 0 ? node.title.trim() : `Step ${index + 1}`;
+      const description = typeof node.short_description === 'string' && node.short_description.trim().length > 0 ? node.short_description.trim() : 'Description will be refined during step execution.';
       return { node_id: nodeId, type, title, description, outputs: ['structured_json', 'summary_text'] };
     });
 
     const plan = {
       overview: { goal, target_audience: targetAudience, tone, duration_sec: 30 },
       phases: [
-        { name: 'Идея', steps: ['Уточнение брифа', 'Формирование ключевых сообщений'] },
-        { name: 'Производство', steps: ['Генерация сцен', 'Подготовка актёров', 'Сбор ассетов'] },
-        { name: 'Пост-продакшн', steps: ['Сборка превью', 'Финальный контроль качества'] },
+        { name: 'Concept', steps: ['Refine the brief', 'Formulate key messages'] },
+        { name: 'Production', steps: ['Generate scenes', 'Prepare talent', 'Collect assets'] },
+        { name: 'Post-production', steps: ['Assemble preview', 'Final quality control'] },
       ],
       nodes: sanitizedNodes,
     };
@@ -330,10 +330,10 @@ export class AiService {
     const combinedPrompt = nodeContent.trim() ? nodeContent : promptSource;
 
     let responseText = '';
-    if (combinedPrompt.toLowerCase().includes('ремонт')) {
-      responseText = `Пошаговый план ремонта:\n\n1. **Подготовительный этап**\n   - Демонтаж старой сантехники\n   - Очистка поверхностей\n   - Подготовка инструментов и материалов\n\n2. **Основные работы**\n   - Замена тумбы под раковиной\n   - Установка нового зеркала\n   - Замена унитаза\n   - Установка фартука перед раковиной\n\n3. **Завершающий этап**\n   - Подключение коммуникаций\n   - Герметизация стыков\n   - Уборка рабочего места\n   - Проверка работоспособности`;
+    if (combinedPrompt.toLowerCase().includes('ремонт') || combinedPrompt.toLowerCase().includes('renovation') || combinedPrompt.toLowerCase().includes('repair')) {
+      responseText = `Step-by-step renovation plan:\n\n1. **Preparation phase**\n   - Remove old plumbing fixtures\n   - Clean surfaces\n   - Prepare tools and materials\n\n2. **Main work**\n   - Replace vanity under the sink\n   - Install new mirror\n   - Replace toilet\n   - Install backsplash behind the sink\n\n3. **Finishing phase**\n   - Connect utilities\n   - Seal joints\n   - Clean up the workspace\n   - Verify everything works properly`;
     } else {
-      responseText = `Ответ на запрос: "${combinedPrompt}"\n\nЭто детальный ответ агента, сгенерированный на основе вашего промпта. Содержание адаптировано под контекст вашего запроса.`;
+      responseText = `Response to request: "${combinedPrompt}"\n\nThis is a detailed agent response generated based on your prompt. The content is adapted to the context of your request.`;
     }
 
     const textResponse = { response: responseText };

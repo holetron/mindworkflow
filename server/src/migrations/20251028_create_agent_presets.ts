@@ -7,8 +7,8 @@ const log = logger.child({ module: 'migrations/20251028_create_agent_presets' })
 const MIGRATION_ID = '20251028_create_agent_presets';
 
 /**
- * Миграция для создания таблицы agent_presets
- * Хранит полные JSON-шаблоны нод агентов для быстрого создания
+ * Migration to create the agent_presets table.
+ * Stores complete JSON templates of agent nodes for quick creation.
  */
 export const migration: Migration = {
   id: MIGRATION_ID,
@@ -16,7 +16,7 @@ export const migration: Migration = {
   run: (db: BetterSqliteDatabase) => {
     log.info(`[Migration ${MIGRATION_ID}] Starting...`);
 
-    // Создаём таблицу для пресетов агентов
+    // Create agent presets table
     db.exec(`
       CREATE TABLE IF NOT EXISTS agent_presets (
         preset_id TEXT PRIMARY KEY,
@@ -35,7 +35,7 @@ export const migration: Migration = {
 
     log.info(`[Migration ${MIGRATION_ID}] Created agent_presets table`);
 
-    // Индексы для быстрого поиска
+    // Indexes for fast lookup
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_agent_presets_user_id 
       ON agent_presets(user_id);

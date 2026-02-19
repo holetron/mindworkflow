@@ -9,11 +9,11 @@ interface AgentRoutingEditorProps {
 }
 
 const OUTPUT_TYPE_OPTIONS: Array<{ value: OutputType; label: string }> = [
-  { value: 'text', label: 'Текст' },
+  { value: 'text', label: 'Text' },
   { value: 'json', label: 'JSON' },
   { value: 'markdown', label: 'Markdown' },
   { value: 'html', label: 'HTML' },
-  { value: 'code', label: 'Код' },
+  { value: 'code', label: 'Code' },
   { value: 'yaml', label: 'YAML' },
   { value: 'xml', label: 'XML' },
   { value: 'csv', label: 'CSV' }
@@ -31,7 +31,7 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
     const newRoute: OutputRoute = {
       id: `route_${Date.now()}`,
       type: 'text',
-      label: 'Новый выход',
+      label: 'New output',
       contentType: 'text/plain',
       enabled: true,
       description: ''
@@ -71,7 +71,7 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
       <div className="bg-slate-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-slate-200">
-            🔀 Настройка роутинга агента
+            🔀 Agent routing configuration
           </h2>
           <button
             onClick={onClose}
@@ -83,7 +83,7 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
 
         {/* Presets */}
         <div className="mb-6">
-          <h3 className="text-lg font-medium text-slate-300 mb-3">Шаблоны конфигурации</h3>
+          <h3 className="text-lg font-medium text-slate-300 mb-3">Configuration Templates</h3>
           <div className="flex gap-2 flex-wrap">
             {Object.entries(DEFAULT_ROUTING_CONFIGS).map(([key, preset]) => (
               <button
@@ -91,10 +91,10 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
                 onClick={() => loadPreset(key)}
                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm text-slate-300 transition-colors"
               >
-                {key === 'universal' && '🌐 Универсальный'}
-                {key === 'coding' && '💻 Программирование'}
-                {key === 'analysis' && '📊 Анализ'}
-                {key === 'creative' && '🎨 Творчество'}
+                {key === 'universal' && '🌐 Universal'}
+                {key === 'coding' && '💻 Programming'}
+                {key === 'analysis' && '📊 Analysis'}
+                {key === 'creative' && '🎨 Creativity'}
               </button>
             ))}
           </div>
@@ -103,12 +103,12 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
         {/* Output Routes */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-medium text-slate-300">Выходы агента</h3>
+            <h3 className="text-lg font-medium text-slate-300">Agent Outputs</h3>
             <button
               onClick={addOutputRoute}
               className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm text-white transition-colors"
             >
-              + Добавить выход
+              + Add output
             </button>
           </div>
           
@@ -123,7 +123,7 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
                     value={route.label}
                     onChange={(e) => updateOutputRoute(index, { label: e.target.value })}
                     className="flex-1 bg-slate-800 rounded px-2 py-1 text-slate-200 text-sm"
-                    placeholder="Название выхода"
+                    placeholder="Output name"
                   />
                   
                   <select
@@ -148,7 +148,7 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
                       onChange={(e) => updateOutputRoute(index, { enabled: e.target.checked })}
                       className="rounded"
                     />
-                    Включен
+                    Enabled
                   </label>
                   
                   <button
@@ -165,7 +165,7 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
                     value={route.description || ''}
                     onChange={(e) => updateOutputRoute(index, { description: e.target.value })}
                     className="bg-slate-800 rounded px-2 py-1 text-slate-200 text-sm"
-                    placeholder="Описание выхода"
+                    placeholder="Output description"
                   />
                   
                   <input
@@ -180,7 +180,7 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
                 {/* Route Conditions */}
                 <details className="mt-2">
                   <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-300">
-                    Условия роутинга
+                    Routing conditions
                   </summary>
                   <div className="mt-2 space-y-2">
                     <input
@@ -193,7 +193,7 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
                         }
                       })}
                       className="w-full bg-slate-800 rounded px-2 py-1 text-slate-200 text-sm"
-                      placeholder="Ключевые слова (через запятую)"
+                      placeholder="Keywords (comma-separated)"
                     />
                   </div>
                 </details>
@@ -204,12 +204,12 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
 
         {/* General Settings */}
         <div className="mb-6">
-          <h3 className="text-lg font-medium text-slate-300 mb-3">Общие настройки</h3>
+          <h3 className="text-lg font-medium text-slate-300 mb-3">General Settings</h3>
           
           <div className="bg-slate-700 rounded-lg p-4 space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-1">
-                Выход по умолчанию
+                Default output
               </label>
               <select
                 value={localConfig.defaultOutput}
@@ -235,10 +235,10 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
                   }))}
                   className="rounded"
                 />
-                Автоматический роутинг
+                Automatic routing
               </label>
               <p className="text-xs text-slate-500 mt-1">
-                Автоматически определять тип контента и направлять в соответствующий выход
+                Automatically detect content type and route to the appropriate output
               </p>
             </div>
 
@@ -258,10 +258,10 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
                       }))}
                       className="rounded"
                     />
-                    {rule === 'detectJson' && 'Определять JSON'}
-                    {rule === 'detectCode' && 'Определять код'}
-                    {rule === 'detectMarkdown' && 'Определять Markdown'}
-                    {rule === 'detectHtml' && 'Определять HTML'}
+                    {rule === 'detectJson' && 'Detect JSON'}
+                    {rule === 'detectCode' && 'Detect code'}
+                    {rule === 'detectMarkdown' && 'Detect Markdown'}
+                    {rule === 'detectHtml' && 'Detect HTML'}
                   </label>
                 ))}
               </div>
@@ -278,10 +278,10 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
                   }))}
                   className="rounded"
                 />
-                Множественные выходы
+                Multiple outputs
               </label>
               <p className="text-xs text-slate-500 mt-1">
-                Генерировать ответ в нескольких форматах одновременно
+                Generate response in multiple formats simultaneously
               </p>
             </div>
           </div>
@@ -293,13 +293,13 @@ export function AgentRoutingEditor({ config, onChange, onClose }: AgentRoutingEd
             onClick={onClose}
             className="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded text-slate-200 transition-colors"
           >
-            Отмена
+            Cancel
           </button>
           <button
             onClick={handleSave}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white transition-colors"
           >
-            Сохранить
+            Save
           </button>
         </div>
       </div>

@@ -268,7 +268,7 @@ export function collectNextNodeMetadata(
     results.push({
       node_id: targetId,
       type: target?.type ?? 'text',
-      title: target?.title ?? 'Следующий узел',
+      title: target?.title ?? 'Next node',
       short_description: buildShortDescription(target),
       connection_labels: depth === 1 && edge.label ? [edge.label] : [],
     });
@@ -307,25 +307,25 @@ export async function collectFilesFromPreviousNodes(
     'text_input',
   ]);
 
-  log.info(`\n[collectFilesFromPreviousNodes] ========== НАЧАЛО ==========`);
+  log.info(`\n[collectFilesFromPreviousNodes] ========== BEGIN ==========`);
   log.info(`[collectFilesFromPreviousNodes] currentNodeId: ${currentNodeId}`);
-  log.info(`[collectFilesFromPreviousNodes] previousNodes: ${previousNodes.length} ноды`);
-  log.info(`[collectFilesFromPreviousNodes] edges: ${edges ? edges.length : 0} всего`);
+  log.info(`[collectFilesFromPreviousNodes] previousNodes: ${previousNodes.length} nodes`);
+  log.info(`[collectFilesFromPreviousNodes] edges: ${edges ? edges.length : 0} total`);
 
   // ========== STEP 2: FIND ALL INCOMING EDGES ==========
   const incomingEdgesMap = new Map<string, string[]>();
 
   if (edges && edges.length > 0) {
-    log.info(`[collectFilesFromPreviousNodes]\n========== СКАНИРОВАНИЕ ВСЕХ EDGES ==========`);
+    log.info(`[collectFilesFromPreviousNodes]\n========== SCANNING ALL EDGES ==========`);
 
     for (const edge of edges) {
       const isIncomingEdge = edge.to_node === currentNodeId;
 
       if (isIncomingEdge) {
-        log.info(`[collectFilesFromPreviousNodes] ВХОДЯЩЕЕ EDGE: ${edge.from_node} -> ${currentNodeId}, port: '${edge.target_handle}'`);
+        log.info(`[collectFilesFromPreviousNodes] INCOMING EDGE: ${edge.from_node} -> ${currentNodeId}, port: '${edge.target_handle}'`);
 
         if (!edge.target_handle) {
-          log.info(`[collectFilesFromPreviousNodes]    БЕЗ target_handle - ПРОПУСК`);
+          log.info(`[collectFilesFromPreviousNodes]    NO target_handle - SKIP`);
           continue;
         }
 
@@ -337,13 +337,13 @@ export async function collectFilesFromPreviousNodes(
     }
   }
 
-  log.info(`[collectFilesFromPreviousNodes] НАЙДЕНО входящих edges: ${incomingEdgesMap.size}`);
-  log.info(`[collectFilesFromPreviousNodes] Ноды с входящими edges: ${Array.from(incomingEdgesMap.keys()).join(', ')}`);
+  log.info(`[collectFilesFromPreviousNodes] FOUND incoming edges: ${incomingEdgesMap.size}`);
+  log.info(`[collectFilesFromPreviousNodes] Nodes with incoming edges: ${Array.from(incomingEdgesMap.keys()).join(', ')}`);
 
   // ========== STEP 3: FILTER BY PORTS ==========
   const nodesConnectedToMediaPorts = new Set<string>();
 
-  log.info(`[collectFilesFromPreviousNodes]\n========== ФИЛЬТРАЦИЯ ПО ПОРТАМ ==========`);
+  log.info(`[collectFilesFromPreviousNodes]\n========== FILTERING BY PORTS ==========`);
 
   for (const [fromNodeId, ports] of incomingEdgesMap.entries()) {
     const mediaPortsForThisNode = ports.filter(port => mediaPortNames.has(port));
@@ -352,26 +352,26 @@ export async function collectFilesFromPreviousNodes(
       nodesConnectedToMediaPorts.add(fromNodeId);
       log.info(`[collectFilesFromPreviousNodes] ${fromNodeId}: ports [${ports.join(', ')}] -> media ports [${mediaPortsForThisNode.join(', ')}]`);
     } else {
-      log.info(`[collectFilesFromPreviousNodes] ${fromNodeId}: ports [${ports.join(', ')}] -> НЕ media ports`);
+      log.info(`[collectFilesFromPreviousNodes] ${fromNodeId}: ports [${ports.join(', ')}] -> NOT media ports`);
     }
   }
 
-  log.info(`[collectFilesFromPreviousNodes] ИТОГО: ${nodesConnectedToMediaPorts.size} нод подключены к media портам`);
+  log.info(`[collectFilesFromPreviousNodes] TOTAL: ${nodesConnectedToMediaPorts.size} nodes connected to media ports`);
 
   // ========== STEP 4: COLLECT FILES FROM MATCHING NODES ==========
-  log.info(`[collectFilesFromPreviousNodes]\n========== ОБРАБОТКА НОД ==========`);
+  log.info(`[collectFilesFromPreviousNodes]\n========== PROCESSING NODES ==========`);
 
   for (const node of previousNodes) {
     const hasIncomingEdge = incomingEdgesMap.has(node.node_id);
     const isMediaNode = nodesConnectedToMediaPorts.has(node.node_id);
 
     if (!hasIncomingEdge) {
-      log.info(`[collectFilesFromPreviousNodes] - ${node.node_id} (${node.type}): НЕТ входящих edges -> ПРОПУСК`);
+      log.info(`[collectFilesFromPreviousNodes] - ${node.node_id} (${node.type}): NO incoming edges -> SKIP`);
       continue;
     }
 
     if (!isMediaNode) {
-      log.info(`[collectFilesFromPreviousNodes] - ${node.node_id} (${node.type}): входящие edges НЕ к media портам -> ПРОПУСК`);
+      log.info(`[collectFilesFromPreviousNodes] - ${node.node_id} (${node.type}): incoming edges NOT to media ports -> SKIP`);
       continue;
     }
 
@@ -379,7 +379,7 @@ export async function collectFilesFromPreviousNodes(
     const mediaPortsForThisNode = portsForThisNode.filter(port => mediaPortNames.has(port));
     const primaryPort = mediaPortsForThisNode[0] || 'reference_image';
 
-    log.info(`[collectFilesFromPreviousNodes] - ${node.node_id} (${node.type}): ВКЛЮЧАЕМ (ports: [${mediaPortsForThisNode.join(', ')}])`);
+    log.info(`[collectFilesFromPreviousNodes] - ${node.node_id} (${node.type}): INCLUDING (ports: [${mediaPortsForThisNode.join(', ')}])`);
 
     // Process file nodes
     if (node.type === 'file' && node.content) {
@@ -466,10 +466,10 @@ export async function collectFilesFromPreviousNodes(
     }
   }
 
-  log.info(`[collectFilesFromPreviousNodes]\n========== ИТОГ ==========`);
-  log.info(`[collectFilesFromPreviousNodes] ВОЗВРАЩАЕМ: ${files.length} файлов`);
+  log.info(`[collectFilesFromPreviousNodes]\n========== RESULT ==========`);
+  log.info(`[collectFilesFromPreviousNodes] RETURNING: ${files.length} files`);
   if (files.length > 0) {
-    log.info(`[collectFilesFromPreviousNodes] Файлы: ${files.map(f => `${f.name} (${f.type})`).join(', ')}`);
+    log.info(`[collectFilesFromPreviousNodes] Files: ${files.map(f => `${f.name} (${f.type})`).join(', ')}`);
   }
   log.info(`[collectFilesFromPreviousNodes] ==========\n`);
 

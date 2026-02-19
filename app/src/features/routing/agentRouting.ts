@@ -80,10 +80,10 @@ export const DEFAULT_ROUTING_CONFIGS: Record<string, AgentRoutingConfig> = {
       {
         id: 'text',
         type: 'text',
-        label: 'Текст',
+        label: 'Text',
         contentType: 'text/plain',
         enabled: true,
-        description: 'Обычный текстовый ответ'
+        description: 'Plain text response'
       },
       {
         id: 'markdown',
@@ -91,7 +91,7 @@ export const DEFAULT_ROUTING_CONFIGS: Record<string, AgentRoutingConfig> = {
         label: 'Markdown',
         contentType: 'text/markdown',
         enabled: true,
-        description: 'Форматированный markdown текст'
+        description: 'Formatted markdown text'
       },
       {
         id: 'json',
@@ -99,7 +99,7 @@ export const DEFAULT_ROUTING_CONFIGS: Record<string, AgentRoutingConfig> = {
         label: 'JSON',
         contentType: 'application/json',
         enabled: true,
-        description: 'Структурированные данные JSON'
+        description: 'Structured JSON data'
       },
       {
         id: 'html',
@@ -107,15 +107,15 @@ export const DEFAULT_ROUTING_CONFIGS: Record<string, AgentRoutingConfig> = {
         label: 'HTML',
         contentType: 'text/html',
         enabled: false,
-        description: 'HTML разметка'
+        description: 'HTML markup'
       },
       {
         id: 'code',
         type: 'code',
-        label: 'Код',
+        label: 'Code',
         contentType: 'text/plain',
         enabled: false,
-        description: 'Программный код'
+        description: 'Program code'
       }
     ],
     defaultOutput: 'text',
@@ -140,18 +140,18 @@ export const DEFAULT_ROUTING_CONFIGS: Record<string, AgentRoutingConfig> = {
       {
         id: 'code',
         type: 'code',
-        label: 'Код',
+        label: 'Code',
         contentType: 'text/plain',
         enabled: true,
-        description: 'Программный код с подсветкой синтаксиса'
+        description: 'Code with syntax highlighting'
       },
       {
         id: 'markdown',
         type: 'markdown',
-        label: 'Документация',
+        label: 'Documentation',
         contentType: 'text/markdown',
         enabled: true,
-        description: 'Документация в markdown'
+        description: 'Documentation in markdown'
       },
       {
         id: 'json',
@@ -159,15 +159,15 @@ export const DEFAULT_ROUTING_CONFIGS: Record<string, AgentRoutingConfig> = {
         label: 'Config',
         contentType: 'application/json',
         enabled: true,
-        description: 'Конфигурационные файлы'
+        description: 'Configuration files'
       },
       {
         id: 'text',
         type: 'text',
-        label: 'Пояснения',
+        label: 'Explanations',
         contentType: 'text/plain',
         enabled: true,
-        description: 'Текстовые пояснения'
+        description: 'Text explanations'
       }
     ],
     defaultOutput: 'code',
@@ -192,10 +192,10 @@ export const DEFAULT_ROUTING_CONFIGS: Record<string, AgentRoutingConfig> = {
       {
         id: 'json',
         type: 'json',
-        label: 'Данные',
+        label: 'Data',
         contentType: 'application/json',
         enabled: true,
-        description: 'Структурированные результаты анализа'
+        description: 'Structured analysis results'
       },
       {
         id: 'csv',
@@ -203,23 +203,23 @@ export const DEFAULT_ROUTING_CONFIGS: Record<string, AgentRoutingConfig> = {
         label: 'CSV',
         contentType: 'text/csv',
         enabled: true,
-        description: 'Табличные данные'
+        description: 'Tabular data'
       },
       {
         id: 'markdown',
         type: 'markdown',
-        label: 'Отчет',
+        label: 'Report',
         contentType: 'text/markdown',
         enabled: true,
-        description: 'Отчет в markdown'
+        description: 'Report in markdown'
       },
       {
         id: 'text',
         type: 'text',
-        label: 'Выводы',
+        label: 'Conclusions',
         contentType: 'text/plain',
         enabled: true,
-        description: 'Текстовые выводы'
+        description: 'Text conclusions'
       }
     ],
     defaultOutput: 'json',
@@ -244,10 +244,10 @@ export const DEFAULT_ROUTING_CONFIGS: Record<string, AgentRoutingConfig> = {
       {
         id: 'markdown',
         type: 'markdown',
-        label: 'Контент',
+        label: 'Content',
         contentType: 'text/markdown',
         enabled: true,
-        description: 'Креативный контент в markdown'
+        description: 'Creative content in markdown'
       },
       {
         id: 'html',
@@ -255,23 +255,23 @@ export const DEFAULT_ROUTING_CONFIGS: Record<string, AgentRoutingConfig> = {
         label: 'HTML',
         contentType: 'text/html',
         enabled: true,
-        description: 'HTML для веб-контента'
+        description: 'HTML for web content'
       },
       {
         id: 'text',
         type: 'text',
-        label: 'Текст',
+        label: 'Text',
         contentType: 'text/plain',
         enabled: true,
-        description: 'Простой текст'
+        description: 'Plain text'
       },
       {
         id: 'json',
         type: 'json',
-        label: 'Метаданные',
+        label: 'Metadata',
         contentType: 'application/json',
         enabled: false,
-        description: 'Метаданные контента'
+        description: 'Content metadata'
       }
     ],
     defaultOutput: 'markdown',

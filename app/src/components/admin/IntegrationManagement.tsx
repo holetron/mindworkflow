@@ -54,8 +54,8 @@ export function IntegrationManagement({
         <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <h2 className="text-base font-semibold text-white">Глобальные интеграции</h2>
-              <p className="text-xs text-slate-500">Хранение API ключей для провайдеров</p>
+              <h2 className="text-base font-semibold text-white">Global Integrations</h2>
+              <p className="text-xs text-slate-500">API Key storage for providers</p>
             </div>
             <button
               type="button"
@@ -72,23 +72,23 @@ export function IntegrationManagement({
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-dashed border-slate-600 px-3 py-2 text-sm text-slate-200 transition hover:border-primary hover:text-primary"
           >
             <Plus className="h-4 w-4" />
-            Новая интеграция
+            New integration
           </button>
 
           {integrationsError && (
             <div className="mt-3 rounded border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
-              Не удалось загрузить интеграции: {integrationsError}
+              Failed to load integrations: {integrationsError}
             </div>
           )}
 
           <div className="mt-4 space-y-2 overflow-y-auto pr-1" style={{ maxHeight: '26rem' }}>
             {integrationsLoading && !integrations.length ? (
               <div className="rounded border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-400">
-                Загрузка интеграций...
+                Loading integrations...
               </div>
             ) : integrations.length === 0 ? (
               <div className="rounded border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-400">
-                Интеграции не найдены.
+                No integrations found.
               </div>
             ) : (
               integrations.map((integration) => {
@@ -115,11 +115,11 @@ export function IntegrationManagement({
                       <div
                         className={`text-xs font-medium ${integration.enabled ? 'text-emerald-300' : 'text-amber-300'}`}
                       >
-                        {integration.enabled ? 'Активна' : 'Выключена'}
+                        {integration.enabled ? 'Active' : 'Disabled'}
                       </div>
                     </div>
                     <div className="mt-2 text-xs text-slate-500">
-                      Обновлена: {formatDateTime(integration.updatedAt)}
+                      Updated: {formatDateTime(integration.updatedAt)}
                     </div>
                   </button>
                 );
@@ -135,10 +135,10 @@ export function IntegrationManagement({
           <div className="flex items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-semibold text-white">
-                {integrationForm?.id ? 'Редактирование интеграции' : integrationForm ? 'Новая интеграция' : 'Выберите интеграцию'}
+                {integrationForm?.id ? 'Editing integration' : integrationForm ? 'New integration' : 'Select integration'}
               </h2>
               <p className="text-xs text-slate-500">
-                Укажите владельца, ключи API и статус доступности провайдера
+                Specify the owner, API keys and provider availability status
               </p>
             </div>
             {integrationForm && (
@@ -147,7 +147,7 @@ export function IntegrationManagement({
                 onClick={onCancelIntegrationEdit}
                 className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300 transition hover:border-slate-500 hover:text-slate-100"
               >
-                Сбросить
+                Reset
               </button>
             )}
           </div>
@@ -162,14 +162,14 @@ export function IntegrationManagement({
             >
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="flex flex-col gap-1 text-xs text-slate-400">
-                  Пользователь
+                  User
                   <select
                     value={integrationForm.userId}
                     onChange={(event) => onIntegrationFormChange('userId', event.target.value)}
                     disabled={Boolean(integrationForm.id) || integrationSubmitting}
                     className="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
                   >
-                    <option value="">-- Выберите пользователя --</option>
+                    <option value="">-- Select user --</option>
                     {users.map((user) => (
                       <option key={user.user_id} value={user.user_id}>
                         {user.email}
@@ -178,7 +178,7 @@ export function IntegrationManagement({
                   </select>
                 </label>
                 <label className="flex flex-col gap-1 text-xs text-slate-400">
-                  Провайдер
+                  Provider
                   <select
                     value={integrationForm.providerId}
                     onChange={(event) => onIntegrationFormChange('providerId', event.target.value)}
@@ -195,28 +195,28 @@ export function IntegrationManagement({
               </div>
 
               <label className="flex flex-col gap-1 text-xs text-slate-400">
-                Название интеграции
+                Integration Name
                 <input
                   value={integrationForm.name}
                   onChange={(event) => onIntegrationFormChange('name', event.target.value)}
                   className="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
-                  placeholder="Например, OpenAI Prod"
+                  placeholder="e.g., OpenAI Prod"
                 />
               </label>
 
               <label className="flex flex-col gap-1 text-xs text-slate-400">
-                Описание
+                Description
                 <textarea
                   value={integrationForm.description}
                   onChange={(event) => onIntegrationFormChange('description', event.target.value)}
                   className="h-20 rounded border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
-                  placeholder="Краткое описание назначения интеграции"
+                  placeholder="Brief description of integration purpose"
                 />
               </label>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="flex flex-col gap-1 text-xs text-slate-400">
-                  API ключ / токен
+                  API Key / token
                   <input
                     value={integrationForm.apiKey}
                     onChange={(event) => onIntegrationFormChange('apiKey', event.target.value)}
@@ -241,12 +241,12 @@ export function IntegrationManagement({
                         );
                       }}
                     >
-                      Ключ сохранён &bull; Сменить
+                      Key saved &bull; Change
                     </button>
                   )}
                 </label>
                 <label className="flex flex-col gap-1 text-xs text-slate-400">
-                  Базовый URL
+                  Base URL
                   <input
                     value={integrationForm.baseUrl}
                     onChange={(event) => onIntegrationFormChange('baseUrl', event.target.value)}
@@ -258,7 +258,7 @@ export function IntegrationManagement({
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="flex flex-col gap-1 text-xs text-slate-400">
-                  Организация / аккаунт
+                  Organization / account
                   <input
                     value={integrationForm.organization}
                     onChange={(event) => onIntegrationFormChange('organization', event.target.value)}
@@ -267,12 +267,12 @@ export function IntegrationManagement({
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-xs text-slate-400">
-                  Системный промпт
+                  System Prompt
                   <input
                     value={integrationForm.systemPrompt}
                     onChange={(event) => onIntegrationFormChange('systemPrompt', event.target.value)}
                     className="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
-                    placeholder="Промпт по умолчанию"
+                    placeholder="Default prompt"
                   />
                 </label>
               </div>
@@ -286,17 +286,17 @@ export function IntegrationManagement({
                     disabled={integrationSubmitting}
                     className="h-4 w-4"
                   />
-                  Интеграция активна
+                  Integration active
                 </label>
                 <div className="text-xs text-slate-500">
-                  Обновлено: {selectedIntegration ? formatDateTime(selectedIntegration.updatedAt) : '\u2014'}
+                  Updated: {selectedIntegration ? formatDateTime(selectedIntegration.updatedAt) : '\u2014'}
                 </div>
               </div>
 
               {selectedIntegration?.models && selectedIntegration.models.length > 0 && (
                 <div className="rounded border border-slate-800 bg-slate-950/50 p-4">
                   <div className="text-xs uppercase tracking-wide text-slate-500">
-                    Доступные модели ({selectedIntegration.models.length})
+                    Available models ({selectedIntegration.models.length})
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-300">
                     {selectedIntegration.models.map((model) => (
@@ -306,7 +306,7 @@ export function IntegrationManagement({
                     ))}
                   </div>
                   <div className="mt-2 text-xs text-slate-500">
-                    Обновлены: {selectedIntegration.modelsUpdatedAt ? formatDateTime(selectedIntegration.modelsUpdatedAt) : 'не загружались'}
+                    Models updated: {selectedIntegration.modelsUpdatedAt ? formatDateTime(selectedIntegration.modelsUpdatedAt) : 'never loaded'}
                   </div>
                 </div>
               )}
@@ -318,7 +318,7 @@ export function IntegrationManagement({
                   className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-primary/40"
                 >
                   {integrationSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit3 className="h-4 w-4" />}
-                  Сохранить
+                  Save
                 </button>
                 {integrationForm.id && (
                   <button
@@ -328,14 +328,14 @@ export function IntegrationManagement({
                     className="flex items-center gap-2 rounded-full border border-rose-600 px-4 py-2 text-sm text-rose-200 transition hover:border-rose-500 hover:text-rose-100 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500"
                   >
                     <Trash2 className="h-4 w-4" />
-                    Удалить
+                    Delete
                   </button>
                 )}
               </div>
             </form>
           ) : (
             <div className="mt-6 rounded border border-slate-800 bg-slate-950/60 p-6 text-sm text-slate-400">
-              Выберите интеграцию слева или создайте новую.
+              Select an integration on the left or create a new one.
             </div>
           )}
         </div>

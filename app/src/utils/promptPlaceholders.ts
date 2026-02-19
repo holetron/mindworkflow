@@ -147,18 +147,18 @@ export function buildUserPromptTemplate(placeholders: PlaceholderInfo[]): string
   const lines: string[] = [];
 
   if (placeholders.length > 0) {
-    lines.push('Заполните значения (измените текст в кавычках ниже):');
+    lines.push('Fill in the values (replace the text in quotes below):');
     for (const placeholder of placeholders) {
       const serializedValue = JSON.stringify(placeholder.resolvedValue ?? '');
       const sourceNote = placeholder.reference
-        ? `  (источник: ${placeholder.reference}${placeholder.resolvedValue === undefined ? ' — не найден' : ''})`
+        ? `  (source: ${placeholder.reference}${placeholder.resolvedValue === undefined ? ' — not found' : ''})`
         : '';
       lines.push(`${JSON.stringify(placeholder.name)}: ${serializedValue}${sourceNote}`);
     }
     lines.push('');
   }
 
-  lines.push('Основной промпт:');
+  lines.push('Main prompt:');
   return lines.join('\n');
 }
 

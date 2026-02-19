@@ -21,18 +21,18 @@ interface PlannerSettingsModalProps {
 }
 
 const DEFAULT_NODE_TYPES: NodeTypeConfig[] = [
-  { type: 'text', name: 'Текстовые ноды', description: 'Для заметок, описаний, постановки задач', color: '#64748b', icon: '📝', enabled: true },
-  { type: 'ai', name: 'AI-агенты', description: 'Для генерации контента и обработки данных', color: '#8b5cf6', icon: '🤖', enabled: true },
-  { type: 'ai_improved', name: 'Улучшенные AI-агенты', description: 'Расширенные возможности ИИ', color: '#8b5cf6', icon: '🧠', enabled: true },
-  { type: 'python', name: 'Python скрипты', description: 'Для вычислений и обработки данных', color: '#6b7280', icon: '🐍', enabled: true },
-  { type: 'image', name: 'Изображения', description: 'Для визуализации и диаграмм', color: '#ec4899', icon: '🖼️', enabled: true },
-  { type: 'video', name: 'Видео контент', description: 'Для демонстраций и обучающих материалов', color: '#06b6d4', icon: '🎬', enabled: true },
-  { type: 'audio', name: 'Аудио контент', description: 'Для подкастов и записей', color: '#84cc16', icon: '🔊', enabled: true },
-  { type: 'html', name: 'HTML страницы', description: 'Для веб-контента и интерфейсов', color: '#f97316', icon: '🌐', enabled: true },
-  { type: 'markdown', name: 'Markdown документы', description: 'Для отчетов и документации', color: '#6b7280', icon: '📄', enabled: true },
-  { type: 'json', name: 'JSON данные', description: 'Для структурированных результатов', color: '#6b7280', icon: '📊', enabled: true },
-  { type: 'file', name: 'Файлы', description: 'Для документов и ресурсов', color: '#f59e0b', icon: '📁', enabled: true },
-  { type: 'router', name: 'Роутеры', description: 'Для условной логики и маршрутизации', color: '#6b7280', icon: '🔀', enabled: false },
+  { type: 'text', name: 'Text Nodes', description: 'For notes, descriptions, task definitions', color: '#64748b', icon: '📝', enabled: true },
+  { type: 'ai', name: 'AI Agents', description: 'For content generation and data processing', color: '#8b5cf6', icon: '🤖', enabled: true },
+  { type: 'ai_improved', name: 'Enhanced AI Agents', description: 'Extended AI capabilities', color: '#8b5cf6', icon: '🧠', enabled: true },
+  { type: 'python', name: 'Python scripts', description: 'For computations and data processing', color: '#6b7280', icon: '🐍', enabled: true },
+  { type: 'image', name: 'Images', description: 'For visualizations and diagrams', color: '#ec4899', icon: '🖼️', enabled: true },
+  { type: 'video', name: 'Video Content', description: 'For demos and educational materials', color: '#06b6d4', icon: '🎬', enabled: true },
+  { type: 'audio', name: 'Audio Content', description: 'For podcasts and recordings', color: '#84cc16', icon: '🔊', enabled: true },
+  { type: 'html', name: 'HTML Pages', description: 'For web content and interfaces', color: '#f97316', icon: '🌐', enabled: true },
+  { type: 'markdown', name: 'Markdown Documents', description: 'For reports and documentation', color: '#6b7280', icon: '📄', enabled: true },
+  { type: 'json', name: 'JSON Data', description: 'For structured results', color: '#6b7280', icon: '📊', enabled: true },
+  { type: 'file', name: 'Files', description: 'For documents and resources', color: '#f59e0b', icon: '📁', enabled: true },
+  { type: 'router', name: 'Routers', description: 'For conditional logic and routing', color: '#6b7280', icon: '🔀', enabled: false },
 ];
 
 export function PlannerSettingsModal({ 
@@ -121,9 +121,9 @@ export function PlannerSettingsModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-600">
           <div>
-            <h3 className="text-lg font-semibold text-white">Настройки планировщика</h3>
+            <h3 className="text-lg font-semibold text-white">Planner Settings</h3>
             <p className="text-sm text-slate-400 mt-1">
-              Выберите типы нод, которые агент может использовать для создания workflow
+              Select node types that the agent can use for workflow creation
             </p>
           </div>
           <button
@@ -137,7 +137,7 @@ export function PlannerSettingsModal({
         <div className="flex h-[65vh]">
           {/* Left Panel - Node Types */}
           <div className="w-1/2 p-6 border-r border-slate-600 overflow-y-auto">
-            <h4 className="text-base font-medium text-white mb-4">Доступные типы нод</h4>
+            <h4 className="text-base font-medium text-white mb-4">Available Node Types</h4>
             <div className="space-y-2">
               {nodeTypes.map(nodeType => (
                 <label
@@ -170,7 +170,7 @@ export function PlannerSettingsModal({
 
             <div className="mt-6 p-4 bg-slate-700/50 rounded-lg border border-slate-600">
               <p className="text-sm text-slate-300 mb-2">
-                <strong>Выбрано:</strong> {nodeTypes.filter(nt => nt.enabled).length} из {nodeTypes.length} типов
+                <strong>Selected:</strong> {nodeTypes.filter(nt => nt.enabled).length} of {nodeTypes.length} types
               </p>
               <div className="flex flex-wrap gap-2">
                 {nodeTypes.filter(nt => nt.enabled).map(nt => (
@@ -189,12 +189,12 @@ export function PlannerSettingsModal({
           {/* Right Panel - Example Output */}
           <div className="w-1/2 p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-base font-medium text-white">Пример вывода для агента</h4>
+              <h4 className="text-base font-medium text-white">Output example for agent</h4>
               <button
                 onClick={() => setOutputExample(generateDefaultExample(nodeTypes.filter(nt => nt.enabled)))}
                 className="px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/50 text-blue-300 rounded text-sm transition"
               >
-                Обновить пример
+                Refresh example
               </button>
             </div>
             
@@ -203,13 +203,13 @@ export function PlannerSettingsModal({
               onChange={(e) => setOutputExample(e.target.value)}
               className="flex-1 p-4 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white placeholder-slate-400 resize-none font-mono"
               style={{ fontSize: '12px', lineHeight: '1.4' }}
-              placeholder="JSON формат для агента-планировщика..."
+              placeholder="JSON format for planner agent..."
             />
 
             <div className="mt-4 p-3 bg-amber-900/20 border border-amber-600/30 rounded-lg">
               <p className="text-xs text-amber-300">
-                <strong>💡 Совет:</strong> Агент будет видеть только выбранные типы нод и сможет 
-                создавать workflow только из них. Отключите ненужные типы для более точных результатов.
+                <strong>💡 Tip:</strong> The agent will only see selected node types and will be able to 
+                create workflows only from them. Disable unnecessary types for more accurate results.
               </p>
             </div>
           </div>
@@ -221,13 +221,13 @@ export function PlannerSettingsModal({
             onClick={onClose}
             className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
           >
-            Отмена
+            Cancel
           </button>
           <button
             onClick={handleSave}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition"
           >
-            Сохранить настройки
+            Save Settings
           </button>
         </div>
       </div>
@@ -247,8 +247,8 @@ function generateDefaultExample(enabledTypes: NodeTypeConfig[]): string {
   if (enabledTypes.find(t => t.type === 'text')) {
     exampleNodes.push({
       type: "text",
-      title: "1. Постановка задачи",
-      content: "Определяем цели и требования проекта"
+      title: "1. Task Definition",
+      content: "Define project goals and requirements"
     });
   }
 
@@ -256,8 +256,8 @@ function generateDefaultExample(enabledTypes: NodeTypeConfig[]): string {
   if (enabledTypes.find(t => t.type === 'python')) {
     exampleNodes.push({
       type: "python",
-      title: "2. Обработка данных",
-      content: "import pandas as pd\n# Загрузка и анализ данных\ndata = pd.read_csv('input.csv')"
+      title: "2. Data Processing",
+      content: "import pandas as pd\n# Loading and data analysis\ndata = pd.read_csv('input.csv')"
     });
   }
 
@@ -265,10 +265,10 @@ function generateDefaultExample(enabledTypes: NodeTypeConfig[]): string {
   if (enabledTypes.find(t => t.type === 'ai')) {
     exampleNodes.push({
       type: "ai",
-      title: "3. Анализ результатов",
-      content: "Проанализируй обработанные данные и сделай выводы",
+      title: "3. Results Analysis",
+      content: "Analyze processed data and draw conclusions",
       ai: {
-        system_prompt: "Ты - эксперт по анализу данных",
+        system_prompt: "You are a data analysis expert",
         temperature: 0.3
       }
     });
@@ -278,9 +278,9 @@ function generateDefaultExample(enabledTypes: NodeTypeConfig[]): string {
   if (enabledTypes.find(t => t.type === 'markdown')) {
     exampleNodes.push({
       type: "text",
-      title: "4. Отчет",
+      title: "4. Report",
       content_type: "text/markdown",
-      content: "# Результаты анализа\n\n## Основные выводы\n- Ключевые находки"
+      content: "# Analysis Results\n\n## Key Findings\n- Key findings"
     });
   }
 
@@ -288,22 +288,22 @@ function generateDefaultExample(enabledTypes: NodeTypeConfig[]): string {
   if (enabledTypes.find(t => t.type === 'image')) {
     exampleNodes.push({
       type: "image",
-      title: "5. Визуализация",
-      content: "Создание графиков и диаграмм для презентации результатов"
+      title: "5. Visualization",
+      content: "Creating charts and diagrams to present results"
     });
   }
 
   return JSON.stringify({ nodes: exampleNodes }, null, 2);
 }
 
-// Базовый пример для простых агентов (не планировщиков)
+// Basic example for simple agents (not planners)
 export function generateSimpleExample(): string {
   return JSON.stringify({
     "nodes": [
       {
         "type": "text",
-        "title": "Ответ",
-        "content": "Здесь будет ваш ответ или результат выполнения задачи"
+        "title": "Response",
+        "content": "Your answer or task execution result will appear here"
       }
     ]
   }, null, 2);
@@ -322,31 +322,31 @@ export function generatePlannerPrompt(enabledTypes: NodeTypeConfig[]): string {
     `- ${nt.type}: ${nt.description.toLowerCase()} (${nt.icon})`
   ).join('\n');
 
-  return `Ты - агент-планировщик workflow. Твоя задача создавать структурированные планы в виде множественных нод.
+  return `You are a workflow planner agent. Your task is to create structured plans as multiple nodes.
 
-ДОСТУПНЫЕ ТИПЫ НОД:
+AVAILABLE NODE TYPES:
 ${availableTypes}
 
-ЦВЕТОВАЯ СХЕМА НОД (для создания визуально понятной карты):
+NODE COLOR SCHEME (for creating a visually clear map):
 ${colorInfo}
 
-ПРАВИЛА СОЗДАНИЯ НОД:
-1. Всегда указывай type и title (обязательно!)
-2. Добавляй content с описанием того, что должна делать нода
-3. Для AI-нод добавляй ai конфигурацию с system_prompt
-4. Создавай логическую последовательность - от постановки задачи к результату
-5. Используй только типы нод из списка выше
-6. Подбирай типы так, чтобы получалась красивая цветовая карта
+NODE CREATION RULES:
+1. Always specify type and title (required!)
+2. Add content describing what the node should do
+3. For AI nodes add ai configuration with system_prompt
+4. Create a logical sequence - from task definition to result
+5. Use only node types from the list above
+6. Choose types to create a visually appealing color map
 
-ФОРМАТ ОТВЕТА (строго JSON):
+RESPONSE FORMAT (strictly JSON):
 {
   "nodes": [
     {
-      "type": "тип_ноды",
-      "title": "Название ноды", 
-      "content": "Описание задачи ноды",
+      "type": "node_type",
+      "title": "Node Name", 
+      "content": "Node task description",
       "ai": {
-        "system_prompt": "Инструкции для ИИ",
+        "system_prompt": "Instructions for AI",
         "model": "gpt-4",
         "temperature": 0.7
       }
@@ -354,8 +354,8 @@ ${colorInfo}
   ]
 }
 
-ПРИМЕРЫ ИСПОЛЬЗОВАНИЯ ДОСТУПНЫХ ТИПОВ:
+EXAMPLES OF USING AVAILABLE TYPES:
 ${examples}
 
-Создавай практичные и полезные workflow с красивой цветовой схемой, используя только разрешенные типы нод!`;
+Create practical and useful workflows with a beautiful color scheme, using only allowed node types!`;
 }

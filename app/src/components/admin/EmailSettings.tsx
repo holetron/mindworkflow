@@ -34,26 +34,26 @@ export function EmailSettings({
     <section className="space-y-4">
       {emailError && (
         <div className="rounded border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-sm text-rose-200">
-          Не удалось загрузить настройки: {emailError}
+          Failed to load settings: {emailError}
         </div>
       )}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-sm">
         <header className="mb-4">
-          <h2 className="text-lg font-semibold text-white">Почта и Google OAuth</h2>
+          <h2 className="text-lg font-semibold text-white">Mail and Google OAuth</h2>
           <p className="mt-1 text-sm text-slate-400">
-            Используется для рассылки писем и входа через Google.
+            Used for sending emails and Google sign-in.
           </p>
         </header>
         {emailLoading && !emailConfig ? (
           <div className="flex items-center gap-2 text-sm text-slate-400">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Загрузка текущих значений...
+            Loading current values...
           </div>
         ) : (
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="text-xs uppercase tracking-wide text-slate-400">Gmail отправитель</label>
+                <label className="text-xs uppercase tracking-wide text-slate-400">Gmail sender</label>
                 <input
                   type="email"
                   value={emailForm.gmailUser}
@@ -71,9 +71,9 @@ export function EmailSettings({
                   onChange={(event) => onEmailFieldChange('gmailAppPassword', event.target.value)}
                   className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
                   disabled={emailLoading || emailSubmitting}
-                  placeholder="Введите новый пароль приложений"
+                  placeholder="Enter new app password"
                 />
-                <p className="mt-1 text-xs text-slate-500">16 символов без пробелов. Оставьте пустым, чтобы не менять.</p>
+                <p className="mt-1 text-xs text-slate-500">16 characters without spaces. Leave empty to keep current.</p>
               </div>
               <div>
                 <label className="text-xs uppercase tracking-wide text-slate-400">Frontend URL</label>
@@ -105,22 +105,22 @@ export function EmailSettings({
                   onChange={(event) => onEmailFieldChange('googleClientSecret', event.target.value)}
                   className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
                   disabled={emailLoading || emailSubmitting}
-                  placeholder="Введите только при обновлении секрета"
+                  placeholder="Enter only when updating the secret"
                 />
               </div>
             </div>
             {emailConfig && (
               <div className="rounded border border-slate-800/60 bg-slate-950/40 p-3 text-xs text-slate-400">
                 <div>
-                  Статус SMTP:{' '}
+                  Status SMTP:{' '}
                   <span className={emailConfig.gmailConfigured ? 'text-emerald-300' : 'text-rose-300'}>
-                    {emailConfig.gmailConfigured ? 'активен' : 'не настроен'}
+                    {emailConfig.gmailConfigured ? 'active' : 'not configured'}
                   </span>
                 </div>
                 <div className="mt-1">
                   Google OAuth:{' '}
                   <span className={emailConfig.googleClientConfigured ? 'text-emerald-300' : 'text-rose-300'}>
-                    {emailConfig.googleClientConfigured ? 'настроен' : 'не настроен'}
+                    {emailConfig.googleClientConfigured ? 'configured' : 'not configured'}
                   </span>
                 </div>
                 {emailConfig.googleClientId && (
@@ -146,7 +146,7 @@ export function EmailSettings({
                 disabled={emailTesting || emailSubmitting || emailLoading}
                 className="rounded-full border border-primary px-4 py-1 text-sm font-medium text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500"
               >
-                {emailTesting ? 'Проверка...' : 'Проверить SMTP'}
+                {emailTesting ? 'Checking...' : 'Test SMTP'}
               </button>
               <button
                 type="button"
@@ -154,7 +154,7 @@ export function EmailSettings({
                 disabled={emailSubmitting || emailLoading}
                 className="rounded-full bg-primary px-4 py-1 text-sm font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-slate-700"
               >
-                {emailSubmitting ? 'Сохранение...' : 'Сохранить настройки'}
+                {emailSubmitting ? 'Saving...' : 'Save Settings'}
               </button>
             </div>
           </div>

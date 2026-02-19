@@ -122,7 +122,7 @@ export function addProjectEdge(
   if (status === 'duplicate') {
     result.notification = {
       code: 'duplicate_edge',
-      message: `Соединение ${edge.from} → ${edge.to} уже существует`,
+      message: `Connection ${edge.from} -> ${edge.to} already exists`,
       severity: 'warning',
     };
   }

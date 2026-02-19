@@ -17,12 +17,12 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    // Обновляем состояние, чтобы следующий рендер показал fallback UI
+    // Update state so the next render shows fallback UI
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Логируем ошибку для отладки
+    // Log the error for debugging
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
@@ -37,7 +37,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
         return <FallbackComponent error={this.state.error} onRetry={this.handleRetry} />;
       }
 
-      // Стандартный fallback UI
+      // Default fallback UI
       return (
         <div className="flex h-full items-center justify-center p-6">
           <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-6 text-center">
@@ -46,9 +46,9 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
             </div>
-            <h3 className="mb-2 text-lg font-semibold text-slate-100">Что-то пошло не так</h3>
+            <h3 className="mb-2 text-lg font-semibold text-slate-100">Something went wrong</h3>
             <p className="mb-4 text-sm text-slate-400">
-              {this.state.error?.message || 'Произошла неожиданная ошибка'}
+              {this.state.error?.message || 'An unexpected error occurred'}
             </p>
             <div className="flex gap-2">
               <button
@@ -56,23 +56,23 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                 className="rounded bg-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-600"
                 onClick={this.handleRetry}
               >
-                Попробовать снова
+                Try Again
               </button>
               <button
                 type="button"
                 className="rounded bg-red-700 px-4 py-2 text-sm text-red-200 hover:bg-red-600"
                 onClick={() => {
-                  const errorMessage = this.state.error?.message || 'Неизвестная ошибка';
+                  const errorMessage = this.state.error?.message || 'Unknown error';
                   const stack = this.state.error?.stack || '';
-                  const errorDetails = `Ошибка: ${errorMessage}\n\nСтек: ${stack}`;
+                  const errorDetails = `Error: ${errorMessage}\n\nStack: ${stack}`;
                   navigator.clipboard.writeText(errorDetails).then(() => {
-                    alert('Ошибка скопирована в буфер обмена. Отправьте её разработчику.');
+                    alert('Error copied to clipboard. Send it to the developer.');
                   }).catch(() => {
                     alert(errorDetails);
                   });
                 }}
               >
-                Сообщить об ошибке
+                Report error
               </button>
             </div>
           </div>
@@ -84,13 +84,13 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
-// Простой компонент fallback для интеграций
+// Simple fallback component for integrations
 export function IntegrationErrorFallback({ error, onRetry }: { error?: Error; onRetry?: () => void }) {
   return (
     <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-center">
-      <h4 className="mb-2 text-sm font-semibold text-red-400">Ошибка загрузки интеграций</h4>
+      <h4 className="mb-2 text-sm font-semibold text-red-400">Integration loading error</h4>
       <p className="mb-3 text-xs text-slate-400">
-        {error?.message || 'Не удалось загрузить настройки интеграций'}
+        {error?.message || 'Failed to load integration settings'}
       </p>
       {onRetry && (
         <button
@@ -98,7 +98,7 @@ export function IntegrationErrorFallback({ error, onRetry }: { error?: Error; on
           className="rounded bg-slate-700 px-3 py-1 text-xs text-slate-200 hover:bg-slate-600"
           onClick={onRetry}
         >
-          Перезагрузить
+          Reload
         </button>
       )}
     </div>

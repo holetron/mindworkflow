@@ -92,8 +92,8 @@ export async function runOpenAi(
       ? { type: 'json_schema', json_schema: { name: `node_${context.node.node_id}`, schema } }
       : undefined;
 
-  const defaultPlanPrompt = 'Ты ассистент, который всегда возвращает результат в виде JSON с одной или несколькими нодами. Каждая нода должна иметь type, title и content. Для простых задач создавай одну ноду с type="text", для сложных - план из нескольких нод.';
-  const defaultTextPrompt = 'Ты внимательный ассистент. Отвечай обычным текстом или Markdown, без JSON и служебных префиксов. Дай краткий, точный и полезный ответ.';
+  const defaultPlanPrompt = 'You are an assistant that always returns results as JSON with one or more nodes. Each node must have type, title, and content. For simple tasks create one node with type="text", for complex ones create a plan with multiple nodes.';
+  const defaultTextPrompt = 'You are a thorough assistant. Respond in plain text or Markdown, without JSON or service prefixes. Provide a concise, accurate, and helpful answer.';
 
   let finalSystemPrompt = systemPrompt;
   if (!finalSystemPrompt || finalSystemPrompt.trim().length === 0) {
@@ -101,13 +101,13 @@ export async function runOpenAi(
   }
 
   if (!isTextResponse && outputExample) {
-    finalSystemPrompt += `\n\nПример ожидаемого формата ответа:\n${outputExample}`;
+    finalSystemPrompt += `\n\nExample of the expected response format:\n${outputExample}`;
   }
 
   if (!isTextResponse && !supportsStructuredOutputs && schema) {
-    finalSystemPrompt += '\n\n🚨 КРИТИЧЕСКИ ВАЖНО: Ты ОБЯЗАН отвечать ТОЛЬКО валидным JSON. Никакого текста до или после JSON. Только чистый JSON объект, соответствующий схеме.';
-    finalSystemPrompt += `\n\nТребуемая JSON схема (строго соблюдай!):\n${JSON.stringify(schema, null, 2)}`;
-    finalSystemPrompt += '\n\nПример правильного ответа:\n{"nodes": [{"type": "text", "title": "Заголовок", "content": "Текст ответа"}]}';
+    finalSystemPrompt += '\n\nCRITICAL: You MUST respond ONLY with valid JSON. No text before or after the JSON. Only a clean JSON object conforming to the schema.';
+    finalSystemPrompt += `\n\nRequired JSON schema (follow strictly!):\n${JSON.stringify(schema, null, 2)}`;
+    finalSystemPrompt += '\n\nExample of a correct response:\n{"nodes": [{"type": "text", "title": "Title", "content": "Response text"}]}';
   }
 
   const placeholderValues = normalizePlaceholderValues((aiConfig as Record<string, unknown>).placeholder_values);

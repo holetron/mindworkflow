@@ -58,8 +58,8 @@ export function QuickCreateAgentModal({
   providerOptions,
   existingAgent 
 }: QuickCreateAgentModalProps) {
-  const [title, setTitle] = useState(existingAgent?.title || 'AI Агент');
-  const [description, setDescription] = useState(existingAgent?.description || 'AI-агент');
+  const [title, setTitle] = useState(existingAgent?.title || 'AI Agent');
+  const [description, setDescription] = useState(existingAgent?.description || 'AI agent');
   const [tags, setTags] = useState(existingAgent?.tags?.join(', ') || '');
   const [color, setColor] = useState(existingAgent?.node_template?.ui?.color || '#8b5cf6');
   const [icon, setIcon] = useState(existingAgent?.icon || PRESET_ICONS[0]);
@@ -76,7 +76,7 @@ export function QuickCreateAgentModal({
     e.preventDefault();
     
     if (!title.trim()) {
-      alert('Введите название агента');
+      alert('Enter agent name');
       return;
     }
 
@@ -96,7 +96,7 @@ export function QuickCreateAgentModal({
     e.preventDefault(); // Prevent form submission
     
     if (!title.trim()) {
-      alert('Введите название агента');
+      alert('Enter agent name');
       return;
     }
 
@@ -143,10 +143,10 @@ export function QuickCreateAgentModal({
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-white">
-                  {existingAgent ? 'Редактировать агента' : 'Новый AI Агент'}
+                  {existingAgent ? 'Edit agent' : 'New AI Agent'}
                 </h2>
                 <div className="text-xs text-slate-400 mt-0.5">
-                  {existingAgent ? 'Изменение параметров агента' : 'Создание нового агента'}
+                  {existingAgent ? 'Edit agent parameters' : 'Create new agent'}
                 </div>
               </div>
             </div>
@@ -164,47 +164,47 @@ export function QuickCreateAgentModal({
         <form onSubmit={handleSubmit}>
           <div className="max-h-[calc(85vh-200px)] overflow-y-auto px-6 py-6">
             <div className="space-y-6">
-              {/* Название и Краткое описание в одной строке */}
+              {/* Name and Short description in one line */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Название ноды
+                    Node Name
                   </label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     className="w-full rounded-md border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-                    placeholder="Введите название..."
+                    placeholder="Enter name..."
                     autoFocus
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Краткое описание
+                    Short description
                   </label>
                   <input
                     type="text"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full rounded-md border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-                    placeholder="Краткое описание узла..."
+                    placeholder="Short node description..."
                   />
                 </div>
               </div>
 
-              {/* Иконка, Цвет, Теги, Провайдер и Модель */}
+              {/* Icon, Color, Tags, Provider and Model */}
               <div className="flex gap-4">
                 {/* Icon Picker */}
                 <div className="flex-shrink-0">
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Иконка
+                    Icon
                   </label>
                   <div className="relative flex-shrink-0">
                     <div
                       onClick={() => setIconPickerOpen(!iconPickerOpen)}
                       className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-750 transition cursor-pointer"
-                      title="Выбрать иконку"
+                      title="Select icon"
                     >
                       <span className="text-xl">{customIcon || icon}</span>
                       <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -240,14 +240,14 @@ export function QuickCreateAgentModal({
 
                 <div className="flex-shrink-0">
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Цвет
+                    Color
                   </label>
                   <div className="relative flex-shrink-0">
                     <button
                       type="button"
                       onClick={() => setColorOpen(!colorOpen)}
                       className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-750 transition"
-                      title="Выбрать цвет"
+                      title="Select color"
                     >
                       <div
                         className="w-6 h-6 rounded-full border-2 border-slate-600"
@@ -290,7 +290,7 @@ export function QuickCreateAgentModal({
                 
                 <div className="flex-1" style={{ marginLeft: '10px' }}>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Теги (через запятую)
+                    Tags (comma-separated)
                   </label>
                   <input
                     type="text"
@@ -301,10 +301,10 @@ export function QuickCreateAgentModal({
                   />
                 </div>
                 
-                {/* Провайдер (оператор) */}
+                {/* Provider (operator) */}
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Провайдер
+                    Provider
                   </label>
                   <select
                     value={provider}
@@ -319,10 +319,10 @@ export function QuickCreateAgentModal({
                   </select>
                 </div>
                 
-                {/* Модель */}
+                {/* Model */}
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Модель
+                    Model
                   </label>
                   <select
                     value={model}
@@ -338,20 +338,20 @@ export function QuickCreateAgentModal({
                 </div>
               </div>
 
-              {/* Промпт */}
+              {/* Prompt */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Промпт
+                  Prompt
                 </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full h-32 rounded-md border border-slate-700 bg-slate-800 px-4 py-3 text-slate-200 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none transition"
-                  placeholder="Введите промпт для агента..."
+                  placeholder="Enter prompt for agent..."
                   spellCheck={false}
                 />
                 <div className="text-xs text-slate-500 mt-1">
-                  {description.length} символов
+                  {description.length} characters
                 </div>
               </div>
             </div>
@@ -367,7 +367,7 @@ export function QuickCreateAgentModal({
                     type="submit"
                     className="px-5 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium transition"
                   >
-                    Сохранить
+                    Save
                   </button>
                 </div>
               )}
@@ -379,7 +379,7 @@ export function QuickCreateAgentModal({
                   onClick={handleOpenAiSettings}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition"
                 >
-                  ⚙️ Сохранить и настроить
+                  ⚙️ Save and configure
                 </button>
               </div>
             </div>

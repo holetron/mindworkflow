@@ -161,14 +161,14 @@ export function collectNodeLinks(meta?: Record<string, unknown>): Array<{ label:
 
 export function formatReplicateStatus(status?: string | null): { label: string; className: string } {
   if (!status) {
-    return { label: 'Неизвестно', className: 'bg-slate-700 text-slate-200 border border-slate-600' };
+    return { label: 'Unknown', className: 'bg-slate-700 text-slate-200 border border-slate-600' };
   }
   const normalized = status.toLowerCase();
   if (['succeeded', 'success', 'completed'].includes(normalized)) {
-    return { label: 'Успех', className: 'bg-green-900/30 text-green-300 border border-green-500/40' };
+    return { label: 'Success', className: 'bg-green-900/30 text-green-300 border border-green-500/40' };
   }
   if (['failed', 'error', 'canceled'].includes(normalized)) {
-    return { label: 'Ошибка', className: 'bg-red-900/30 text-red-300 border border-red-500/40' };
+    return { label: 'Error', className: 'bg-red-900/30 text-red-300 border border-red-500/40' };
   }
   return { label: status, className: 'bg-yellow-900/30 text-yellow-300 border border-yellow-500/40' };
 }

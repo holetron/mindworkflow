@@ -29,9 +29,9 @@ export function WorkflowSettings({
     <section className="space-y-4">
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-semibold">Глобальные настройки Workflow</h1>
+          <h1 className="text-3xl font-semibold">Global Workflow Settings</h1>
           <p className="text-sm text-slate-400 mt-2">
-            Эти настройки применяются ко всем новым проектам
+            These settings apply to all new projects
           </p>
         </div>
 
@@ -49,21 +49,21 @@ export function WorkflowSettings({
 
         {workflowSettingsLoading ? (
           <div className="rounded border border-slate-800 bg-slate-900/70 p-6">
-            <p className="text-slate-400">Загрузка настроек...</p>
+            <p className="text-slate-400">Loading settings...</p>
           </div>
         ) : (
           <>
             {/* Markdown Preview Settings */}
             <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-4">
-              <h2 className="text-xl font-semibold">Настройки Markdown предпросмотра</h2>
+              <h2 className="text-xl font-semibold">Markdown Preview Settings</h2>
               <p className="text-sm text-slate-400">
-                Эти настройки применяются ко всем текстовым нодам с Markdown.
+                These settings apply to all text nodes with Markdown.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Интерлиньяж (line-height)
+                    Line height
                   </label>
                   <input
                     type="number"
@@ -75,12 +75,12 @@ export function WorkflowSettings({
                     className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
                     disabled={workflowSettingsSaving}
                   />
-                  <p className="text-xs text-slate-500 mt-1">Расстояние между строками (1.0 - 3.0)</p>
+                  <p className="text-xs text-slate-500 mt-1">Line spacing (1.0 - 3.0)</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Отступ между параграфами (em)
+                    Paragraph spacing (em)
                   </label>
                   <input
                     type="number"
@@ -92,12 +92,12 @@ export function WorkflowSettings({
                     className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
                     disabled={workflowSettingsSaving}
                   />
-                  <p className="text-xs text-slate-500 mt-1">Вертикальный отступ (0.0 - 2.0 em)</p>
+                  <p className="text-xs text-slate-500 mt-1">Vertical spacing (0.0 - 2.0 em)</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Отступ для &lt;br&gt; (em)
+                    Break spacing (em)
                   </label>
                   <input
                     type="number"
@@ -109,12 +109,12 @@ export function WorkflowSettings({
                     className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
                     disabled={workflowSettingsSaving}
                   />
-                  <p className="text-xs text-slate-500 mt-1">Отступ после разрыва строки (0.0 - 1.0 em)</p>
+                  <p className="text-xs text-slate-500 mt-1">Spacing after line break (0.0 - 1.0 em)</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Padding блоков кода (Y, em)
+                    Code block padding (Y, em)
                   </label>
                   <input
                     type="number"
@@ -126,12 +126,12 @@ export function WorkflowSettings({
                     className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
                     disabled={workflowSettingsSaving}
                   />
-                  <p className="text-xs text-slate-500 mt-1">Вертикальный отступ (0.0 - 2.0 em)</p>
+                  <p className="text-xs text-slate-500 mt-1">Vertical spacing (0.0 - 2.0 em)</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Padding блоков кода (X, em)
+                    Code block padding (X, em)
                   </label>
                   <input
                     type="number"
@@ -143,12 +143,12 @@ export function WorkflowSettings({
                     className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
                     disabled={workflowSettingsSaving}
                   />
-                  <p className="text-xs text-slate-500 mt-1">Горизонтальный отступ (0.0 - 3.0 em)</p>
+                  <p className="text-xs text-slate-500 mt-1">Horizontal spacing (0.0 - 3.0 em)</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Цвет фона
+                    Background color
                   </label>
                   <input
                     type="color"
@@ -157,12 +157,12 @@ export function WorkflowSettings({
                     className="w-full h-10 rounded border border-slate-700 bg-slate-900 cursor-pointer"
                     disabled={workflowSettingsSaving}
                   />
-                  <p className="text-xs text-slate-500 mt-1">Фон блоков Markdown</p>
+                  <p className="text-xs text-slate-500 mt-1">Markdown block background</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Цвет границ
+                    Border color
                   </label>
                   <input
                     type="text"
@@ -172,22 +172,22 @@ export function WorkflowSettings({
                     placeholder="rgba(148, 163, 184, 0.2)"
                     disabled={workflowSettingsSaving}
                   />
-                  <p className="text-xs text-slate-500 mt-1">CSS цвет границ (rgba, hex, и т.д.)</p>
+                  <p className="text-xs text-slate-500 mt-1">CSS border color (rgba, hex, etc.)</p>
                 </div>
               </div>
             </div>
 
             {/* Font Scaling Settings */}
             <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-4">
-              <h2 className="text-xl font-semibold">Настройки масштабирования шрифта</h2>
+              <h2 className="text-xl font-semibold">Font Scaling Settings</h2>
               <p className="text-sm text-slate-400">
-                Автоматическое изменение размера шрифта в зависимости от длины текста.
+                Automatic font size adjustment based on text length.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Базовый размер шрифта (px)
+                    Base font size (px)
                   </label>
                   <input
                     type="number"
@@ -198,12 +198,12 @@ export function WorkflowSettings({
                     className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
                     disabled={workflowSettingsSaving}
                   />
-                  <p className="text-xs text-slate-500 mt-1">Минимальный размер шрифта (8-24px)</p>
+                  <p className="text-xs text-slate-500 mt-1">Minimum font size (8-24px)</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Множитель масштаба
+                    Scale multiplier
                   </label>
                   <input
                     type="number"
@@ -215,13 +215,13 @@ export function WorkflowSettings({
                     className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
                     disabled={workflowSettingsSaving}
                   />
-                  <p className="text-xs text-slate-500 mt-1">Общий коэффициент увеличения (0.5 - 2.0)</p>
+                  <p className="text-xs text-slate-500 mt-1">Overall scale factor (0.5 - 2.0)</p>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Типы нод для применения
+                  Node types to apply
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {['text', 'ai', 'ai_improved', 'sticky-note'].map((type) => (
@@ -242,7 +242,7 @@ export function WorkflowSettings({
                     </label>
                   ))}
                 </div>
-                <p className="text-xs text-slate-500 mt-2">Выберите типы нод, к которым применяется автомасштабирование</p>
+                <p className="text-xs text-slate-500 mt-2">Select node types to which auto-scaling applies</p>
               </div>
             </div>
 
@@ -253,14 +253,14 @@ export function WorkflowSettings({
                 className="px-6 py-2 rounded-full border border-slate-700 text-slate-300 hover:border-slate-500 hover:text-slate-100 transition"
                 disabled={workflowSettingsSaving}
               >
-                Сбросить
+                Reset
               </button>
               <button
                 onClick={onWorkflowSettingsSave}
                 disabled={workflowSettingsSaving}
                 className="px-6 py-2 rounded-full bg-primary text-white hover:bg-primary/90 transition disabled:bg-slate-700 disabled:cursor-not-allowed"
               >
-                {workflowSettingsSaving ? 'Сохранение...' : 'Сохранить изменения'}
+                {workflowSettingsSaving ? 'Saving...' : 'Save changes'}
               </button>
             </div>
           </>

@@ -276,7 +276,7 @@ export function ChatMessage({ message, chatId, projectId, onAddToWorkflow }: Cha
       {/* Logs Modal */}
       {showLogsModal && logs && logs.length > 0 && (
         <Modal
-          title="Логи выполнения запроса"
+          title="Request execution logs"
           onClose={() => setShowLogsModal(false)}
           actions={
             <button
@@ -284,7 +284,7 @@ export function ChatMessage({ message, chatId, projectId, onAddToWorkflow }: Cha
               className="rounded bg-slate-800 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700"
               onClick={() => setShowLogsModal(false)}
             >
-              Закрыть
+              Close
             </button>
           }
         >

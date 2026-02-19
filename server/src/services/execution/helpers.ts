@@ -49,31 +49,25 @@ export const getPackageInfo = (): { name: string; version: string } => {
 };
 
 // ============================================================
-// Russian pluralization
+// English pluralization
 // ============================================================
 
 export function selectRussianPlural(count: number, forms: [string, string, string]): string {
-  const n = Math.abs(count) % 100;
-  const n1 = n % 10;
-  if (n > 10 && n < 20) {
-    return forms[2];
-  }
-  if (n1 > 1 && n1 < 5) {
-    return forms[1];
-  }
-  if (n1 === 1) {
+  // Simple English pluralization: forms[0] = singular, forms[1] = plural (2-4), forms[2] = plural (5+)
+  // For English we only need singular vs plural
+  if (count === 1) {
     return forms[0];
   }
-  return forms[2];
+  return forms[1] || forms[2];
 }
 
 export function describeArtifactPlural(type: string, count: number): string {
   const dictionary: Record<string, [string, string, string]> = {
-    image: ['изображение', 'изображения', 'изображений'],
-    video: ['видео', 'видео', 'видео'],
-    text: ['текст', 'текста', 'текстов'],
+    image: ['image', 'images', 'images'],
+    video: ['video', 'videos', 'videos'],
+    text: ['text', 'texts', 'texts'],
   };
-  const forms = dictionary[type] ?? ['узел', 'узла', 'узлов'];
+  const forms = dictionary[type] ?? ['node', 'nodes', 'nodes'];
   return selectRussianPlural(count, forms);
 }
 
@@ -191,7 +185,7 @@ export function sanitizeMetaSnapshot(meta: Record<string, unknown>): Record<stri
 // ============================================================
 
 export function buildShortDescription(node?: StoredNode): string {
-  if (!node) return 'Нет данных';
+  if (!node) return 'No data';
   const base = node.meta?.short_description ?? node.content ?? node.title;
   return String(base ?? node.title).substring(0, 200);
 }

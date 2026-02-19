@@ -18,7 +18,7 @@ export class ParserService {
   run(input: ParserInput): ParserResult {
     const { html, source = 'parser_input', schemaRef } = input;
     const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-    const title = titleMatch ? sanitize(titleMatch[1]) : 'Автогенерированный документ';
+    const title = titleMatch ? sanitize(titleMatch[1]) : 'Auto-generated document';
     const text = sanitize(html.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
 
     const linkRegex = /<a[^>]+href=["'](.*?)["'][^>]*>/gi;

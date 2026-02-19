@@ -19,7 +19,7 @@ export function ShareAgentModal({ agent, onClose }: ShareAgentModalProps) {
 
   const handleShare = async () => {
     if (!email.trim()) {
-      setMessage('Введите email получателя');
+      setMessage('Enter recipient email');
       return;
     }
 
@@ -40,13 +40,13 @@ export function ShareAgentModal({ agent, onClose }: ShareAgentModalProps) {
         throw new Error('Failed to share agent');
       }
 
-      setMessage('✅ Агент успешно отправлен!');
+      setMessage('✅ Agent sent successfully!');
       setTimeout(() => {
         onClose();
       }, 1500);
     } catch (error) {
       console.error('Share error:', error);
-      setMessage('❌ Не удалось отправить агента');
+      setMessage('❌ Failed to send agent');
     } finally {
       setSending(false);
     }
@@ -75,7 +75,7 @@ export function ShareAgentModal({ agent, onClose }: ShareAgentModalProps) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    setMessage('✅ Агент экспортирован!');
+    setMessage('✅ Agent exported!');
     setTimeout(() => {
       setMessage('');
     }, 2000);
@@ -89,7 +89,7 @@ export function ShareAgentModal({ agent, onClose }: ShareAgentModalProps) {
           <div className="flex items-center gap-3">
             <span className="text-3xl">{agent.icon}</span>
             <div>
-              <h2 className="text-lg font-semibold text-white">Поделиться агентом</h2>
+              <h2 className="text-lg font-semibold text-white">Share Agent</h2>
               <p className="text-sm text-slate-400">{agent.title}</p>
             </div>
           </div>
@@ -106,7 +106,7 @@ export function ShareAgentModal({ agent, onClose }: ShareAgentModalProps) {
           {/* Email Input */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
-              Email получателя
+              Recipient Email
             </label>
             <input
               type="email"
@@ -138,14 +138,14 @@ export function ShareAgentModal({ agent, onClose }: ShareAgentModalProps) {
               disabled={sending || !email.trim()}
               className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {sending ? 'Отправка...' : '📧 Отправить'}
+              {sending ? 'Sending...' : '📧 Submit'}
             </button>
             <button
               onClick={handleExport}
               disabled={sending}
               className="flex-1 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition disabled:opacity-50"
             >
-              💾 Экспорт JSON
+              💾 Export JSON
             </button>
           </div>
         </div>
@@ -156,7 +156,7 @@ export function ShareAgentModal({ agent, onClose }: ShareAgentModalProps) {
             onClick={onClose}
             className="w-full px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium transition"
           >
-            Закрыть
+            Close
           </button>
         </div>
       </div>

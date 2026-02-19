@@ -17,7 +17,7 @@ export const NODE_HEADER_HEIGHT = 40;
 
 /**
  * Toolbar height - contains mode switches, Load, Link buttons
- * Always visible, fixed at 24px в компактном режиме
+ * Always visible, fixed at 24px in compact mode
  */
 export const NODE_TOOLBAR_HEIGHT = 24;
 

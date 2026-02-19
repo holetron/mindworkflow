@@ -7,7 +7,7 @@ import { logger } from '../lib/logger';
 const log = logger.child({ module: 'migrations/20251029_chat_agent_prompts' });
 const MIGRATION_ID = '20251029_chat_agent_prompts';
 
-// System prompts для разных режимов агента чата
+// System prompts for different chat agent modes
 
 const AGENT_MODE_PROMPT = `You are an AI assistant with FULL ACCESS to the user's workflow.
 

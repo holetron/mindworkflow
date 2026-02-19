@@ -49,7 +49,7 @@ function NodeEditor({ node, projectId, runs = [], loading }: NodeEditorProps) {
             <p className="text-xs text-slate-500">{node.node_id}</p>
           </div>
         ) : (
-          <p className="text-sm text-slate-400">Выберите узел в графе</p>
+          <p className="text-sm text-slate-400">Select a node in the graph</p>
         )}
       </header>
       <nav className="flex gap-2 border-b border-slate-700 px-4 py-2">
@@ -67,7 +67,7 @@ function NodeEditor({ node, projectId, runs = [], loading }: NodeEditorProps) {
         ))}
       </nav>
       <section className="flex-1 overflow-y-auto p-4 text-sm">
-        {!node && <p className="text-slate-400">Нет данных</p>}
+        {!node && <p className="text-slate-400">No data</p>}
         {node && activeTab === 'data' && (
           <div className="space-y-2">
             <div>
@@ -85,7 +85,7 @@ function NodeEditor({ node, projectId, runs = [], loading }: NodeEditorProps) {
                   />
                 )
               ) : (
-                <p className="text-slate-500">Контент отсутствует</p>
+                <p className="text-slate-500">No content</p>
               )}
             </div>
             {node.meta && (
@@ -100,7 +100,7 @@ function NodeEditor({ node, projectId, runs = [], loading }: NodeEditorProps) {
         )}
         {node && activeTab === 'prompt' && (
           <div className="space-y-3">
-            {!promptData && <p className="text-slate-400">Нет данных для отображения</p>}
+            {!promptData && <p className="text-slate-400">No data to display</p>}
             {promptData?.system && (
               <FieldBlock label="System Prompt" value={promptData.system as string} />
             )}
@@ -115,8 +115,8 @@ function NodeEditor({ node, projectId, runs = [], loading }: NodeEditorProps) {
         )}
         {node && activeTab === 'history' && (
           <div className="space-y-3">
-            {loading && <p className="text-slate-400">Загрузка истории...</p>}
-            {!loading && runs.length === 0 && <p className="text-slate-400">Нет запусков</p>}
+            {loading && <p className="text-slate-400">Loading history...</p>}
+            {!loading && runs.length === 0 && <p className="text-slate-400">No runs</p>}
             {runs.map((run) => (
               <article key={run.run_id} className="rounded border border-slate-700 p-2">
                 <header className="flex items-center justify-between text-xs text-slate-400">
@@ -126,7 +126,7 @@ function NodeEditor({ node, projectId, runs = [], loading }: NodeEditorProps) {
                   </span>
                 </header>
                 <details className="mt-2">
-                  <summary className="cursor-pointer text-xs text-primary">Подробнее</summary>
+                  <summary className="cursor-pointer text-xs text-primary">Details</summary>
                   <pre className="mt-2 max-h-48 overflow-auto rounded bg-slate-900 p-2 text-xs">
                     {JSON.stringify(run.logs, null, 2)}
                   </pre>

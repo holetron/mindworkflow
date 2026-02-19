@@ -15,8 +15,8 @@ function JsonViewer({
   value,
   schema,
   collapsible = false,
-  collapsedLabel = 'Показать JSON',
-  expandedLabel = 'Скрыть JSON',
+  collapsedLabel = 'Show JSON',
+  expandedLabel = 'Hide JSON',
 }: JsonViewerProps) {
   const [collapsed, setCollapsed] = useState(collapsible);
 
@@ -52,7 +52,7 @@ function JsonViewer({
       )}
       {validation && (
         <p className={`mb-2 text-xs ${validation.valid ? 'text-emerald-300' : 'text-amber-300'}`}>
-          {validation.valid ? 'JSON валиден' : 'JSON не прошёл валидацию'}
+          {validation.valid ? 'JSON is valid' : 'JSON validation failed'}
         </p>
       )}
       {!collapsed && (

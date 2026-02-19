@@ -82,7 +82,7 @@ export function VideoPreview({
     setErrorMessage(
       error instanceof Error && error.message
         ? error.message
-        : 'Не удалось воспроизвести видео. Попробуйте открыть в новой вкладке.',
+        : 'Failed to play video. Try opening in a new tab.',
     );
   };
 
@@ -116,7 +116,7 @@ export function VideoPreview({
     >
       {status === 'loading' && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-black/50 text-white/70 text-xs">
-          <span className="animate-pulse">Загрузка видео...</span>
+          <span className="animate-pulse">Loading video...</span>
         </div>
       )}
 
@@ -172,19 +172,19 @@ export function VideoPreview({
             }}
             onError={(event) => handleError((event.currentTarget?.error as Error) ?? event)}
           >
-            Ваш браузер не поддерживает видео.
+            Your browser does not support video.
           </video>
         )
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center text-xs text-white/60">
-          <span>Добавьте ссылку или загрузите файл, чтобы увидеть предпросмотр.</span>
+          <span>Add a link or upload a file to see a preview.</span>
         </div>
       )}
 
       {status === 'error' && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/70 px-4 text-center">
           <div className="space-y-1 text-white">
-            <p className="text-sm font-medium">Предпросмотр недоступен</p>
+            <p className="text-sm font-medium">Preview unavailable</p>
             {errorMessage && <p className="text-xs text-white/70">{errorMessage}</p>}
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
@@ -193,7 +193,7 @@ export function VideoPreview({
               onClick={handleRetry}
               className="rounded border border-white/30 bg-white/10 px-3 py-1 hover:bg-white/20 transition"
             >
-              Повторить
+              Retry
             </button>
             {source?.src && (
               <a
@@ -202,7 +202,7 @@ export function VideoPreview({
                 rel="noopener noreferrer"
                 className="rounded border border-white/20 bg-black/40 px-3 py-1 text-white/80 hover:bg-black/30 transition"
               >
-                Открыть в новой вкладке
+                Open in new tab
               </a>
             )}
           </div>
@@ -216,9 +216,9 @@ export function VideoPreview({
             target="_blank"
             rel="noopener noreferrer"
             className="rounded border border-white/20 bg-black/70 px-2 py-1 text-white/80 hover:bg-black/50 transition"
-            title="Открыть видео в новой вкладке"
+            title="Open video in new tab"
           >
-            ↗ Открыть
+            ↗ Open
           </a>
         </div>
       )}

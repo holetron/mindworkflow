@@ -76,7 +76,7 @@ export async function runGemini(
     const defaultSystemPrompt =
       typeof aiConfig.system_prompt === 'string' && aiConfig.system_prompt.trim().length > 0
         ? aiConfig.system_prompt.trim()
-        : 'Ты полезный ИИ-ассистент, который умеет работать с файлами и изображениями.';
+        : 'You are a helpful AI assistant capable of working with files and images.';
     const geminiPlaceholderValues = normalizePlaceholderValues(
       (aiConfig as Record<string, unknown>).placeholder_values,
     );

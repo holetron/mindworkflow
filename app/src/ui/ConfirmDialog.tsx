@@ -19,7 +19,7 @@ export function ConfirmDialog({
   title,
   message,
   confirmText = 'OK',
-  cancelText = 'Отмена',
+  cancelText = 'Cancel',
   neutralText,
   onConfirm,
   onCancel,
@@ -106,7 +106,7 @@ export function ConfirmDialog({
   );
 }
 
-// Hook для удобного использования
+// Hook for convenient use
 export function useConfirmDialog() {
   const [dialog, setDialog] = useState<{
     isOpen: boolean;

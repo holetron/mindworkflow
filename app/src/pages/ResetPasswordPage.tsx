@@ -18,15 +18,15 @@ const ResetPasswordPage: React.FC = () => {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!token) {
-      setError('Отсутствует токен восстановления. Попросите новую ссылку.');
+      setError('Recovery token missing. Please request a new link.');
       return;
     }
     if (password.length < 6) {
-      setError('Пароль должен содержать не менее 6 символов.');
+      setError('Password must contain at least 6 characters.');
       return;
     }
     if (password !== confirm) {
-      setError('Пароли не совпадают.');
+      setError('Passwords do not match.');
       return;
     }
 
@@ -41,14 +41,14 @@ const ResetPasswordPage: React.FC = () => {
         body: JSON.stringify({ token, password }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: 'Не удалось обновить пароль' }));
-        throw new Error(data.error || 'Не удалось обновить пароль');
+        const data = await res.json().catch(() => ({ error: 'Failed to update password' }));
+        throw new Error(data.error || 'Failed to update password');
       }
-      setInfo('Пароль обновлён. Теперь вы можете войти с новыми данными.');
+      setInfo('Password updated. You can now log in with your new credentials.');
       setPassword('');
       setConfirm('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Произошла ошибка');
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setSubmitting(false);
     }
@@ -60,29 +60,29 @@ const ResetPasswordPage: React.FC = () => {
     <div className="min-h-screen bg-slate-950 px-4 py-10 text-slate-100">
       <div className="mx-auto w-full max-w-md space-y-6 rounded-2xl bg-slate-900/70 p-8 shadow-xl backdrop-blur">
         <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold text-primary">Восстановление пароля</h1>
+          <h1 className="text-3xl font-bold text-primary">Password Recovery</h1>
           <p className="text-sm text-slate-400">
             {tokenMissing
-              ? 'Ссылка устарела или некорректна. Запросите восстановление ещё раз.'
-              : 'Придумайте новый пароль для вашего аккаунта.'}
+              ? 'The link is expired or invalid. Please request recovery again.'
+              : 'Create a new password for your account.'}
           </p>
         </div>
 
         {tokenMissing ? (
           <div className="space-y-4 text-sm text-slate-300">
             <p>
-              Вернитесь на{' '}
+              Go back to{' '}
               <Link to="/login" className="text-primary underline transition hover:text-primary/80">
-                страницу входа
+                login page
               </Link>{' '}
-              и запросите новую ссылку на восстановление пароля.
+              and request a new password recovery link.
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-300">
-                Новый пароль
+                New Password
               </label>
               <input
                 id="password"
@@ -92,13 +92,13 @@ const ResetPasswordPage: React.FC = () => {
                 required
                 minLength={6}
                 className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-                placeholder="Введите новый пароль"
+                placeholder="Enter new password"
               />
             </div>
 
             <div>
               <label htmlFor="confirm" className="mb-2 block text-sm font-medium text-slate-300">
-                Подтверждение пароля
+                Confirm Password
               </label>
               <input
                 id="confirm"
@@ -108,7 +108,7 @@ const ResetPasswordPage: React.FC = () => {
                 required
                 minLength={6}
                 className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-                placeholder="Повторите пароль"
+                placeholder="Confirm password"
               />
             </div>
 
@@ -129,14 +129,14 @@ const ResetPasswordPage: React.FC = () => {
               disabled={submitting}
               className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/80 focus:outline-none focus:ring-2 focus:ring-primary/60 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-60"
             >
-              {submitting ? 'Сохраняем…' : 'Обновить пароль'}
+              {submitting ? 'Saving...' : 'Reset password'}
             </button>
           </form>
         )}
 
         <div className="text-center text-xs text-slate-500">
           <Link to="/login" className="text-primary hover:text-primary/80">
-            Вернуться к авторизации
+            Back to login
           </Link>
         </div>
       </div>

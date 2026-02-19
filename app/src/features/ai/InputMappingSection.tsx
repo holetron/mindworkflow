@@ -52,7 +52,7 @@ export function InputMappingSection({
   if (upstreamNodes.length === 0) {
     return (
       <div className="text-slate-400 text-sm p-4 border border-slate-700 rounded">
-        Нет входящих подключений. Подключите ноды к этой AI-ноде для маппинга параметров.
+        No incoming connections. Connect nodes to this AI node for parameter mapping.
       </div>
     );
   }
@@ -62,7 +62,7 @@ export function InputMappingSection({
       {/* Progress bar */}
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
-          <span className="text-slate-300">Использование контекста:</span>
+          <span className="text-slate-300">Context usage:</span>
           <span className={contextUsage.isOverLimit ? 'text-red-600 font-semibold' : 'text-slate-400'}>
             {formatTokenCount(contextUsage.used)} / {formatTokenCount(contextUsage.limit)} tokens ({contextUsage.percentage}%)
           </span>
@@ -78,14 +78,14 @@ export function InputMappingSection({
         {contextUsage.isOverLimit && (
           <div className="text-red-600 text-sm flex items-start gap-2">
             <span>⚠️</span>
-            <span>Превышен лимит контекста! Модель может не принять этот запрос.</span>
+            <span>Context limit exceeded! The model may not accept this request.</span>
           </div>
         )}
       </div>
 
       {/* Mapping table */}
       <div className="space-y-3">
-        <h4 className="font-medium text-slate-300">Маппинг входных портов:</h4>
+        <h4 className="font-medium text-slate-300">Input port mapping:</h4>
         {upstreamNodes.map((upstreamNode) => (
           <div
             key={upstreamNode.id}
@@ -94,7 +94,7 @@ export function InputMappingSection({
             <div className="flex-1">
               <div className="font-medium text-slate-200">{upstreamNode.label}</div>
               <div className="text-xs text-slate-400 mt-1">
-                Тип: {upstreamNode.type}
+                Type: {upstreamNode.type}
               </div>
               <div className="text-xs text-slate-500 mt-1 truncate max-w-xs">
                 {upstreamNode.content.substring(0, 100)}...
@@ -106,10 +106,10 @@ export function InputMappingSection({
                 onChange={(e) => handleMappingChange(upstreamNode.id, e.target.value)}
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-slate-200 text-sm"
               >
-                <option value="">-- Не выбрано --</option>
+                <option value="">-- Not selected --</option>
                 {modelInputs.map((input) => (
                   <option key={input.name} value={input.name}>
-                    {input.name} {input.required ? '(обязательно)' : ''}
+                    {input.name} {input.required ? '(required)' : ''}
                   </option>
                 ))}
               </select>
@@ -129,7 +129,7 @@ export function InputMappingSection({
               : 'bg-blue-600 text-white hover:bg-blue-700'
           }`}
         >
-          Сохранить маппинг
+          Save mapping
         </button>
       </div>
     </div>

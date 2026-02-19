@@ -2,23 +2,23 @@ import type { AdminFeedbackStatus } from '../../state/api';
 import type { PromptPresetCategory } from '../../state/api';
 
 export const PROMPT_CATEGORY_OPTIONS: Array<{ value: PromptPresetCategory; label: string }> = [
-  { value: 'system_prompt', label: 'Системные промпты' },
-  { value: 'output_example', label: 'Примеры вывода' },
+  { value: 'system_prompt', label: 'System prompts' },
+  { value: 'output_example', label: 'Output examples' },
 ];
 
 export const FEEDBACK_TYPE_LABELS: Record<'problem' | 'suggestion' | 'unknown', string> = {
-  problem: 'Проблема',
-  suggestion: 'Предложение',
-  unknown: 'Другое',
+  problem: 'Problem',
+  suggestion: 'Suggestion',
+  unknown: 'Other',
 };
 
 export const FEEDBACK_STATUS_ORDER: AdminFeedbackStatus[] = ['new', 'in_progress', 'resolved', 'archived'];
 
 export const FEEDBACK_STATUS_LABELS: Record<AdminFeedbackStatus, string> = {
-  new: 'Новое',
-  in_progress: 'В работе',
-  resolved: 'Решено',
-  archived: 'Архив',
+  new: 'New',
+  in_progress: 'In Progress',
+  resolved: 'Resolved',
+  archived: 'Archive',
 };
 
 export const FEEDBACK_STATUS_BADGE_CLASSES: Record<AdminFeedbackStatus, string> = {
@@ -36,13 +36,13 @@ export const FEEDBACK_STATUS_BUTTON_CLASSES: Record<AdminFeedbackStatus, string>
 };
 
 export const ADMIN_TABS = [
-  { id: 'users', label: 'Пользователи' },
-  { id: 'projects', label: 'Проекты' },
-  { id: 'feedback', label: 'Фидбек' },
+  { id: 'users', label: 'Users' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'feedback', label: 'Feedback' },
   { id: 'workflow', label: 'Workflow' },
-  { id: 'integrations', label: 'Интеграции' },
-  { id: 'prompts', label: 'Промпты' },
-  { id: 'settings', label: 'Настройки' },
+  { id: 'integrations', label: 'Integrations' },
+  { id: 'prompts', label: 'Prompts' },
+  { id: 'settings', label: 'Settings' },
 ] as const;
 
 // --------------- Utility Functions ---------------

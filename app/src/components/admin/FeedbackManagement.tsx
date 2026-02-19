@@ -65,26 +65,26 @@ export function FeedbackManagement({
       <section className="space-y-4">
         {feedbackError && (
           <div className="rounded border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-sm text-rose-200">
-            Не удалось загрузить обратную связь: {feedbackError}
+            Failed to load feedback: {feedbackError}
           </div>
         )}
         {feedbackLoading && !feedback.length ? (
           <div className="rounded border border-slate-800 bg-slate-900/70 p-6 text-sm text-slate-400">
-            Загрузка обратной связи...
+            Loading feedback...
           </div>
         ) : filteredFeedback.length === 0 ? (
           <div className="rounded border border-slate-800 bg-slate-900/70 p-6 text-sm text-slate-400">
             {feedbackSearch.trim()
-              ? `Нет записей по запросу \u00AB${feedbackSearch.trim()}\u00BB.`
-              : 'Пока нет обратной связи.'}
+              ? `No records matching query \u00AB${feedbackSearch.trim()}\u00BB.`
+              : 'No feedback yet.'}
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {(
               [
-                { id: 'problem', label: 'Сообщения о проблемах', tone: 'border-rose-500/40 bg-rose-500/10' },
-                { id: 'suggestion', label: 'Предложения улучшений', tone: 'border-emerald-500/20 bg-emerald-500/10' },
-                { id: 'unknown', label: 'Без категории', tone: 'border-slate-700 bg-slate-900/70' },
+                { id: 'problem', label: 'Problem reports', tone: 'border-rose-500/40 bg-rose-500/10' },
+                { id: 'suggestion', label: 'Improvement suggestions', tone: 'border-emerald-500/20 bg-emerald-500/10' },
+                { id: 'unknown', label: 'Uncategorized', tone: 'border-slate-700 bg-slate-900/70' },
               ] as const
             ).map((section) => {
               const sectionItems = filteredFeedback.filter((item) => item.type === section.id);
@@ -104,7 +104,7 @@ export function FeedbackManagement({
                     <header className="mb-3 text-sm font-semibold text-slate-200">
                       {section.label}
                     </header>
-                    <p>Нет записей.</p>
+                    <p>No records.</p>
                   </article>
                 );
               }
@@ -137,17 +137,17 @@ export function FeedbackManagement({
                                 </span>
                                 {item.has_resolution && (
                                   <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] uppercase tracking-wide text-emerald-200">
-                                    Есть решение
+                                    Has resolution
                                   </span>
                                 )}
                               </div>
                               <div className="mt-1 text-xs text-slate-400">
-                                Создан: {formatDateTime(item.created_at)}
+                                Created: {formatDateTime(item.created_at)}
                                 <span className="mx-1">&middot;</span>
-                                Обновлен: {formatDateTime(item.updated_at)}
+                                Updated: {formatDateTime(item.updated_at)}
                               </div>
                               <div className="mt-1 text-xs text-slate-500">
-                                Контакт: {item.contact ? item.contact : 'не указан'}
+                                Contact: {item.contact ? item.contact : 'not specified'}
                               </div>
                             </div>
                             <div className="flex flex-col items-end gap-2">
@@ -156,7 +156,7 @@ export function FeedbackManagement({
                                 onClick={() => onOpenFeedbackModal(item)}
                                 className="rounded-full px-4 py-1 text-sm font-medium transition bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
                               >
-                                Открыть
+                                Open
                               </button>
                             </div>
                           </div>
@@ -175,7 +175,7 @@ export function FeedbackManagement({
       {/* Feedback detail modal */}
       {feedbackModalOpen && (
         <Modal
-          title={feedbackDetails ? `Фидбек: ${feedbackDetails.title}` : 'Фидбек'}
+          title={feedbackDetails ? `Feedback: ${feedbackDetails.title}` : 'Feedback'}
           onClose={onCloseFeedbackModal}
           actions={
             <div className="flex w-full flex-wrap items-center justify-between gap-3">
@@ -185,7 +185,7 @@ export function FeedbackManagement({
                 className="rounded-full border border-rose-600 px-4 py-1 text-sm text-rose-200 transition hover:border-rose-500 hover:text-rose-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-500"
                 disabled={feedbackDeleting || feedbackDetailsLoading || !selectedFeedbackId}
               >
-                {feedbackDeleting ? 'Удаление...' : 'Удалить'}
+                {feedbackDeleting ? 'Deleting...' : 'Delete'}
               </button>
               <div className="flex items-center gap-2">
                 <button
@@ -194,7 +194,7 @@ export function FeedbackManagement({
                   className="rounded-full border border-slate-700 px-4 py-1 text-sm text-slate-300 hover:border-slate-500 hover:text-slate-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-500"
                   disabled={feedbackSaving}
                 >
-                  Закрыть
+                  Close
                 </button>
                 <button
                   type="button"
@@ -207,7 +207,7 @@ export function FeedbackManagement({
                     !feedbackDirty
                   }
                 >
-                  {feedbackSaving ? 'Сохранение...' : feedbackDirty ? 'Сохранить' : 'Сохранено'}
+                  {feedbackSaving ? 'Saving...' : feedbackDirty ? 'Save' : 'Saved'}
                 </button>
               </div>
             </div>
@@ -222,29 +222,29 @@ export function FeedbackManagement({
             {feedbackDetailsLoading ? (
               <div className="flex items-center gap-2 text-sm text-slate-400">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Загрузка записи...
+                Loading record...
               </div>
             ) : feedbackDetails ? (
               <div className="space-y-4">
                 <div className="rounded border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-400">
                   <div>ID: {feedbackDetails.feedback_id}</div>
                   <div className="mt-1">
-                    Тип: {FEEDBACK_TYPE_LABELS[feedbackDetails.type] ?? feedbackDetails.type}
+                    Type: {FEEDBACK_TYPE_LABELS[feedbackDetails.type] ?? feedbackDetails.type}
                   </div>
                   <div className="mt-1">
-                    Создан: {formatDateTime(feedbackDetails.created_at)}
+                    Created: {formatDateTime(feedbackDetails.created_at)}
                   </div>
                   <div className="mt-1">
-                    Обновлен: {formatDateTime(feedbackDetails.updated_at)}
+                    Updated: {formatDateTime(feedbackDetails.updated_at)}
                   </div>
                   {feedbackDetails.source && (
                     <div className="mt-1">
-                      Файл: <span className="text-slate-300">{feedbackDetails.source}</span>
+                      File: <span className="text-slate-300">{feedbackDetails.source}</span>
                     </div>
                   )}
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-wide text-slate-400">Заголовок</label>
+                  <label className="text-xs uppercase tracking-wide text-slate-400">Title</label>
                   <input
                     type="text"
                     value={feedbackForm.title}
@@ -253,7 +253,7 @@ export function FeedbackManagement({
                   />
                 </div>
                 <div>
-                  <span className="text-xs uppercase tracking-wide text-slate-400">Статус</span>
+                  <span className="text-xs uppercase tracking-wide text-slate-400">Status</span>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {FEEDBACK_STATUS_ORDER.map((status) => {
                       const isActive = feedbackForm.status === status;
@@ -276,17 +276,17 @@ export function FeedbackManagement({
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-wide text-slate-400">Контакт</label>
+                  <label className="text-xs uppercase tracking-wide text-slate-400">Contact</label>
                   <input
                     type="text"
                     value={feedbackForm.contact}
                     onChange={(event) => onFeedbackFieldChange('contact', event.target.value)}
                     className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
-                    placeholder="telegram @username, email или телефон"
+                    placeholder="telegram @username, email or phone"
                   />
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-wide text-slate-400">Описание</label>
+                  <label className="text-xs uppercase tracking-wide text-slate-400">Description</label>
                   <textarea
                     rows={6}
                     value={feedbackForm.description}
@@ -295,19 +295,19 @@ export function FeedbackManagement({
                   />
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-wide text-slate-400">Решение</label>
+                  <label className="text-xs uppercase tracking-wide text-slate-400">Resolution</label>
                   <textarea
                     rows={4}
                     value={feedbackForm.resolution}
                     onChange={(event) => onFeedbackFieldChange('resolution', event.target.value)}
                     className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
-                    placeholder="Опишите, как была решена проблема или что планируется сделать"
+                    placeholder="Describe how the problem was resolved or what is planned"
                   />
                 </div>
               </div>
             ) : (
               <div className="rounded border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
-                Не удалось загрузить запись.
+                Failed to load record.
               </div>
             )}
           </div>

@@ -42,13 +42,13 @@ function maybeCreateAggregatedTextNode(ctx: {
   const signatureKey = `text:${aggregatedText}`;
   const hashedSignatureKey = `signature:${textSignature}`;
   if (existingSignatures.has(signatureKey) || existingSignatures.has(hashedSignatureKey)) {
-    logs.push('Replicate: текстовые сегменты совпадают с существующими, новая text-нода не создана.');
+    logs.push('Replicate: text segments match existing ones, new text node not created.');
     return;
   }
   const assetId = predictionId && predictionId.trim().length > 0
     ? `${predictionId}_text` : `${sourceNode.node_id}_text_${Date.now()}`;
   if (createdAssetIds.has(assetId)) {
-    logs.push('Replicate: текстовый артефакт уже создан в текущем цикле, пропуск.');
+    logs.push('Replicate: text artifact already created in current cycle, skipping.');
     return;
   }
   const position = deriveReplicateAssetPosition(sourceNode, created.length);
@@ -77,7 +77,7 @@ function maybeCreateAggregatedTextNode(ctx: {
     content_type: node.content_type ?? null, ui_position: safeExtractUiPosition(baseMeta),
     meta: extractNodeMetaSnapshot(baseMeta, 'text', aggregatedText),
   });
-  logs.push(`Replicate: создана text-нода "${node.title}" (${node.node_id}).`);
+  logs.push(`Replicate: created text node "${node.title}" (${node.node_id}).`);
 }
 
 export async function createReplicateAssetNodes(
@@ -145,7 +145,7 @@ export async function createReplicateAssetNodes(
         aggregatedText = normalizeAggregatedReplicateText(aggregatedText) ?? aggregatedText.trimEnd();
         if (!aggregatedText.trim()) aggregatedText = null;
       }
-      if (aggregatedText) logs.push(`Replicate: агрегированы текстовые сегменты (${textArtifacts.length} шт.) без создания отдельных нод.`);
+      if (aggregatedText) logs.push(`Replicate: aggregated text segments (${textArtifacts.length} pcs.) without creating separate nodes.`);
 
       const downstreamTargetIds = new Set(listProjectEdges(projectId).filter((e) => e.from_node === sourceNode.node_id).map((e) => e.to_node));
       const downstreamNodes = listProjectNodes(projectId).filter((n) => downstreamTargetIds.has(n.node_id));
@@ -181,25 +181,25 @@ export async function createReplicateAssetNodes(
 
       for (const [index, artifact] of assetArtifacts.entries()) {
         const rawValue = typeof artifact.value === 'string' ? artifact.value.trim() : '';
-        if (!rawValue) { logs.push('Replicate: пропущен пустой артефакт.'); continue; }
+        if (!rawValue) { logs.push('Replicate: skipped empty artifact.'); continue; }
 
         const assetId = predictionId ? `${predictionId}_${index}` : `${sourceNode.node_id}_${index}_${Date.now()}`;
 
         // Dedup guards
-        if (createdAssetIds.has(assetId)) { duplicateCount++; logs.push(`Replicate: пропуск ${artifact.kind}-артефакта (дубль в цикле).`); continue; }
-        if (downstreamNodes.some((n) => ((n.meta ?? {}) as Record<string, unknown>).replicate_asset_id === assetId)) { duplicateCount++; logs.push(`Replicate: пропуск ${artifact.kind}-артефакта (дубль по asset_id).`); continue; }
+        if (createdAssetIds.has(assetId)) { duplicateCount++; logs.push(`Replicate: skipping ${artifact.kind} artifact (duplicate in cycle).`); continue; }
+        if (downstreamNodes.some((n) => ((n.meta ?? {}) as Record<string, unknown>).replicate_asset_id === assetId)) { duplicateCount++; logs.push(`Replicate: skipping ${artifact.kind} artifact (duplicate by asset_id).`); continue; }
 
         const artifactSignature = computeAssetSignature(rawValue);
         const signature = `${artifact.kind}:${rawValue}`;
         const hashedSigKey = `signature:${artifactSignature}`;
-        if (existingSignatures.has(signature) || existingSignatures.has(hashedSigKey)) { duplicateCount++; logs.push(`Replicate: пропуск ${artifact.kind}-артефакта, найден дубликат.`); continue; }
+        if (existingSignatures.has(signature) || existingSignatures.has(hashedSigKey)) { duplicateCount++; logs.push(`Replicate: skipping ${artifact.kind} artifact, duplicate found.`); continue; }
 
         const existingNode = downstreamNodes.find((n) => {
           const nm = (n.meta ?? {}) as Record<string, unknown>;
           return nm.image_url === rawValue || nm.original_url === rawValue || nm.video_url === rawValue ||
             (typeof nm.source_asset_signature === 'string' && nm.source_asset_signature === artifactSignature) || n.content === rawValue;
         });
-        if (existingNode) { duplicateCount++; logs.push(`Replicate: пропуск ${artifact.kind}-артефакта (дубль по URL).`); continue; }
+        if (existingNode) { duplicateCount++; logs.push(`Replicate: skipping ${artifact.kind} artifact (duplicate by URL).`); continue; }
 
         existingSignatures.add(signature); existingSignatures.add(hashedSigKey);
         const position = deriveReplicateAssetPosition(sourceNode, created.length);
@@ -261,11 +261,11 @@ export async function createReplicateAssetNodes(
           try {
             const dl = await autoDownloadMediaIfNeeded(projectId, artifact.kind, nodeInputMeta);
             if (dl.updatedMeta) finalMeta = dl.updatedMeta;
-            if (dl.downloaded) logs.push(`Replicate: файл скачан на сервер (${Math.round((finalMeta.file_size as number) / 1024)}KB)`);
-            else if (finalMeta.auto_download_skipped) logs.push(`Replicate: скачивание пропущено (${finalMeta.skip_reason})`);
-            else if (finalMeta.auto_download_failed) logs.push(`Replicate: ошибка скачивания (${finalMeta.download_error})`);
+            if (dl.downloaded) logs.push(`Replicate: file downloaded to server (${Math.round((finalMeta.file_size as number) / 1024)}KB)`);
+            else if (finalMeta.auto_download_skipped) logs.push(`Replicate: download skipped (${finalMeta.skip_reason})`);
+            else if (finalMeta.auto_download_failed) logs.push(`Replicate: download error (${finalMeta.download_error})`);
           } catch (error) {
-            logs.push(`Replicate: ошибка скачивания (${error instanceof Error ? error.message : String(error)})`);
+            logs.push(`Replicate: download error (${error instanceof Error ? error.message : String(error)})`);
           }
         }
 
@@ -283,18 +283,18 @@ export async function createReplicateAssetNodes(
           ui_position: safeExtractUiPosition(finalMeta),
           meta: extractNodeMetaSnapshot(finalMeta, artifact.kind, rawValue),
         });
-        logs.push(`Replicate: создана ${artifact.kind}-нода "${node.title}" (${node.node_id}).`);
+        logs.push(`Replicate: created ${artifact.kind} node "${node.title}" (${node.node_id}).`);
       }
 
       // Create text node for aggregated text (before summary logs)
       maybeCreateAggregatedTextNode({ aggregatedText, projectId, sourceNode, predictionId, predictionUrl, timestamp, created, snapshots, logs, existingSignatures, createdAssetIds, buildTitle });
 
-      if (duplicateCount > 0) logs.push(`Replicate: пропущено ${duplicateCount} артефакт(ов) как дубликаты.`);
+      if (duplicateCount > 0) logs.push(`Replicate: skipped ${duplicateCount} artifact(s) as duplicates.`);
       if (created.length > 0) {
         const byType = new Map<string, number>();
         created.forEach((n) => byType.set(n.type, (byType.get(n.type) ?? 0) + 1));
-        logs.push(`Replicate: создано ${created.length} нод (${Array.from(byType.entries()).map(([t, c]) => `${c} ${describeArtifactPlural(t, c)}`).join(', ')}).`);
-      } else if (duplicateCount === 0) { logs.push('Replicate: новые артефакты не найдены.'); }
+        logs.push(`Replicate: created ${created.length} nodes (${Array.from(byType.entries()).map(([t, c]) => `${c} ${describeArtifactPlural(t, c)}`).join(', ')}).`);
+      } else if (duplicateCount === 0) { logs.push('Replicate: no new artifacts found.'); }
 
       if (predictionId) logs.push(`Replicate meta: prediction_id=${predictionId}`);
       if (predictionUrl) logs.push(`Replicate meta: prediction_url=${predictionUrl}`);

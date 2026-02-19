@@ -69,7 +69,7 @@ export function listProjectCollaborators(projectId: string): ProjectCollaborator
 
 export function upsertProjectCollaborator(projectId: string, userId: string, role: ProjectRole): void {
   if (role === 'owner') {
-    throw createHttpError(400, 'Используйте передачу владения для назначения владельца');
+    throw createHttpError(400, 'Use ownership transfer to assign an owner');
   }
 
   const now = new Date().toISOString();

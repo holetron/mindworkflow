@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Анимации для переключения режимов */
+/* Animations for mode switching */
 @keyframes fadeIn {
   from { 
     opacity: 0; 
@@ -18,7 +18,7 @@
   animation: fadeIn 0.2s ease-out;
 }
 
-/* Кастомный скроллбар для всего приложения */
+/* Custom scrollbar for the entire app */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.35) rgba(15, 23, 42, 0.6);
@@ -534,7 +534,7 @@ textarea {
   cursor: default !important;
 }
 
-/* Анимация мерцания для генерирующих нод */
+/* Flickering animation for generating nodes */
 @keyframes gentle-pulse {
   0%, 100% {
     opacity: 0.7;

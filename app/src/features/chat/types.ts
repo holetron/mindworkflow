@@ -31,7 +31,7 @@ export interface Chat {
   created_at: number;
   settings?: ChatSettings;
   project_id?: string | null;
-  agent_preset_id?: string | null; // NEW: связь с агентом
+  agent_preset_id?: string | null; // NEW: link to agent
 }
 
 export interface ChatMessage {

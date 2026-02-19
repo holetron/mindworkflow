@@ -125,13 +125,13 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-// Определить тип модели по имени
+// Determine model type by name
 function getModelType(modelName?: string): { type: string; emoji: string; color: string } {
   if (!modelName) return { type: 'text', emoji: '📝', color: '#6b7280' };
   
   const name = modelName.toLowerCase();
   
-  // Изображения
+  // Images
   if (name.includes('dall-e') || name.includes('dalle') || name.includes('stable-diffusion') || 
       name.includes('midjourney') || name.includes('imagen') || name.includes('firefly') ||
       name.includes('flux') || name.includes('playground') || name.includes('sd-') ||
@@ -139,7 +139,7 @@ function getModelType(modelName?: string): { type: string; emoji: string; color:
     return { type: 'image', emoji: '🎨', color: '#8b5cf6' };
   }
   
-  // Видео
+  // Video
   if (name.includes('sora') || name.includes('runway') || name.includes('pika') || 
       name.includes('video') || name.includes('gen-2') || name.includes('gen-3') ||
       name.includes('kling') || name.includes('luma')) {
@@ -152,21 +152,21 @@ function getModelType(modelName?: string): { type: string; emoji: string; color:
     return { type: '3d', emoji: '🎲', color: '#06b6d4' };
   }
   
-  // Аудио
+  // Audio
   if (name.includes('whisper') || name.includes('tts') || name.includes('audio') || 
       name.includes('sound') || name.includes('voice') || name.includes('elevenlabs') ||
       name.includes('bark') || name.includes('musicgen')) {
     return { type: 'audio', emoji: '🎵', color: '#f59e0b' };
   }
   
-  // Мультимодальные
+  // Multimodal
   if (name.includes('gpt-4-vision') || name.includes('gpt-4o') || name.includes('claude-3') ||
       name.includes('gemini-pro-vision') || name.includes('gemini-1.5') || 
       name.includes('vision') || name.includes('multimodal')) {
     return { type: 'multi', emoji: '👁️', color: '#10b981' };
   }
   
-  // Текст (по умолчанию)
+  // Text (default)
   return { type: 'text', emoji: '📝', color: '#6b7280' };
 }
 
@@ -255,8 +255,8 @@ export interface AiProviderOption {
   config?: Record<string, unknown>;
   systemPromptTemplate?: string;
   inputFields?: IntegrationFieldConfig[];
-  supportsFiles?: boolean; // Поддержка файлов
-  supportedFileTypes?: string[]; // Поддерживаемые типы файлов
+  supportsFiles?: boolean; // File support
+  supportedFileTypes?: string[]; // Supported file types
   modelFamilies?: Array<{
     id: string;
     label: string;
@@ -288,7 +288,7 @@ export interface FlowNodeCardData {
   targets?: Array<{ node_id: string; title: string; type: string }>;
   allNodes?: FlowNode[];
   disabled?: boolean;
-  isGenerating?: boolean; // Индикатор что нода сейчас генерирует ответ
+  isGenerating?: boolean; // Indicator that the node is currently generating a response
   onRemoveNodeFromFolder?: (nodeId: string, folderId?: string, position?: { x: number; y: number }) => void | Promise<void>;
   onRemoveInvalidPorts?: (nodeId: string, invalidPorts: string[]) => void | Promise<void>;
   onSplitText?: (nodeId: string, config: TextSplitterConfig, options?: { content: string }) => void | Promise<void>;
@@ -298,8 +298,8 @@ const FALLBACK_SYSTEM_PRESETS: PromptPreset[] = [
   {
     preset_id: 'fallback-system-planner',
     category: 'system_prompt',
-    label: 'Планировщик',
-    description: 'Базовый системный промпт для генерации workflow планов',
+    label: 'Planner',
+    description: 'Basic system prompt for workflow plan generation',
     content: defaultPlannerPrompt,
     tags: ['default', 'planner'],
     is_quick_access: true,
@@ -345,7 +345,7 @@ export interface TextSplitterConfig {
 
 const DEFAULT_TEXT_SPLITTER_CONFIG: TextSplitterConfig = {
   separator: '---',
-  subSeparator: '-----', // ← изменено с '-' на '-----'
+  subSeparator: '-----', // ← changed from '-' to '-----'
   namingMode: 'auto',
 };
 
@@ -420,7 +420,7 @@ const FALLBACK_PROVIDERS: AiProviderOption[] = [
     models: ['local-llm-7b-q5'],
     defaultModel: 'local-llm-7b-q5',
     available: true,
-    description: 'Встроенный оффлайн движок для тестовых запусков.',
+    description: 'Built-in offline engine for test runs.',
     inputFields: [],
     supportsFiles: false,
     supportedFileTypes: [],
@@ -428,10 +428,10 @@ const FALLBACK_PROVIDERS: AiProviderOption[] = [
   {
     id: 'openai_gpt',
     name: 'OpenAI GPT',
-    models: ['chatgpt-4o-latest', 'gpt-4o-mini', 'gpt-3.5-turbo'], // Минимальный список для тестирования
+    models: ['chatgpt-4o-latest', 'gpt-4o-mini', 'gpt-3.5-turbo'], // Minimal list for testing
     defaultModel: 'gpt-4o-mini',
     available: true,
-    description: 'OpenAI GPT модели с поддержкой структурированного вывода.',
+    description: 'OpenAI GPT models with structured output support.',
     inputFields: [],
     supportsFiles: false,
     supportedFileTypes: [],
@@ -442,7 +442,7 @@ const FALLBACK_PROVIDERS: AiProviderOption[] = [
     models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-pro-latest'],
     defaultModel: 'gemini-2.5-flash',
     available: true,
-    description: 'Google Gemini с нативной поддержкой файлов и изображений.',
+    description: 'Google Gemini with native file and image support.',
     inputFields: [],
     supportsFiles: true,
     supportedFileTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain'],
@@ -509,14 +509,14 @@ function FieldConfigurator({ nodeId, nodeType, currentFields, onFieldsChange, di
   // Default fields based on node type
   function getDefaultFields(type: string): NodeFieldConfig[] {
     const commonFields = [
-      { id: 'title', label: 'Заголовок', type: 'text' as const, visible: true, order: 0 },
-      { id: 'content', label: 'Содержимое', type: 'textarea' as const, visible: true, order: 1 }
+      { id: 'title', label: 'Title', type: 'text' as const, visible: true, order: 0 },
+      { id: 'content', label: 'Content', type: 'textarea' as const, visible: true, order: 1 }
     ];
 
     if (type === 'ai') {
       return [
         { id: 'htmlUrl', label: 'URL', type: 'text', visible: true, order: 0 },
-        { id: 'screenWidth', label: 'Ширина экрана', type: 'select', visible: true, order: 1 }
+        { id: 'screenWidth', label: 'Screen Width', type: 'select', visible: true, order: 1 }
       ];
     }
     return commonFields;
@@ -552,11 +552,11 @@ function FieldConfigurator({ nodeId, nodeType, currentFields, onFieldsChange, di
   const addCustomField = () => {
     const newField: NodeFieldConfig = {
       id: `custom_${Date.now()}`,
-      label: 'Новое поле',
+      label: 'New Field',
       type: 'text',
       visible: true,
       order: fields.length,
-      placeholder: 'Введите значение...'
+      placeholder: 'Enter value...'
     };
     const updatedFields = [...fields, newField];
     setFields(updatedFields);
@@ -581,7 +581,7 @@ function FieldConfigurator({ nodeId, nodeType, currentFields, onFieldsChange, di
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="text-xs text-white/60">
-          Настройте, какие поля отображать в слайдере ноды
+          Configure which fields to display in the node slider
         </div>
         <button
           type="button"
@@ -589,7 +589,7 @@ function FieldConfigurator({ nodeId, nodeType, currentFields, onFieldsChange, di
           onClick={addCustomField}
           disabled={disabled}
         >
-          + Поле
+          + Field
         </button>
       </div>
 
@@ -651,7 +651,7 @@ function FieldConfigurator({ nodeId, nodeType, currentFields, onFieldsChange, di
       </div>
 
       <div className="text-xs text-white/50 p-2 bg-black/5 rounded">
-        Видимые поля будут отображаться в слайдере в указанном порядке
+        Visible fields will be displayed in the slider in the specified order
       </div>
     </div>
   );
@@ -673,10 +673,10 @@ function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes,
   function getDefaultRouting(type: string): NodeRoutingConfig {
     const baseRouting = {
       inputPorts: [
-        { id: 'main_input', label: 'Основной вход', type: 'any', required: false, multiple: false }
+        { id: 'main_input', label: 'Main Input', type: 'any', required: false, multiple: false }
       ],
       outputPorts: [
-        { id: 'main_output', label: 'Основной выход', type: 'any' }
+        { id: 'main_output', label: 'Main Output', type: 'any' }
       ],
       routingRules: []
     };
@@ -684,16 +684,16 @@ function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes,
     if (type === 'ai') {
       return {
         inputPorts: [
-          { id: 'prompt_input', label: 'Промпт', type: 'text', required: true, multiple: false },
-          { id: 'context_input', label: 'Контекст', type: 'any', required: false, multiple: true }
+          { id: 'prompt_input', label: 'Prompt', type: 'text', required: true, multiple: false },
+          { id: 'context_input', label: 'Context', type: 'any', required: false, multiple: true }
         ],
         outputPorts: [
-          { id: 'success_output', label: 'Успешный результат', type: 'text' },
-          { id: 'error_output', label: 'Ошибка', type: 'error' }
+          { id: 'success_output', label: 'Success Result', type: 'text' },
+          { id: 'error_output', label: 'Error', type: 'error' }
         ],
         routingRules: [
-          { id: 'success_rule', condition: 'success', outputPort: 'success_output', description: 'При успешном выполнении' },
-          { id: 'error_rule', condition: 'error', outputPort: 'error_output', description: 'При ошибке' }
+          { id: 'success_rule', condition: 'success', outputPort: 'success_output', description: 'On successful execution' },
+          { id: 'error_rule', condition: 'error', outputPort: 'error_output', description: 'On error' }
         ]
       };
     }
@@ -704,7 +704,7 @@ function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes,
   const addInputPort = () => {
     const newPort = {
       id: `input_${Date.now()}`,
-      label: 'Новый вход',
+      label: 'New Input',
       type: 'any',
       required: false,
       multiple: false
@@ -720,7 +720,7 @@ function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes,
   const addOutputPort = () => {
     const newPort = {
       id: `output_${Date.now()}`,
-      label: 'Новый выход',
+      label: 'New Output',
       type: 'any'
     };
     const updatedRouting = {
@@ -777,14 +777,14 @@ function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes,
       {/* Input Ports */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-xs font-medium text-white/70">Входные порты</h4>
+          <h4 className="text-xs font-medium text-white/70">Input Ports</h4>
           <button
             type="button"
             className="text-xs px-2 py-1 bg-green-500/20 text-green-300 rounded hover:bg-green-500/30 transition-colors"
             onClick={addInputPort}
             disabled={disabled}
           >
-            + Вход
+            + Input
           </button>
         </div>
         <div className="space-y-2 max-h-32 overflow-y-auto">
@@ -796,7 +796,7 @@ function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes,
                 onChange={(e) => updateInputPort(port.id, { label: e.target.value })}
                 disabled={disabled}
                 className="flex-1 bg-transparent text-xs text-white/80 border-none outline-none"
-                placeholder="Название порта"
+                placeholder="Port Name"
               />
               <select
                 value={port.type}
@@ -804,12 +804,12 @@ function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes,
                 disabled={disabled}
                 className="text-xs bg-black/20 text-white/70 border border-white/10 rounded px-1 py-0.5"
               >
-                <option value="any">Любой</option>
-                <option value="text">Текст</option>
-                <option value="number">Число</option>
+                <option value="any">Any</option>
+                <option value="text">Text</option>
+                <option value="number">Number</option>
                 <option value="json">JSON</option>
-                <option value="image">Изображение</option>
-                <option value="file">Файл</option>
+                <option value="image">Image</option>
+                <option value="file">File</option>
               </select>
               <label className="flex items-center gap-1">
                 <input
@@ -819,7 +819,7 @@ function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes,
                   disabled={disabled}
                   className="w-3 h-3"
                 />
-                <span className="text-xs text-white/60">Обяз.</span>
+                <span className="text-xs text-white/60">Req.</span>
               </label>
               <button
                 type="button"
@@ -837,14 +837,14 @@ function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes,
       {/* Output Ports */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-xs font-medium text-white/70">Выходные порты</h4>
+          <h4 className="text-xs font-medium text-white/70">Output Ports</h4>
           <button
             type="button"
             className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded hover:bg-blue-500/30 transition-colors"
             onClick={addOutputPort}
             disabled={disabled}
           >
-            + Выход
+            + Output
           </button>
         </div>
         <div className="space-y-2 max-h-32 overflow-y-auto">
@@ -856,7 +856,7 @@ function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes,
                 onChange={(e) => updateOutputPort(port.id, { label: e.target.value })}
                 disabled={disabled}
                 className="flex-1 bg-transparent text-xs text-white/80 border-none outline-none"
-                placeholder="Название порта"
+                placeholder="Port Name"
               />
               <select
                 value={port.type}
@@ -864,13 +864,13 @@ function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes,
                 disabled={disabled}
                 className="text-xs bg-black/20 text-white/70 border border-white/10 rounded px-1 py-0.5"
               >
-                <option value="any">Любой</option>
-                <option value="text">Текст</option>
-                <option value="number">Число</option>
+                <option value="any">Any</option>
+                <option value="text">Text</option>
+                <option value="number">Number</option>
                 <option value="json">JSON</option>
-                <option value="image">Изображение</option>
-                <option value="file">Файл</option>
-                <option value="error">Ошибка</option>
+                <option value="image">Image</option>
+                <option value="file">File</option>
+                <option value="error">Error</option>
               </select>
               <button
                 type="button"
@@ -887,12 +887,12 @@ function RoutingConfigurator({ nodeId, nodeType, currentRouting, availableNodes,
 
       {/* Connection Status */}
       <div className="p-2 bg-black/5 rounded border border-white/5">
-        <div className="text-xs text-white/60 mb-1">Доступные подключения:</div>
+        <div className="text-xs text-white/60 mb-1">Available connections:</div>
         <div className="text-xs text-white/50">
           {availableNodes.length > 0 ? (
-            `${availableNodes.length} нод доступно для соединения`
+            `${availableNodes.length} nodes available for connection`
           ) : (
-            'Нет доступных нод для соединения'
+            'No nodes available for connection'
           )}
         </div>
       </div>
@@ -1140,21 +1140,21 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     setImageNotes(nextValue);
   }, [node.meta?.short_description]);
 
-  // onBlur паттерн - сохранение только при потере фокуса
+  // onBlur pattern - save only on focus loss
   const handleImageNotesChange = useCallback(
     (value: string) => {
-      // Обновляем локальный state БЕЗ сохранения в БД
+      // Update local state WITHOUT saving to DB
       setImageNotes(value);
     },
     [],
   );
 
-  // onFocus - помечаем начало редактирования
+  // onFocus - mark editing start
   const handleImageNotesFocus = useCallback(() => {
     setIsEditingImageNotes(true);
   }, []);
 
-  // onBlur - сохраняем только при выходе из поля
+  // onBlur - save only when leaving the field
   const handleImageNotesBlur = useCallback(() => {
     setIsEditingImageNotes(false);
     if (imageNotes !== node.meta?.short_description) {
@@ -1346,11 +1346,11 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       const parsed = rawTextSplitterConfig as Record<string, unknown>;
       const separator =
         typeof parsed.separator === 'string' && parsed.separator.trim().length > 0
-          ? parsed.separator.replace(/\\n/g, '\n') // ← поддержка \n
+          ? parsed.separator.replace(/\\n/g, '\n') // ← support for \n
           : DEFAULT_TEXT_SPLITTER_CONFIG.separator;
       const subSeparator =
         typeof parsed.subSeparator === 'string'
-          ? parsed.subSeparator.replace(/\\n/g, '\n') // ← поддержка \n
+          ? parsed.subSeparator.replace(/\\n/g, '\n') // ← support for \n
           : DEFAULT_TEXT_SPLITTER_CONFIG.subSeparator;
       const namingMode: TextSplitterConfig['namingMode'] =
         parsed.namingMode === 'manual' ? 'manual' : DEFAULT_TEXT_SPLITTER_CONFIG.namingMode;
@@ -1545,9 +1545,9 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
             style={textSplitterPopoverStyle}
             onPointerDown={(event) => event.stopPropagation()}
           >
-            <div className="font-medium text-white/90">Настройки разделения</div>
+            <div className="font-medium text-white/90">Split Settings</div>
             <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-white/50">
-              Разделитель
+              Separator
               <input
                 type="text"
                 value={textSplitterDraft.separator}
@@ -1557,7 +1557,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
               />
             </label>
             <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-white/50">
-              Подразделитель
+              Sub-separator
               <input
                 type="text"
                 value={textSplitterDraft.subSeparator}
@@ -1567,7 +1567,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
               />
             </label>
             <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-white/50">
-              Именование
+              Naming
               <select
                 value={textSplitterDraft.namingMode}
                 onChange={(event) =>
@@ -1575,12 +1575,12 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 }
                 className="w-full rounded border border-white/15 bg-black/40 px-2 py-1 text-xs text-white/90 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400/40"
               >
-                <option value="auto">Авто по сегменту</option>
-                <option value="manual">Ручное</option>
+                <option value="auto">Auto by segment</option>
+                <option value="manual">Manual</option>
               </select>
             </label>
             <p className="text-[11px] leading-relaxed text-white/50">
-              Полное дерево нод появится в следующем шаге реализации сплиттера.
+              Full node tree will appear in the next splitter implementation step.
             </p>
             <button
               type="button"
@@ -1588,11 +1588,11 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
               onClick={handleSplitTextConfirm}
               disabled={!canSplitTextContent || disabled}
             >
-              Разделить текст
+              Split Text
             </button>
             {!canSplitTextContent ? (
               <div className="text-[10px] text-emerald-200/70">
-                Добавьте содержимое в ноду, чтобы активировать разделение.
+                Add content to the node to activate splitting.
               </div>
             ) : null}
           </div>,
@@ -1609,7 +1609,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
   const htmlIframeRef = useRef<HTMLIFrameElement | null>(null);
   const nodeIdRef = useRef(node.node_id);
   const updateNodeInternals = useUpdateNodeInternals();
-  // ✅ Дебаунсированная версия updateNodeInternals для предотвращения множественных вызовов
+  // Debounced version of updateNodeInternals to prevent multiple calls
   const debouncedUpdateNodeInternals = useDebouncedUpdateNodeInternals(updateNodeInternals, node.node_id, 50);
   const reactFlow = useReactFlow();
   const resizeStartPos = useRef({ x: 0, y: 0, width: 0, height: 0 });
@@ -1716,8 +1716,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     }
     return {
       primaryIcon: '🎬',
-      primaryLabel: 'Видео',
-      fileName: videoSourceName || 'Источник не задан',
+      primaryLabel: 'Video',
+      fileName: videoSourceName || 'Source not set',
       sizeLabel: formattedVideoFileSize ?? null,
     };
   }, [formattedVideoFileSize, node.type, videoSourceName]);
@@ -1725,7 +1725,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     if (node.type !== 'video') {
       return null;
     }
-    const displayName = videoFooterInfo?.fileName ?? 'Источник не задан';
+    const displayName = videoFooterInfo?.fileName ?? 'Source not set';
     return (
       <span className="flex-1 truncate" title={displayName}>
         {displayName}
@@ -1761,7 +1761,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     if (Number.isNaN(date.getTime())) {
       return replicateLastRunAt;
     }
-    return date.toLocaleString('ru-RU', {
+    return date.toLocaleString('en-US', {
       day: '2-digit',
       month: '2-digit',
       hour: '2-digit',
@@ -1774,13 +1774,13 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     }
     const normalized = replicateStatus.toLowerCase();
     if (['succeeded', 'success', 'completed'].includes(normalized)) {
-      return { label: 'Успех', className: 'bg-green-900/30 text-green-300 border border-green-500/40' };
+      return { label: 'Success', className: 'bg-green-900/30 text-green-300 border border-green-500/40' };
     }
     if (['failed', 'error', 'canceled'].includes(normalized)) {
-      return { label: 'Ошибка', className: 'bg-red-900/30 text-red-300 border border-red-500/40' };
+      return { label: 'Error', className: 'bg-red-900/30 text-red-300 border border-red-500/40' };
     }
     if (['processing', 'running', 'queued', 'starting'].includes(normalized)) {
-      return { label: 'Выполняется', className: 'bg-yellow-900/30 text-yellow-300 border border-yellow-500/40' };
+      return { label: 'Processing', className: 'bg-yellow-900/30 text-yellow-300 border border-yellow-500/40' };
     }
     return { label: replicateStatus, className: 'bg-slate-700 text-slate-200 border border-slate-600' };
   }, [replicateStatus]);
@@ -2221,17 +2221,17 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       }
       setIsFolderDropActive(false);
 
-      // Показываем уведомление при импорте файлов
+      // Show notification when importing files
       const files = event.dataTransfer?.files;
       if (files && files.length > 0) {
-        setFolderImportMessage(`✓ Добавлено ${files.length} файл(ов)`);
+        setFolderImportMessage(`✓ Added ${files.length} file(s)`);
         
-        // Очищаем старый таймер если он существует
+        // Clear old timer if it exists
         if (folderImportTimerRef.current !== null) {
           clearTimeout(folderImportTimerRef.current);
         }
         
-        // Скрываем сообщение через 3 секунды
+        // Hide message after 3 seconds
         folderImportTimerRef.current = setTimeout(() => {
           setFolderImportMessage('');
           folderImportTimerRef.current = null;
@@ -2492,7 +2492,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
 
         if (!effectiveProjectId) {
           console.error('Video upload failed: missing projectId');
-          alert('Не удалось определить проект для загрузки видео');
+          alert('Could not determine project for video upload');
           return;
         }
 
@@ -2505,7 +2505,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
         });
         if (!response.ok) {
           console.error('Video upload failed:', response.statusText);
-          alert('Ошибка загрузки видео');
+          alert('Video upload error');
           return;
         }
         const payload = await response.json();
@@ -2565,13 +2565,13 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
         setVideoPreviewReloadToken((value) => value + 1);
       } catch (error) {
         console.error('Video upload error:', error);
-        alert('Ошибка при загрузке видео');
+        alert('Error uploading video');
       }
     };
     input.click();
   }, [autoRenameFromSource, data.projectId, node.project_id, node.node_id, onChangeMeta, projectId]);
   const handleVideoUrlInput = useCallback(() => {
-    const url = window.prompt('Введите URL видео:')?.trim();
+    const url = window.prompt('Enter video URL:')?.trim();
     if (!url) {
       return;
     }
@@ -2619,8 +2619,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
   const handleOutputTypeChange = useCallback((type: 'mindmap' | 'node' | 'folder') => {
     console.log('🎯 handleOutputTypeChange called:', type, 'for node:', node.node_id);
     setOutputType(type);
-    userSetOutputTypeRef.current = type; // Запоминаем выбор пользователя
-    // Можно также сохранить в метаданных ноды
+    userSetOutputTypeRef.current = type; // Remember user's choice
+    // Can also be saved in node metadata
     onChangeMeta(node.node_id, { output_type: type });
     console.log('✅ onChangeMeta called with output_type:', type);
   }, [node.node_id, onChangeMeta]);
@@ -2770,7 +2770,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       } catch (error) {
         if (!cancelled) {
           console.warn('Prompt search failed', error);
-          setPromptSearchError(error instanceof Error ? error.message : 'Не удалось выполнить поиск');
+          setPromptSearchError(error instanceof Error ? error.message : 'Search failed');
           setPromptSearchLoading(false);
         }
       }
@@ -2854,8 +2854,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     const finalOutputType = isMidjourneyProvider && newOutputType === 'mindmap' ? 'node' : newOutputType;
     
     setOutputType((prev) => {
-      // Если пользователь вручную выбрал тип, ВСЕГДА сохраняем его выбор
-      // Выбор пользователя имеет приоритет над бэкендом
+      // If the user manually selected a type, ALWAYS preserve their choice
+      // User's choice takes priority over backend
       if (userSetOutputTypeRef.current !== null) {
         return userSetOutputTypeRef.current;
       }
@@ -2923,7 +2923,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       const raw = typeof candidate === 'string' ? candidate : htmlUrlInput;
       const nextUrl = raw.trim();
       if (!nextUrl) {
-        setHtmlError('Укажите URL страницы');
+        setHtmlError('Enter page URL');
         return;
       }
 
@@ -2946,7 +2946,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        setHtmlError(message || 'Не удалось загрузить страницу');
+        setHtmlError(message || 'Failed to load page');
       } finally {
         setIsHtmlLoading(false);
       }
@@ -3021,7 +3021,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     }
 
     if (!targetUrl) {
-      setHtmlError('Сначала укажите URL страницы');
+      setHtmlError('Enter page URL first');
       return;
     }
 
@@ -3061,7 +3061,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setHtmlError(message || 'Не удалось получить скриншот');
+      setHtmlError(message || 'Failed to capture screenshot');
     } finally {
       setIsScreenshotCapturing(false);
     }
@@ -3135,14 +3135,14 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
   }, [node.meta?.htmlScreenshotCapturedAt]);
 
   const capturedAtLabel = useMemo(
-    () => (screenshotCapturedAt ? new Date(screenshotCapturedAt).toLocaleString('ru-RU') : '—'),
+    () => (screenshotCapturedAt ? new Date(screenshotCapturedAt).toLocaleString('en-US') : '—'),
     [screenshotCapturedAt],
   );
 
   const displayHtmlUrl = useMemo(() => {
     const trimmedInput = htmlUrlInput.trim();
     const trimmedSaved = htmlUrl.trim();
-    return trimmedInput || trimmedSaved || 'URL не указан';
+    return trimmedInput || trimmedSaved || 'URL not specified';
   }, [htmlUrl, htmlUrlInput]);
 
   const handleIframeLoad = useCallback(() => {
@@ -3222,7 +3222,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
   }, [autoRenameFromSource, node.node_id, onChangeMeta]);
 
   const handleImageUrlInput = useCallback(() => {
-    const url = window.prompt('Введите URL изображения:');
+    const url = window.prompt('Enter image URL:');
     if (!url) return;
 
     pendingImageModeRef.current = true;
@@ -3248,11 +3248,11 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
 
     const { naturalWidth, naturalHeight } = img;
     
-    // ⚠️ КРИТИЧНО: Проверяем, не сохранены ли уже эти размеры, чтобы избежать бесконечного цикла!
+    // CRITICAL: Check if these dimensions are already saved to avoid infinite loop!
     const savedNaturalWidth = node.meta?.natural_width as number | undefined;
     const savedNaturalHeight = node.meta?.natural_height as number | undefined;
     
-    // Если размеры уже сохранены и совпадают - не обновляем!
+    // If dimensions are already saved and match - do not update!
     if (savedNaturalWidth === naturalWidth && savedNaturalHeight === naturalHeight) {
       return;
     }
@@ -3266,18 +3266,18 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       naturalHeight
     );
     
-    // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Рассчитываем размеры контента (без фиксированных частей)
-    // Контент должен быть не больше MAX_CONTENT_HEIGHT
+    // KEY FIX: Calculate content dimensions (without fixed parts)
+    // Content must not exceed MAX_CONTENT_HEIGHT
     let contentHeight = Math.min(scaledHeight, MAX_CONTENT_HEIGHT);
     let contentWidth = contentHeight * aspectRatio;
     
-    // Проверяем, не превышает ли ширина максимум
+    // Check if width exceeds maximum
     if (contentWidth > MAX_CONTENT_WIDTH) {
       contentWidth = MAX_CONTENT_WIDTH;
       contentHeight = contentWidth / aspectRatio;
     }
     
-    // Проверяем минимумы
+    // Check minimums
     if (contentWidth < MIN_CONTENT_WIDTH) {
       contentWidth = MIN_CONTENT_WIDTH;
       contentHeight = contentWidth / aspectRatio;
@@ -3288,7 +3288,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       contentWidth = contentHeight * aspectRatio;
     }
 
-    // Save dimensions to meta (только если изменились!)
+    // Save dimensions to meta (only if changed!)
     onChangeMeta(node.node_id, {
       natural_width: naturalWidth,
       natural_height: naturalHeight,
@@ -3334,8 +3334,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
   }, [node.node_id, node.meta?.natural_width, node.meta?.natural_height, node.ui?.bbox, imageViewMode, onChangeMeta, onChangeUi, reactFlow]);
 
   // Update node height when switching between annotation modes (only for image nodes)
-  // ⚠️ ВРЕМЕННО ОТКЛЮЧЕНО для отладки бесконечного цикла
-  // TODO: Нужно добавить проверку изменения высоты перед обновлением
+  // TEMPORARILY DISABLED for debugging infinite loop
+  // TODO: Need to add height change check before updating
   /*
   useEffect(() => {
     if (node.type !== 'image') return;
@@ -3347,7 +3347,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     const isAnnotationMode = imageViewMode === 'edit';
     const newTotalHeight = calculateNodeHeight(displayHeight, isAnnotationMode);
     
-    // ⚠️ TODO: Проверить текущую высоту и не обновлять если она уже правильная!
+    // TODO: Check current height and do not update if already correct!
     const currentHeight = reactFlow.getNode(node.node_id)?.style?.height;
     if (currentHeight === newTotalHeight) return;
     
@@ -3373,7 +3373,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       const currentY = node.ui.bbox.y1;
       const currentWidth = node.ui.bbox.x2 - node.ui.bbox.x1;
       
-      // ⚠️ TODO: Проверить текущий bbox и не обновлять если он уже правильный!
+      // TODO: Check current bbox and do not update if already correct!
       const currentBboxHeight = node.ui.bbox.y2 - node.ui.bbox.y1;
       if (currentBboxHeight === newTotalHeight) return;
       
@@ -3426,10 +3426,10 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
         source = editedImage ?? originalImage;
       }
       if (!source) {
-        setImageToolbarError('Нет изображения для обрезки');
+        setImageToolbarError('No image to crop');
         return;
       }
-      // ✅ BUG-FIX: loadImageWithRetry с retry logic обрабатывает CORS и network issues
+      // BUG-FIX: loadImageWithRetry with retry logic handles CORS and network issues
       const img = await loadImageWithRetry(source);
       const naturalWidth = Math.max(1, img.naturalWidth || img.width || 0);
       const naturalHeight = Math.max(1, img.naturalHeight || img.height || 0);
@@ -3442,7 +3442,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       setIsCropModalOpen(true);
     } catch (error) {
       console.error('[FlowNodeCard] Failed to prepare crop modal', error);
-      setImageToolbarError('Не удалось подготовить изображение для обрезки.');
+      setImageToolbarError('Failed to prepare image for cropping.');
     } finally {
       setIsPreparingCrop(false);
     }
@@ -3473,7 +3473,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
         image_crop_expose_port: false,
       });
       if (!projectId) {
-        setImageToolbarError('Не удалось создать ноду: проект недоступен.');
+        setImageToolbarError('Failed to create node: project unavailable.');
         return;
       }
       try {
@@ -3552,7 +3552,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
         }
       } catch (error) {
         console.error('[FlowNodeCard] Failed to create crop node', error);
-        setImageToolbarError('Не удалось создать ноду с обрезкой.');
+        setImageToolbarError('Failed to create node with crop.');
       } finally {
         setIsSavingCropNode(false);
       }
@@ -3577,13 +3577,13 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       const videoSource = typeof node.meta.video_url === 'string' ? node.meta.video_url : '';
       const videoPath = typeof node.meta.video_path === 'string' ? node.meta.video_path : videoSource;
       if (!videoPath) {
-        alert('Нет видео для обрезки');
+        alert('No video to crop');
         return;
       }
       const videoWidth = typeof node.meta.video_display_width === 'number' ? node.meta.video_display_width : 0;
       const videoHeight = typeof node.meta.video_display_height === 'number' ? node.meta.video_display_height : 0;
       if (!videoWidth || !videoHeight) {
-        alert('Не удалось определить размеры видео');
+        alert('Could not determine video dimensions');
         return;
       }
       // try to extract first frame client-side for preview in crop modal
@@ -3626,7 +3626,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       setIsVideoCropModalOpen(true);
     } catch (error) {
       console.error('[FlowNodeCard] Failed to prepare video crop modal', error);
-      alert('Не удалось подготовить видео для обрезки.');
+      alert('Failed to prepare video for cropping.');
     } finally {
       setIsPreparingVideoCrop(false);
     }
@@ -3710,7 +3710,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       }
     ) => {
       if (!projectId) {
-        throw new Error('Проект недоступен');
+        throw new Error('Project unavailable');
       }
 
       try {
@@ -3745,7 +3745,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
         const frameUrl = body.frame?.frameUrl || body.frameUrl || body.framePath || '';
         if (!frameUrl) {
           console.error('Invalid response structure:', body);
-          throw new Error('Не удалось получить кадр от сервера');
+          throw new Error('Failed to get frame from server');
         }
 
         // Create an image node with the extracted frame
@@ -3824,7 +3824,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       }
     ) => {
       if (!projectId) {
-        throw new Error('Проект недоступен');
+        throw new Error('Project unavailable');
       }
 
       try {
@@ -3870,7 +3870,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
           // Extract trimmed video info from response
           if (!body.trimmedVideo?.trimmedVideoUrl) {
             console.error('Invalid trim response structure:', body);
-            throw new Error('Не удалось получить обрезанное видео от сервера');
+            throw new Error('Failed to get cropped video from server');
           }
 
           // Create a video node positioned correctly (like handleExtractFrame does)
@@ -3932,7 +3932,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
           }
         } catch (fetchErr) {
           if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
-            throw new Error('Операция отняла слишком много времени. Пожалуйста, попробуйте еще раз.');
+            throw new Error('Operation timed out. Please try again.');
           }
           throw fetchErr;
         }
@@ -4030,18 +4030,18 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       naturalHeight
     );
     
-    // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Рассчитываем размеры контента (без фиксированных частей)
-    // Контент должен быть не больше MAX_CONTENT_HEIGHT
+    // KEY FIX: Calculate content dimensions (without fixed parts)
+    // Content must not exceed MAX_CONTENT_HEIGHT
     let contentHeight = Math.min(scaledHeight, MAX_CONTENT_HEIGHT);
     let contentWidth = contentHeight * aspectRatio;
     
-    // Проверяем, не превышает ли ширина максимум
+    // Check if width exceeds maximum
     if (contentWidth > MAX_CONTENT_WIDTH) {
       contentWidth = MAX_CONTENT_WIDTH;
       contentHeight = contentWidth / aspectRatio;
     }
     
-    // Проверяем минимумы
+    // Check minimums
     if (contentWidth < MIN_CONTENT_WIDTH) {
       contentWidth = MIN_CONTENT_WIDTH;
       contentHeight = contentWidth / aspectRatio;
@@ -4095,7 +4095,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     );
   }, [node.node_id, node.meta, node.ui?.bbox, imageViewMode, onChangeMeta, onChangeUi, reactFlow]);
 
-  // Функция скачивания файла
+  // File download function
   const handleFileDownload = useCallback((fileName: string, fileData: string | ArrayBuffer | null) => {
     if (!fileData || !fileName) return;
     
@@ -4165,31 +4165,31 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-white/50 text-sm">
-                Введите URL для предпросмотра сайта
+                Enter URL for website preview
               </div>
             )
           ) : htmlScreenshot ? (
             <img
               src={htmlScreenshot}
-              alt="Скриншот страницы"
+              alt="Page screenshot"
               className="w-full h-full object-contain bg-slate-950"
               draggable={false}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-white/50 text-sm">
-              Скриншот ещё не создан
+              Screenshot not yet created
             </div>
           )}
 
           {isHtmlLoading && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-xs text-white">
-              Загрузка страницы…
+              Loading page…
             </div>
           )}
 
           {isScreenshotCapturing && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-xs text-white">
-              Создание скриншота…
+              Capturing screenshot…
             </div>
           )}
         </div>
@@ -4223,7 +4223,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   onClick={handleHtmlRefresh}
                   disabled={disabled || isHtmlLoading}
                   className="flex h-7 w-7 items-center justify-center rounded border border-white/10 bg-black/30 text-white/70 text-base hover:bg-black/40 hover:text-white transition disabled:opacity-60"
-                  title="Обновить страницу"
+                  title="Refresh page"
                 >
                   🔄
                 </button>
@@ -4232,7 +4232,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   onClick={handleTogglePreviewMode}
                   disabled={showLivePreview && !htmlScreenshot}
                   className="flex h-7 w-7 items-center justify-center rounded border border-white/10 bg-black/30 text-white/70 text-base hover:bg-black/40 hover:text-white transition disabled:opacity-40"
-                  title={showLivePreview ? 'Показать скриншот' : 'Открыть живой просмотр'}
+                  title={showLivePreview ? 'Show screenshot' : 'Open live preview'}
                 >
                   {showLivePreview ? '🖼️' : '🌐'}
                 </button>
@@ -4241,7 +4241,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   onClick={handleCaptureScreenshot}
                   disabled={disabled || isScreenshotCapturing || isHtmlLoading || !htmlUrl.trim()}
                   className="flex h-7 w-7 items-center justify-center rounded border border-primary/50 bg-primary/30 text-white text-base hover:bg-primary/40 transition disabled:opacity-60"
-                  title="Сделать скриншот видимой области"
+                  title="Capture visible area screenshot"
                 >
                   📸
                 </button>
@@ -4251,7 +4251,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   className="flex h-7 w-7 items-center justify-center rounded border border-white/10 bg-black/30 text-white text-base hover:bg-black/40 hover:text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
                   data-nodrag="true"
                   disabled={disabled}
-                  title="Настройки HTML-ноды"
+                  title="HTML node settings"
                 >
                   ⚙️
                 </button>
@@ -4261,7 +4261,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   value={htmlOutputType}
                   onChange={(e) => handleHtmlOutputTypeChange(e.target.value as 'link' | 'image' | 'code')}
                   className="w-full rounded bg-black/30 px-2 py-1 text-[11px] text-white border border-white/10 focus:border-primary/70 focus:outline-none transition-colors nodrag disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Определяет, что получат следующие ноды"
+                  title="Determines what next nodes will receive"
                   data-nodrag="true"
                   disabled={disabled}
                 >
@@ -4334,10 +4334,10 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     }
 
     const fallbackSection = raw || `<p style="margin:0 0 16px 0;">
-  Начните редактировать письмо, используя панель инструментов. Добавьте изображения, кнопки и разделители, чтобы собрать свой шаблон.
+  Start editing the email using the toolbar. Add images, buttons, and dividers to build your template.
 </p>
 <p style="margin:0 0 16px 0;">
-  Нажмите «Показать HTML», чтобы внести точечные правки в код.
+  Click "Show HTML" to make precise code edits.
 </p>`;
 
     return `<!DOCTYPE html><html lang="ru"><head><meta charset=\"UTF-8\" /><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
@@ -4361,8 +4361,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
 </head><body>
   <div class="email-shell">
     <header class="email-header">
-      <h1>Заголовок письма</h1>
-      <p>Добавьте сюда ключевой оффер или промо.</p>
+      <h1>Email Header</h1>
+      <p>Add your key offer or promotion here.</p>
     </header>
     <main class="email-main">
       ${heroBlock}
@@ -4371,10 +4371,10 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       </div>
     </main>
     <div class="email-cta">
-      <a class="email-button" href="https://example.com">Перейти в проект →</a>
+      <a class="email-button" href="https://example.com">Go to project →</a>
     </div>
     <footer class="email-footer">
-      Вы получили это письмо, потому что подписались на обновления.
+      You received this email because you subscribed to updates.
     </footer>
   </div>
 </body></html>`;
@@ -4551,10 +4551,10 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       ?.filter((port: { type: string }) => filePortTypes.includes(port.type))
       ?.map((port: { type: string }) => {
         switch (port.type) {
-          case 'image': return 'Изображения';
-          case 'audio': return 'Аудио';
-          case 'video': return 'Видео';
-          case 'file': return 'Файлы';
+          case 'image': return 'Images';
+          case 'audio': return 'Audio';
+          case 'video': return 'Video';
+          case 'file': return 'Files';
           default: return port.type;
         }
       }) || [];
@@ -4603,7 +4603,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
       let models: string[] = [];
       const providerConfig = providers.find(p => p.id === providerId) ?? FALLBACK_PROVIDERS.find(p => p.id === providerId);
       
-      // Сначала пробуем использовать модели из providerConfig (они уже загружены из интеграций)
+      // First try to use models from providerConfig (already loaded from integrations)
       if (Array.isArray(providerConfig?.models) && providerConfig.models.length > 0) {
         models = providerConfig.models;
         console.log(`📦 Using ${models.length} models from provider config for ${providerId}`);
@@ -4662,7 +4662,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
 
     // Save to AI config
     const newAiConfig = {
-      ...node.ai, // Сохраняем существующую конфигурацию
+      ...node.ai, // Preserve existing configuration
       provider: providerId,
       model: provider.defaultModel,
     };
@@ -4781,7 +4781,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     if (!provider) return;
 
     onChangeAi?.(node.node_id, {
-      ...node.ai, // Сохраняем существующую конфигурацию
+      ...node.ai, // Preserve existing configuration
       provider: pendingProviderId,
       model: provider.defaultModel,
     });
@@ -4799,7 +4799,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     if (!fileProvider) return;
 
     onChangeAi?.(node.node_id, {
-      ...node.ai, // Сохраняем существующую конфигурацию
+      ...node.ai, // Preserve existing configuration
       provider: fileProvider.id,
       model: fileProvider.defaultModel,
     });
@@ -4820,7 +4820,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
     if (!provider) return;
 
     onChangeAi?.(node.node_id, {
-      ...node.ai, // Сохраняем существующую конфигурацию
+      ...node.ai, // Preserve existing configuration
       provider: providerId,
       model: provider.defaultModel,
     });
@@ -5021,7 +5021,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
         markRecentlySaved();
         return true;
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Не удалось сохранить изменения';
+        const message = error instanceof Error ? error.message : 'Failed to save changes';
         setContentSyncError(message);
         setIsContentDirty(true);
         return false;
@@ -5271,9 +5271,9 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
 
   const handleInsertImageBlock = useCallback(() => {
     if (typeof window === 'undefined') return;
-    const url = window.prompt('Введите URL изображения');
+    const url = window.prompt('Enter image URL');
     if (!url) return;
-    const alt = window.prompt('Альтернативный текст для изображения') || 'Image';
+    const alt = window.prompt('Alternative text for image') || 'Image';
     const block = `<div style="text-align:center;margin:24px 0;">
   <img src="${url}" alt="${alt}" style="max-width:100%;border-radius:12px;box-shadow:0 8px 18px rgba(15,23,42,0.15);" />
 </div>`;
@@ -5282,7 +5282,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
 
   const handleInsertCtaBlock = useCallback(() => {
     const snippet = `<div style="text-align:center;margin:32px 0;">
-  <a href="https://example.com" style="display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:999px;background:${emailAccentColor};color:#ffffff;font-weight:600;text-decoration:none;">Перейти по ссылке →</a>
+  <a href="https://example.com" style="display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:999px;background:${emailAccentColor};color:#ffffff;font-weight:600;text-decoration:none;">Follow link →</a>
 </div>`;
     handleContentChange(contentValue.trim() ? `${contentValue}\n${snippet}` : snippet);
   }, [contentValue, emailAccentColor, handleContentChange]);
@@ -5422,7 +5422,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
         const footerHeight = getFooterHeight(isAnnotationMode);
         const fixedPartsHeight = NODE_HEADER_HEIGHT + NODE_TOOLBAR_HEIGHT + footerHeight;
         
-        // 🎯 КАК В ФОТОШОПЕ: maxWidth = natural size изображения (нода НЕ больше изображения!)
+        // Like Photoshop: maxWidth = natural image size (node NOT larger than image!)
         const maxResizeWidth = naturalWidth ? Math.min(naturalWidth, MAX_CONTENT_WIDTH) : MAX_CONTENT_WIDTH;
         const maxResizeHeight = naturalHeight 
           ? naturalHeight + fixedPartsHeight 
@@ -5441,7 +5441,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
             keepAspectRatio={false}
           isVisible={selected}
           onResize={(event, params) => {
-            // ✅ Только визуальный индикатор - НЕ обновляем размеры здесь!
+            // Visual indicator only - do NOT update dimensions here!
             setIsResizing(true);
           }}
           onResizeEnd={(event, params) => {
@@ -5452,8 +5452,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
             const contentWidth = params.width;
             
             if (!naturalWidth || !naturalHeight) {
-              // Для нод без aspect ratio (text, pdf и т.д.)
-              // bbox хранит размеры контента как есть
+              // For nodes without aspect ratio (text, pdf, etc.)
+              // bbox stores content dimensions as-is
               if (onChangeUi && node.ui?.bbox) {
                 onChangeUi(node.node_id, {
                   bbox: {
@@ -5467,9 +5467,9 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
               return;
             }
             
-            // ✅ Для image/video: bbox = размеры контента по aspect ratio
-            // bbox хранит ТОЛЬКО размеры контента (изображения)
-            // Константы (header, toolbar, footer) добавляются в UI автоматически
+            // For image/video: bbox = content dimensions by aspect ratio
+            // bbox stores ONLY content dimensions (image)
+            // Constants (header, toolbar, footer) are added in UI automatically
             const aspectRatio = naturalWidth / naturalHeight;
             const contentHeight = contentWidth / aspectRatio;
             
@@ -5507,14 +5507,14 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
           >
             {isGenerating ? (
               <div className="relative flex items-center justify-center">
-                {/* Фоновая иконка приглушенная */}
+                {/* Muted background icon */}
                 <span className="absolute opacity-30">{typeIcon}</span>
                 
-                {/* Индикатор загрузки */}
+                {/* Loading indicator */}
                 <div className="w-5 h-5 relative">
                   <div className="w-full h-full border-2 border-slate-400 border-t-sky-500 rounded-full animate-spin"></div>
                   
-                  {/* Пульсирующая точка в центре */}
+                  {/* Pulsating dot in center */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse"></div>
                   </div>
@@ -5563,7 +5563,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
               </span>
               <span className="flow-node__meta-id">{node.node_id.slice(-8)}</span>
               {(node.meta?.attachments && Array.isArray(node.meta.attachments)) ? (
-                <span className="text-blue-300" title="Есть прикрепленные файлы">
+                <span className="text-blue-300" title="Has attached files">
                   📎 {String((node.meta.attachments as string[]).length)}
                 </span>
               ) : null}
@@ -5582,7 +5582,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 e.stopPropagation();
                 setCollapsed(!collapsed);
               }}
-              title={collapsed ? "Развернуть" : "Свернуть"}
+              title={collapsed ? "Expand" : "Collapse"}
               disabled={disabled}
               style={{ 
                 width: '28px', 
@@ -5602,7 +5602,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
             type="button"
             className="flow-node__toolbar-button"
             onClick={handleColorButtonClick}
-            title="Изменить цвет"
+            title="Change color"
             disabled={disabled}
             style={{ 
               width: '28px', 
@@ -5629,7 +5629,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
               }
               setShowSettingsModal(true);
             }}
-            title="Настройки ноды"
+            title="Node settings"
             disabled={disabled}
             style={{ 
               width: '28px', 
@@ -5651,10 +5651,10 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
               e.preventDefault();
               e.stopPropagation();
               const confirmed = await showConfirm({
-                title: 'Удалить ноду?',
-                message: 'Эта нода будет удалена безвозвратно. Все данные и связи с ней будут потеряны.',
-                confirmText: 'Удалить',
-                cancelText: 'Отмена',
+                title: 'Delete node?',
+                message: 'This node will be permanently deleted. All data and connections will be lost.',
+                confirmText: 'Delete',
+                cancelText: 'Cancel',
                 type: 'danger'
               });
               
@@ -5662,7 +5662,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 onDelete(node.node_id);
               }
             }}
-            title="Удалить ноду"
+            title="Delete node"
             disabled={disabled}
             style={{ 
               width: '28px', 
@@ -5730,7 +5730,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     event.stopPropagation();
                     finishContentEditing();
                   }}
-                  placeholder="Введите ваш промпт для агента..."
+                  placeholder="Enter your prompt for the agent..."
                   disabled={disabled}
                   className="w-full h-full p-3 bg-black/20 border border-white/10 rounded text-sm resize-none nodrag"
                   onMouseDown={(e) => e.stopPropagation()}
@@ -5764,14 +5764,14 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   }}
                   disabled={disabled || providerModelOptions.length === 0}
                   className="flex-1 min-w-[150px] max-w-full px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-slate-300 hover:text-white hover:bg-slate-600 transition nodrag"
-                  title={selectedProvider ? `Модель (${selectedProvider.name})` : 'Выберите оператора в настройках'}
+                  title={selectedProvider ? `Model (${selectedProvider.name})` : 'Select operator in settings'}
                   data-nodrag="true"
                   key={`model-${forceRender}`}
                   style={{ marginRight: '8px' }}
                 >
                   {providerModelOptions.length === 0 ? (
                     <option value="" disabled>
-                      Нет доступных моделей
+                      No available models
                     </option>
                   ) : (
                     providerModelOptions.map((model) => (
@@ -5790,7 +5790,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     setShowAiSettingsModal(true);
                   }}
                   className="w-7 h-7 rounded border transition flex items-center justify-center bg-black/20 border-white/10 text-white/70 hover:bg-black/30 hover:text-white"
-                  title={isSyncingProvider ? 'Синхронизация…' : `Настройки ИИ (оператор: ${currentProviderLabel})`}
+                  title={isSyncingProvider ? 'Syncing…' : `AI Settings (operator: ${currentProviderLabel})`}
                   disabled={disabled || isSyncingProvider}
                   style={{ marginRight: '8px' }}
                 >
@@ -5810,7 +5810,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     }
                   }}
                   className="px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-slate-300 hover:text-white hover:bg-slate-600 transition"
-                  title="Тип вывода"
+                  title="Output type"
                   disabled={disabled}
                   style={{ marginRight: '5px' }}
                 >
@@ -5836,7 +5836,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onRun(node.node_id);
                   }}
                   className="px-3 py-1.5 text-xs rounded border border-green-500/50 bg-green-600/20 text-green-300 hover:bg-green-600/30 transition"
-                  title={isSyncingProvider ? "Синхронизация..." : "Запустить генерацию"}
+                  title={isSyncingProvider ? "Syncing..." : "Run generation"}
                   disabled={disabled || isSyncingProvider}
                 >
                   {isSyncingProvider ? '⏳' : '▶️'}
@@ -5848,7 +5848,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
             {activeAiTab === 'settings' && (
               <div className="mt-2 bg-black/20 border border-white/10 rounded p-3 space-y-3" style={{ flexShrink: 0 }}>
                 <div>
-                  <label className="text-xs text-white/70 block mb-2">Системный промпт</label>
+                  <label className="text-xs text-white/70 block mb-2">System Prompt</label>
                   <div className="flex flex-wrap items-start gap-2 mb-2">
                     <div className="flex flex-wrap gap-2">
                       {quickSystemPrompts.map((preset) => (
@@ -5885,19 +5885,19 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                         onMouseDown={(event) => event.stopPropagation()}
                         onPointerDown={(event) => event.stopPropagation()}
                         className="w-full rounded border border-white/10 bg-black/30 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none"
-                        placeholder="Поиск по библиотеке промптов..."
+                        placeholder="Search prompt library..."
                         disabled={disabled}
                       />
                       {promptSearchTerm.trim().length >= 2 && (
                         <div className="absolute z-40 mt-1 max-h-48 w-full overflow-y-auto rounded border border-slate-700 bg-slate-900 shadow-lg">
                           {promptSearchLoading && (
-                            <div className="px-3 py-2 text-xs text-slate-400">Поиск…</div>
+                            <div className="px-3 py-2 text-xs text-slate-400">Searching…</div>
                           )}
                           {promptSearchError && !promptSearchLoading && (
                             <div className="px-3 py-2 text-xs text-rose-400">{promptSearchError}</div>
                           )}
                           {!promptSearchLoading && !promptSearchError && promptSearchResults.length === 0 && (
-                            <div className="px-3 py-2 text-xs text-slate-400">Ничего не найдено</div>
+                            <div className="px-3 py-2 text-xs text-slate-400">Nothing found</div>
                           )}
                           {!promptSearchLoading &&
                             promptSearchResults.map((preset) => (
@@ -5932,7 +5932,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   <textarea
                     value={systemPromptValue}
                     onChange={(e) => handleSystemPromptChange(e.target.value)}
-                    placeholder="Например: Ты — полезный ассистент."
+                    placeholder="E.g.: You are a helpful assistant."
                     disabled={disabled}
                     className="w-full p-3 bg-black/20 border border-white/10 rounded text-sm resize-none nodrag"
                     onMouseDown={(e) => e.stopPropagation()}
@@ -5950,9 +5950,9 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 />
                 {placeholderInfo.length > 0 && (
                   <div className="mt-3 space-y-2">
-                    <div className="text-xs font-semibold text-white/70">Переменные промпта</div>
+                    <div className="text-xs font-semibold text-white/70">Prompt Variables</div>
                     <div className="text-[11px] text-white/40">
-                      Заполните значения вручную или укажите идентификатор ноды (например, <code>node123.content</code>).
+                      Fill in values manually or specify a node identifier (e.g., <code>node123.content</code>).
                     </div>
                     {placeholderInfo.map((placeholder) => {
                       const currentValue = placeholderInputs[placeholder.name] ?? '';
@@ -5964,7 +5964,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                             <span className="text-xs font-medium text-white/80">{placeholder.name}</span>
                             {preview && (
                               <span className="text-[11px] text-white/40">
-                                Авто: {previewText}
+                                Auto: {previewText}
                               </span>
                             )}
                           </div>
@@ -5972,7 +5972,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                             type="text"
                             value={currentValue}
                             onChange={(event) => handlePlaceholderInputChange(placeholder.name, event.target.value)}
-                            placeholder={preview ? `Авто: ${previewText}` : 'Введите значение или node_id'}
+                            placeholder={preview ? `Auto: ${previewText}` : 'Enter value or node_id'}
                             className="w-full rounded border border-white/10 bg-black/20 px-3 py-1.5 text-sm text-white/80 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none"
                             onMouseDown={(event) => event.stopPropagation()}
                             onPointerDown={(event) => event.stopPropagation()}
@@ -5992,7 +5992,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
             {activeAiTab === 'ai_config' && (
               <div className="mt-2 bg-black/20 border border-white/10 rounded p-3 space-y-3" style={{ flexShrink: 0 }}>
                 <div>
-                  <label className="text-xs text-white/70 block mb-2">Провайдер</label>
+                  <label className="text-xs text-white/70 block mb-2">Provider</label>
                   <select
                     value={String(node.ai?.provider || '')}
                     onChange={(e) => handleProviderChange(e.target.value)}
@@ -6004,8 +6004,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                       <option key={p.id} value={p.id} disabled={!p.available}>
                         {p.name}{' '}
                         {p.supportsFiles && '🗂️'}{' '}
-                        {!p.available && `(${p.reason || 'Недоступен'})`}
-                        {hasFileInputs && !p.supportsFiles && ' ⚠️ Файлы не поддерживаются'}
+                        {!p.available && `(${p.reason || 'Unavailable'})`}
+                        {hasFileInputs && !p.supportsFiles && ' ⚠️ Files not supported'}
                       </option>
                     ))}
                   </select>
@@ -6013,30 +6013,30 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   {/* File support warning */}
                   {hasFileInputs && selectedProvider && !selectedProvider.supportsFiles && (
                     <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded text-xs text-amber-300">
-                      ⚠️ Текущий провайдер не поддерживает файлы. Обнаружены входы: {getFileTypes().join(', ')}
+                      ⚠️ Current provider does not support files. Detected inputs: {getFileTypes().join(', ')}
                     </div>
                   )}
                 </div>
                 {selectedProvider && (
                   <div>
-                    <label className="text-xs text-white/70 block mb-2">Модель</label>
+                    <label className="text-xs text-white/70 block mb-2">Model</label>
                     <button
                       onClick={() => setActiveAiTab('ai_config')}
                       disabled={disabled}
                       className="w-full p-2 bg-black/30 border border-white/10 rounded text-sm nodrag text-left hover:bg-black/40 hover:border-white/20 transition-colors flex items-center justify-between group"
                       data-nodrag="true"
-                      title="Нажмите, чтобы изменить модель"
+                      title="Click to change model"
                     >
                       <span className="text-white/80 truncate">
-                        {String(node.ai?.model || selectedProvider.defaultModel || 'Не выбрана')}
+                        {String(node.ai?.model || selectedProvider.defaultModel || 'Not selected')}
                       </span>
                       <span className="text-white/40 group-hover:text-white/60 transition-colors">⚙️</span>
                     </button>
-                    <div className="text-xs text-white/50 mt-1">Нажмите для изменения модели</div>
+                    <div className="text-xs text-white/50 mt-1">Click to change model</div>
                   </div>
                 )}
                 <div>
-                  <label className="text-xs text-white/70 block mb-2">Температура</label>
+                  <label className="text-xs text-white/70 block mb-2">Temperature</label>
                   <input
                     type="number"
                     min="0"
@@ -6052,7 +6052,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     className="w-full p-2 bg-black/30 border border-white/10 rounded text-sm nodrag"
                     data-nodrag="true"
                   />
-                  <div className="text-xs text-white/50 mt-1">От 0 (строго) до 2 (креативно)</div>
+                  <div className="text-xs text-white/50 mt-1">From 0 (strict) to 2 (creative)</div>
                 </div>
                 {selectedProvider?.inputFields && selectedProvider.inputFields.length > 0 && (
                   <div>
@@ -6082,15 +6082,15 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
             {activeAiTab === 'routing' && (
               <div className="mt-2 bg-black/20 border border-white/10 rounded p-3 space-y-3" style={{ flexShrink: 0 }}>
                 <div className="text-xs text-white/70">
-                  <div className="mb-2">Настройки роутинга выходов:</div>
+                  <div className="mb-2">Output routing settings:</div>
                   <div className="text-white/50 text-[10px]">
-                    Здесь можно настроить типы входящих и исходящих данных, 
-                    количество портов ввода/вывода и правила обработки.
+                    Here you can configure input and output data types, 
+                    number of I/O ports and processing rules.
                   </div>
                 </div>
                 {/* Placeholder for routing configuration */}
                 <div className="p-2 bg-black/20 border border-white/5 rounded text-xs text-white/50 text-center">
-                  Конфигурация роутинга будет добавлена в следующих версиях
+                  Routing configuration will be added in future versions
                 </div>
               </div>
             )}
@@ -6108,7 +6108,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 {/* Mode Toggle and Quick Actions in one row */}
                 <div className="flex items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-2">
-                    <span className="text-white/70">Режим:</span>
+                    <span className="text-white/70">Mode:</span>
                     {(['rich', 'code', 'preview'] as const).map((mode) => (
                       <button
                         key={mode}
@@ -6145,15 +6145,15 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
 <body>
   <div class="container">
     <div class="header">
-      <h1>Заголовок письма</h1>
+      <h1>Email Header</h1>
     </div>
     <div class="content">
-      <p>Привет!</p>
-      <p>Это шаблон HTML письма. Вы можете редактировать его в режиме "Редактор" или переключиться в режим "Код" для точной настройки.</p>
-      <p>С уважением,<br>Команда проекта</p>
+      <p>Hello!</p>
+      <p>This is an HTML email template. You can edit it in "Editor" mode or switch to "Code" mode for fine-tuning.</p>
+      <p>Best regards,<br>Project Team</p>
     </div>
     <div class="footer">
-      Вы получили это письмо, потому что подписались на обновления.
+      You received this email because you subscribed to updates.
     </div>
   </div>
 </body>
@@ -6162,7 +6162,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                       }}
                       className="px-2 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded hover:bg-blue-500/30 transition-colors"
                       onPointerDown={(e) => e.stopPropagation()}
-                      title="Загрузить шаблон"
+                      title="Upload template"
                     >
                       📝
                     </button>
@@ -6180,7 +6180,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                       }}
                       className="px-2 py-1 bg-green-500/20 text-green-300 border border-green-500/30 rounded hover:bg-green-500/30 transition-colors"
                       onPointerDown={(e) => e.stopPropagation()}
-                      title="Скачать HTML"
+                      title="Download HTML"
                     >
                       💾
                     </button>
@@ -6204,7 +6204,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                           onChange={handleContentChange}
                           onFocus={startContentEditing}
                           onBlur={finishContentEditing}
-                          placeholder="Создайте красивое HTML письмо..."
+                          placeholder="Create a beautiful HTML email..."
                           disabled={disabled}
                           height={300}
                           mode="full"
@@ -6271,8 +6271,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onClick={handleImageUpload}
                     onPointerDown={(event) => event.stopPropagation()}
                     className={`${toolbarButtonBaseClasses} border-emerald-400/50 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30 disabled:opacity-40 disabled:hover:bg-emerald-500/20 disabled:hover:text-emerald-100/70`}
-                    title="Загрузить файл"
-                    aria-label="Загрузить файл"
+                    title="Upload file"
+                    aria-label="Upload file"
                     disabled={disabled}
                     data-nodrag="true"
                   >
@@ -6283,8 +6283,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onClick={handleImageUrlInput}
                     onPointerDown={(event) => event.stopPropagation()}
                     className={`${toolbarButtonBaseClasses} border-blue-400/50 bg-blue-500/20 text-blue-100 hover:bg-blue-500/30 disabled:opacity-40 disabled:hover:bg-blue-500/20 disabled:hover:text-blue-100/70`}
-                    title="Загрузить по ссылке"
-                    aria-label="Загрузить по ссылке"
+                    title="Upload from URL"
+                    aria-label="Upload from URL"
                     disabled={disabled}
                     data-nodrag="true"
                   >
@@ -6295,8 +6295,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onClick={handleImageDownload}
                     onPointerDown={(event) => event.stopPropagation()}
                     className={`${toolbarButtonBaseClasses} ${toolbarButtonInactiveClasses}`}
-                    title="Скачать выбранную версию"
-                    aria-label="Скачать выбранную версию"
+                    title="Download selected version"
+                    aria-label="Download selected version"
                     disabled={disabled || (!editedImage && !originalImage)}
                     data-nodrag="true"
                   >
@@ -6307,8 +6307,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onClick={handleResetToContentSize}
                     onPointerDown={(event) => event.stopPropagation()}
                     className={`${toolbarButtonBaseClasses} border-purple-400/60 bg-purple-500/20 text-purple-100 hover:bg-purple-500/30 disabled:opacity-40 disabled:hover:bg-purple-500/20 disabled:hover:text-purple-100/70`}
-                    title="Подогнать размер под содержимое"
-                    aria-label="Подогнать размер под содержимое"
+                    title="Fit size to content"
+                    aria-label="Fit size to content"
                     disabled={
                       disabled || !node.meta?.natural_width || !node.meta?.natural_height
                     }
@@ -6321,8 +6321,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onClick={handleOpenCropModal}
                     onPointerDown={(event) => event.stopPropagation()}
                     className={`${toolbarButtonBaseClasses} border-amber-400/70 bg-amber-500/20 text-amber-100 hover:bg-amber-500/30 disabled:opacity-40 disabled:hover:bg-amber-500/20 disabled:hover:text-amber-100/70`}
-                    title="Создать кадр"
-                    aria-label="Создать кадр"
+                    title="Extract frame"
+                    aria-label="Extract frame"
                     disabled={disabled || !canCropImage || isPreparingCrop || isSavingCropNode}
                     data-nodrag="true"
                   >
@@ -6338,8 +6338,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                         ? 'border-amber-400/70 bg-amber-500/25 text-amber-50 shadow-inner shadow-amber-500/30 disabled:opacity-40 disabled:hover:bg-amber-500/25 disabled:hover:text-amber-50/70'
                         : toolbarButtonInactiveClasses
                     }`}
-                    title="Режим аннотаций"
-                    aria-label="Режим аннотаций"
+                    title="Annotation mode"
+                    aria-label="Annotation mode"
                     disabled={disabled || !hasOriginalImage}
                     data-nodrag="true"
                     aria-pressed={imageViewMode === 'edit'}
@@ -6356,8 +6356,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                         ? 'border-sky-400/70 bg-sky-500/25 text-sky-100 shadow-inner shadow-sky-500/30 disabled:opacity-40 disabled:hover:bg-sky-500/25 disabled:hover:text-sky-100/70'
                         : toolbarButtonInactiveClasses
                     }`}
-                    title="Просмотр оригинального изображения"
-                    aria-label="Просмотр оригинального изображения"
+                    title="View original image"
+                    aria-label="View original image"
                     disabled={disabled || !hasOriginalImage}
                     data-nodrag="true"
                     aria-pressed={effectiveImageOutput === 'original'}
@@ -6373,8 +6373,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                         ? 'border-purple-400/70 bg-purple-500/25 text-purple-50 shadow-inner shadow-purple-500/30 disabled:opacity-40 disabled:hover:bg-purple-500/25 disabled:hover:text-purple-50/70'
                         : toolbarButtonInactiveClasses
                     }`}
-                    title="Просмотр изменённого изображения"
-                    aria-label="Просмотр изменённого изображения"
+                    title="View edited image"
+                    aria-label="View edited image"
                     disabled={disabled || !hasEditedVersion}
                     data-nodrag="true"
                     aria-pressed={effectiveImageOutput === 'annotated'}
@@ -6446,7 +6446,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                           if (!previewSource) {
                             return (
                               <div className="px-4 py-8 text-center text-sm text-white/60">
-                                Загрузите изображение, чтобы увидеть предпросмотр
+                                Upload an image to see preview
                               </div>
                             );
                           }
@@ -6455,8 +6455,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                               src={previewSource}
                               alt={
                                 imageViewMode === 'annotated'
-                                  ? 'Изменённое изображение'
-                                  : 'Оригинальное изображение'
+                                  ? 'Edited image'
+                                  : 'Original image'
                               }
                               style={{
                                 width: '100%',
@@ -6484,7 +6484,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                       onChange={(event) => handleImageNotesChange(event.target.value)}
                       onFocus={handleImageNotesFocus}
                       onBlur={handleImageNotesBlur}
-                      placeholder="Напишите, что важно помнить при работе с этим изображением..."
+                      placeholder="Write what's important to remember when working with this image..."
                       className="w-full flex-1 resize-none rounded border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80 nodrag"
                       style={{
                         minHeight: `${IMAGE_NOTES_MIN_HEIGHT}px`,
@@ -6509,7 +6509,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onClick={handleVideoUpload}
                     onPointerDown={(event) => event.stopPropagation()}
                     className="inline-flex h-6 w-6 items-center justify-center rounded border border-green-500/40 bg-green-500/20 text-green-200 transition-colors hover:bg-green-500/30 text-[11px]"
-                    title="Загрузить видео файл"
+                    title="Upload video file"
                     disabled={disabled}
                     data-nodrag="true"
                   >
@@ -6520,7 +6520,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onClick={handleVideoUrlInput}
                     onPointerDown={(event) => event.stopPropagation()}
                     className="inline-flex h-6 w-6 items-center justify-center rounded border border-blue-500/40 bg-blue-500/20 text-blue-200 transition-colors hover:bg-blue-500/30 text-[11px]"
-                    title="Загрузить по URL"
+                    title="Upload from URL"
                     disabled={disabled}
                     data-nodrag="true"
                   >
@@ -6531,7 +6531,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onClick={handleVideoDownload}
                     onPointerDown={(event) => event.stopPropagation()}
                     className="inline-flex h-6 w-6 items-center justify-center rounded border border-white/10 bg-black/20 text-white/60 transition-colors hover:bg-white/10 text-[11px]"
-                    title="Скачать текущее видео"
+                    title="Download current video"
                     disabled={disabled || !videoSource}
                     data-nodrag="true"
                   >
@@ -6546,7 +6546,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     }}
                     onPointerDown={(event) => event.stopPropagation()}
                     className="inline-flex h-6 w-6 items-center justify-center rounded border border-emerald-500/40 bg-emerald-500/20 text-emerald-200 transition-colors hover:bg-emerald-500/30 text-[11px]"
-                    title="Извлечь кадр"
+                    title="Extract frame"
                     disabled={disabled || !videoSource || isPreparingVideoCrop}
                     data-nodrag="true"
                   >
@@ -6560,7 +6560,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     }}
                     onPointerDown={(event) => event.stopPropagation()}
                     className="inline-flex h-6 w-6 items-center justify-center rounded border border-sky-500/40 bg-sky-500/20 text-sky-200 transition-colors hover:bg-sky-500/30 text-[11px]"
-                    title="Обрезать видео"
+                    title="Trim video"
                     disabled={disabled || !videoSource || isPreparingVideoCrop}
                     data-nodrag="true"
                   >
@@ -6568,7 +6568,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   </button>
                   <div className="flex-1" />
                   <label className="flex items-center gap-1 rounded border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">
-                    Масштаб
+                    Scale
                     <select
                       value={String(videoScale)}
                       onChange={(event) => {
@@ -6602,7 +6602,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                       disabled={disabled || !videoSource}
                       data-nodrag="true"
                     />
-                    Контролы
+                    Controls
                   </label>
                 </div>
 
@@ -6621,7 +6621,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     <textarea
                       value={videoNotes}
                       onChange={(event) => handleVideoNotesChange(event.target.value)}
-                      placeholder="Напишите, что важно помнить при работе с этим видео..."
+                      placeholder="Write what's important to remember when working with this video..."
                       className="flex-1 w-full resize-none rounded border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80 nodrag"
                       style={{ minHeight: VIDEO_NOTES_MIN_HEIGHT }}
                       onMouseDown={(event) => event.stopPropagation()}
@@ -6641,7 +6641,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   <div className="flex items-center gap-2" />
                   <div className="flex items-center gap-2">
                     <label className="flex items-center gap-1 rounded border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/70">
-                      Контекст
+                      Context
                       <input
                         type="number"
                         min={1}
@@ -6696,14 +6696,14 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 >
                   <div className="flex items-center gap-2 text-xs font-medium">
                     <span>📥</span>
-                    <span>Перетащите ноды или файлы в эту область</span>
+                    <span>Drag nodes or files to this area</span>
                   </div>
                   <div className="mt-1 text-[11px] text-white/50">
-                    Изображения и <span className="font-mono text-xs text-white/70">.txt</span> до 5000 символов будут добавлены внутрь папки.
+                    Images and <span className="font-mono text-xs text-white/70">.txt</span> files up to 5000 characters will be added to the folder.
                   </div>
                   {folderChildNodes.length === 0 && (
                     <div className="mt-3 text-[11px] text-white/45">
-                      Здесь появятся вложенные ноды. Можно также использовать кнопку ↗ на ноде, чтобы вернуть её на канву.
+                      Nested nodes will appear here. You can also use the ↗ button on a node to return it to the canvas.
                     </div>
                   )}
                 </div>
@@ -6790,7 +6790,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                                 onRemoveNodeFromFolder?.(child.node_id, parentFolderId);
                               }}
                               disabled={!onRemoveNodeFromFolder || disabled}
-                              title="Вернуть на канву"
+                              title="Return to canvas"
                             >
                               ↗
                             </button>
@@ -6867,7 +6867,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                               onRemoveNodeFromFolder?.(child.node_id, parentFolderId);
                             }}
                             disabled={!onRemoveNodeFromFolder || disabled}
-                            title="Вернуть на канву"
+                            title="Return to canvas"
                           >
                             ↗
                           </button>
@@ -6887,7 +6887,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onChange={(e) => handleFolderFileNotesChange(e.target.value)}
                     onFocus={handleFolderFileNotesFocus}
                     onBlur={handleFolderFileNotesBlur}
-                    placeholder="Напишите, что важно помнить при работе с этой папкой..."
+                    placeholder="Write what's important to remember when working with this folder..."
                     disabled={disabled}
                     className="flex-1 w-full resize-none rounded border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80 nodrag"
                     style={{ minHeight: FOLDER_NOTES_MIN_HEIGHT }}
@@ -6913,7 +6913,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   
                   return hasFiles ? (
                     <div className="space-y-2">
-                      <div className="text-xs text-white/70 mb-2">Прикрепленные файлы:</div>
+                      <div className="text-xs text-white/70 mb-2">Attached files:</div>
                       {/* Display attachments */}
                       {attachments.map((file: string, index: number) => (
                         <div key={index} className="flex items-center justify-between p-2 bg-black/20 rounded border border-white/10">
@@ -6950,7 +6950,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                               <button
                                 onClick={() => handleFileDownload(fileName, fileData as string | ArrayBuffer)}
                                 className="text-blue-400 hover:text-blue-300 text-xs ml-1"
-                                title="Скачать файл"
+                                title="Download file"
                               >
                                 ⬇️
                               </button>
@@ -6962,7 +6962,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   ) : (
                     <div className="space-y-3">
                       <div className="text-center py-6 text-white/50 text-sm border border-dashed border-white/20 rounded">
-                        📁 Нет прикрепленных файлов
+                        📁 No attached files
                       </div>
                       
                       {/* Upload button */}
@@ -7019,7 +7019,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                           className="px-3 py-2 text-sm rounded bg-green-600/30 text-green-200 hover:bg-green-600/50 transition flex-1"
                           disabled={isFileUploading}
                         >
-                          📁 {isFileUploading ? 'Загружаем...' : 'Загрузить файлы'}
+                          📁 {isFileUploading ? 'Uploading...' : 'Upload files'}
                         </button>
                       </div>
                     </div>
@@ -7034,7 +7034,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onChange={(e) => handleFolderFileNotesChange(e.target.value)}
                     onFocus={handleFolderFileNotesFocus}
                     onBlur={handleFolderFileNotesBlur}
-                    placeholder="Напишите, что важно помнить при работе с этими файлами..."
+                    placeholder="Write what's important to remember when working with these files..."
                     disabled={disabled}
                     className="flex-1 w-full resize-none rounded border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80 nodrag"
                     style={{ minHeight: FILE_NOTES_MIN_HEIGHT }}
@@ -7067,14 +7067,14 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     // Upload/URL input when no PDF
                     <div className="flex-1 flex flex-col items-center justify-center gap-4">
                       <div className="text-center py-6 text-white/50 text-sm">
-                        📄 PDF просмотрщик
+                        📄 PDF Viewer
                       </div>
                       
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => {
-                            const url = prompt('Введите URL PDF файла:');
+                            const url = prompt('Enter PDF file URL:');
                           if (url) {
                         onChangeMeta(node.node_id, { pdf_url: url, pdf_file: null, pdf_data: null });
                         autoRenameFromSource(url);
@@ -7110,7 +7110,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                           }}
                           className="px-3 py-2 text-sm rounded bg-green-600/30 text-green-200 hover:bg-green-600/50 transition"
                         >
-                          📁 Файл
+                          📁 File
                         </button>
                       </div>
                     </div>
@@ -7129,8 +7129,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                         ? 'border-blue-500/50 bg-blue-500/25 text-blue-100 shadow-inner shadow-blue-500/30'
                         : toolbarButtonInactiveClasses
                     }`}
-                    aria-label="Режим редактирования"
-                    title="Режим редактирования"
+                    aria-label="Edit mode"
+                    title="Edit mode"
                     disabled={disabled}
                     aria-pressed={textViewMode === 'edit'}
                   >
@@ -7145,8 +7145,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                         ? 'border-sky-500/50 bg-sky-500/25 text-sky-100 shadow-inner shadow-sky-500/30'
                         : toolbarButtonInactiveClasses
                     }`}
-                    aria-label="Режим предпросмотра"
-                    title="Режим предпросмотра"
+                    aria-label="Preview mode"
+                    title="Preview mode"
                     disabled={disabled}
                     aria-pressed={textViewMode === 'preview'}
                   >
@@ -7162,8 +7162,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                       onPointerDown={(event) => event.stopPropagation()}
                       className={`${toolbarButtonBaseClasses} border-emerald-500/40 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30`}
                       aria-expanded={isTextSplitterOpen}
-                      aria-label="Разделить на ноды"
-                      title="Разделить на ноды"
+                      aria-label="Split into nodes"
+                      title="Split into nodes"
                       disabled={disabled}
                     >
                       /
@@ -7174,7 +7174,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onChange={handleTextFontSizeChange}
                     onPointerDown={(event) => event.stopPropagation()}
                     className="h-6 rounded border border-white/15 bg-black/30 px-1 text-[10px] text-white/80 focus:border-emerald-400 focus:outline-none"
-                    title="Размер шрифта"
+                    title="Font size"
                     disabled={disabled}
                   >
                     {TEXT_FONT_SIZE_PRESETS.map((option) => (
@@ -7198,7 +7198,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     }}
                     className={`${toolbarButtonBaseClasses} bg-green-500/20 text-green-300 border border-green-500/30 hover:bg-green-500/30`}
                     onPointerDown={(event) => event.stopPropagation()}
-                    title="Скачать Markdown"
+                    title="Download Markdown"
                     disabled={disabled}
                   >
                     💾
@@ -7238,7 +7238,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                       event.stopPropagation();
                       finishContentEditing();
                     }}
-                    placeholder="Введите содержимое..."
+                    placeholder="Enter content..."
                     disabled={disabled}
                     className="flex-1 rounded-lg border border-white/10 bg-black/20 p-4 text-sm text-white/90 shadow-inner shadow-black/30 resize-none nodrag font-mono tracking-wide"
                     onMouseDown={(event) => event.stopPropagation()}
@@ -7297,12 +7297,12 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     }}
                     className="px-3 py-2 text-sm rounded bg-green-600/30 text-green-200 hover:bg-green-600/50 transition flex-1"
                   >
-                    📁 Файл
+                    📁 File
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      const csvUrl = prompt('Введите URL CSV файла:');
+                      const csvUrl = prompt('Enter CSV file URL:');
                       if (csvUrl) {
                         onChangeMeta(node.node_id, { 
                           csv_url: csvUrl,
@@ -7334,7 +7334,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                         }
                       }}
                       className="px-3 py-2 text-sm rounded bg-orange-600/30 text-orange-200 hover:bg-orange-600/50 transition"
-                      title="Скачать CSV"
+                      title="Download CSV"
                     >
                       💾
                     </button>
@@ -7389,11 +7389,11 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                           </table>
                         ) : csvUrl ? (
                           <div className="flex-1 flex items-center justify-center text-white/60 text-sm">
-                            📊 Введите URL CSV файла для загрузки
+                            📊 Enter CSV file URL to load
                           </div>
                         ) : (
                           <div className="flex-1 flex items-center justify-center text-white/60 text-sm">
-                            📊 Данные CSV не найдены
+                            📊 CSV data not found
                           </div>
                         )}
                       </div>
@@ -7401,7 +7401,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   } else {
                     return (
                       <div className="flex-1 flex items-center justify-center text-white/50 text-sm border border-dashed border-white/20 rounded">
-                        📊 Загрузите CSV файл или укажите ссылку
+                        📊 Upload a CSV file or provide a link
                       </div>
                     );
                   }
@@ -7421,7 +7421,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   event.stopPropagation();
                   finishContentEditing();
                 }}
-                placeholder="Введите содержимое..."
+                placeholder="Enter content..."
                 disabled={disabled}
                 className="w-full bg-transparent border-none outline-none text-white/90 resize-none nodrag"
                 onMouseDown={(e) => e.stopPropagation()} // Prevent node dragging when clicking in textarea
@@ -7471,10 +7471,10 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
               <>
                 <div className="text-xs text-white/70 flex items-center gap-1">
                   <span>📂</span>
-                  <span>Папка</span>
+                  <span>Folder</span>
                 </div>
                 <div className="text-xs text-white/50">
-                  {folderChildNodes.length} элементов • Контекст {folderContextLimit}
+                  {folderChildNodes.length} items • Context {folderContextLimit}
                 </div>
               </>
             ) : (
@@ -7483,7 +7483,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   {node.type === 'video' ? (
                     <>
                       <span>{videoFooterInfo?.primaryIcon ?? '🎬'}</span>
-                      <span className="truncate">{videoFooterInfo?.primaryLabel ?? 'Видео'}</span>
+                      <span className="truncate">{videoFooterInfo?.primaryLabel ?? 'Video'}</span>
                     </>
                   ) : (
                     <span>{node.type.toUpperCase()}</span>
@@ -7504,29 +7504,29 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                       } else if (imageUrl && typeof imageUrl === 'string') {
                         return <span>🔗 URL</span>;
                       } else {
-                        return <span>Не загружено</span>;
+                        return <span>Not loaded</span>;
                       }
                     }
                     if (node.type === 'video') {
-                      return videoFooterSecondaryNode ?? <span>Видео не загружено</span>;
+                      return videoFooterSecondaryNode ?? <span>Video not loaded</span>;
                     }
-                    if (node.type === 'file') return <span>Файл</span>;
+                    if (node.type === 'file') return <span>File</span>;
                     if (node.type === 'pdf') {
                       const pdfUrl = node.meta?.pdf_url;
                       const pdfFile = node.meta?.pdf_file;
                       if (pdfUrl || pdfFile) return <span>📄 PDF</span>;
-                      return <span>PDF не загружен</span>;
+                      return <span>PDF not loaded</span>;
                     }
                     if (node.type === 'markdown') {
                       const viewMode = node.meta?.view_mode || 'preview';
                       return (
                         <span>
-                          📋 {viewMode === 'edit' ? 'Редактор' : viewMode === 'preview' ? 'Просмотр' : 'Разделено'}
+                          📋 {viewMode === 'edit' ? 'Editor' : viewMode === 'preview' ? 'Preview' : 'Split'}
                         </span>
                       );
                     }
                     const chars = isAiNode ? aiCharacterCount : (node.content || '').length;
-                    return <span>Симв. {chars.toLocaleString()}</span>;
+                    return <span>Chars {chars.toLocaleString()}</span>;
                   })()}
                 </div>
               </>
@@ -7536,10 +7536,10 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
               <>
                 <div className="text-xs text-white/70 flex items-center gap-1">
                   <span>📂</span>
-                  <span>Папка</span>
+                  <span>Folder</span>
                 </div>
                 <div className="text-xs text-white/50">
-                  {folderChildNodes.length} элементов • Контекст {folderContextLimit}
+                  {folderChildNodes.length} items • Context {folderContextLimit}
                 </div>
               </>
             ) : (
@@ -7567,7 +7567,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                             return <span title={imageUrl}>🔗 URL</span>;
                           }
                         } else {
-                          return <span>Изображение не загружено</span>;
+                          return <span>Image not loaded</span>;
                         }
                       }
                       if (node.type === 'video') {
@@ -7580,7 +7580,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                           </span>
                         );
                       }
-                      if (node.type === 'file') return <span>Размер: —</span>; // Placeholder for file weight
+                      if (node.type === 'file') return <span>Size: —</span>; // Placeholder for file weight
                       if (node.type === 'pdf') {
                         const pdfUrl = node.meta?.pdf_url as string | undefined;
                         const pdfFile = node.meta?.pdf_file;
@@ -7592,14 +7592,14 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                             const hostname = new URL(pdfUrl).hostname;
                             return (
                               <span>
-                                📄 {hostname} • Стр. {currentPage}
+                                📄 {hostname} • Page {currentPage}
                                 {totalPages ? `/${totalPages}` : ''}
                               </span>
                             );
                           } catch {
                             return (
                               <span>
-                                📄 PDF • Стр. {currentPage}
+                                📄 PDF • Page {currentPage}
                                 {totalPages ? `/${totalPages}` : ''}
                               </span>
                             );
@@ -7607,12 +7607,12 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                         } else if (pdfFile) {
                           return (
                             <span>
-                              📄 Файл • Стр. {currentPage}
+                              📄 File • Page {currentPage}
                               {totalPages ? `/${totalPages}` : ''}
                             </span>
                           );
                         } else {
-                          return <span>📄 PDF не загружен</span>;
+                          return <span>📄 PDF not loaded</span>;
                         }
                       }
                       if (node.type === 'markdown') {
@@ -7620,8 +7620,8 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                         const lines = (node.content || '').split('\n').length;
                         return (
                           <span>
-                            📋 {viewMode === 'edit' ? 'Редактор' : viewMode === 'preview' ? 'Просмотр' : 'Разделено'} • {lines}{' '}
-                            строк
+                            📋 {viewMode === 'edit' ? 'Editor' : viewMode === 'preview' ? 'Preview' : 'Split'} • {lines}{' '}
+                            lines
                           </span>
                         );
                       }
@@ -7633,7 +7633,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                               {getModelType(node.ai.model as string).type}
                             </>
                           ) : (
-                            <>Симв. {(isAiNode ? aiCharacterCount : (node.content || '').length).toLocaleString()}</>
+                            <>Chars {(isAiNode ? aiCharacterCount : (node.content || '').length).toLocaleString()}</>
                           )}
                         </span>
                       );
@@ -7650,7 +7650,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     if (node.type === 'video') {
                       return (
                         <span className="flex items-center gap-2 truncate pl-[30px]">
-                          {videoFooterSecondaryNode ?? <span>Источник не задан</span>}
+                          {videoFooterSecondaryNode ?? <span>Source not set</span>}
                         </span>
                       );
                     }
@@ -7679,21 +7679,21 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                           </span>
                         );
                       }
-                      return <span>Источник не задан</span>;
+                      return <span>Source not set</span>;
                     }
                     if (node.type === 'markdown') {
                       const chars = (node.content || '').length;
-                      return <span>Симв. {chars.toLocaleString()}</span>;
+                      return <span>Chars {chars.toLocaleString()}</span>;
                     }
                     if (node.type === 'pdf') {
-                      return <span>Нажмите, чтобы открыть настройки PDF</span>;
+                      return <span>Click to open PDF settings</span>;
                     }
                     if (node.type === 'file') {
                       const fileName = node.meta?.file_name;
-                      return fileName ? <span className="truncate">{fileName as string}</span> : <span>Файл не выбран</span>;
+                      return fileName ? <span className="truncate">{fileName as string}</span> : <span>No file selected</span>;
                     }
                     const chars = isAiNode ? aiCharacterCount : (node.content || '').length;
-                    return <span>Симв. {chars.toLocaleString()}</span>;
+                    return <span>Chars {chars.toLocaleString()}</span>;
                   })()}
                 </div>
               </>
@@ -7721,14 +7721,14 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
               left: -7,
               zIndex: 10,
             }}
-            title="Контекст - основной вход для промпта"
+            title="Context - main input for prompt"
           />
           
-          {/* Render auto-generated ports BELOW context - ВСЕ порты слева, КРОМЕ "prompt" */}
+          {/* Render auto-generated ports BELOW context - ALL ports on the left, EXCEPT "prompt" */}
           {node.ai.auto_ports
-            .filter(port => port.id !== 'prompt') // ← ИСКЛЮЧАЕМ prompt
+            .filter(port => port.id !== 'prompt') // ← EXCLUDE prompt
             .map((port, index) => {
-              // ⚠️ Проверяем, является ли порт невалидным (с подключениями, но не поддерживается моделью)
+              // Check if port is invalid (has connections but not supported by model)
               const invalidPortsList = (node.meta?.invalid_ports_with_edges || []) as string[];
               const isInvalidPort = invalidPortsList.includes(port.id);
               
@@ -7742,15 +7742,15 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                   className="flow-node__handle flow-node__handle--target"
                   style={{ 
                     background: port.required ? '#ef4444' : '#3b82f6',
-                    border: isInvalidPort ? '3px solid #ef4444' : '2px solid #fff', // ⚠️ Красная обводка для невалидных портов
+                    border: isInvalidPort ? '3px solid #ef4444' : '2px solid #fff', // Red border for invalid ports
                     width: 14,
                     height: 14,
                     top: `${95 + index * 35}px`,
                     left: -7,
                     zIndex: 10,
-                    boxShadow: isInvalidPort ? '0 0 0 2px rgba(239, 68, 68, 0.3)' : undefined, // ⚠️ Дополнительное свечение
+                    boxShadow: isInvalidPort ? '0 0 0 2px rgba(239, 68, 68, 0.3)' : undefined, // Additional glow effect
                   }}
-                  title={isInvalidPort ? `⚠️ ${port.label} - порт больше не поддерживается текущей моделью, но имеет подключения. Переключите на другой порт.` : `${port.label}${port.required ? ' (обязательный)' : ''}`}
+                  title={isInvalidPort ? `⚠️ ${port.label} - port is no longer supported by the current model but has connections. Switch to another port.` : `${port.label}${port.required ? ' (required)' : ''}`}
                 />
               );
             })
@@ -7787,9 +7787,9 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
               context
             </span>
             
-            {/* Labels for auto ports - все слева, КРОМЕ "prompt" */}
+            {/* Labels for auto ports - all on the left, EXCEPT "prompt" */}
             {node.ai.auto_ports
-              .filter(port => port.id !== 'prompt') // ← ИСКЛЮЧАЕМ prompt
+              .filter(port => port.id !== 'prompt') // ← EXCLUDE prompt
               .map((port, index) => (
               <span 
                 key={`label-${port.id}`}
@@ -7949,7 +7949,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
             pointerEvents: 'auto',
             border: '1px solid rgba(255, 255, 255, 0.25)',
           }}
-          title="Изменить размер (тащите для увеличения/уменьшения)"
+          title="Resize (drag to enlarge/shrink)"
         />
       )}
       
@@ -8030,7 +8030,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
           }}
         >
           <div className="bg-slate-800 border border-slate-600 rounded-lg p-6 w-96 max-w-90vw">
-            <h3 className="text-lg font-medium text-white mb-4">Вставить ссылку на изображение</h3>
+            <h3 className="text-lg font-medium text-white mb-4">Insert Image URL</h3>
             
             <input
               type="url"
@@ -8043,7 +8043,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 if (e.key === 'Enter') {
                   onChangeMeta(node.node_id, { 
                     image_url: urlInputValue,
-                    image_data: null, // Очищаем файл при установке URL
+                    image_data: null, // Clear file when setting URL
                     image_file: null,
                     file_size: null,
                     file_type: null
@@ -8061,7 +8061,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 onClick={() => {
                   onChangeMeta(node.node_id, { 
                     image_url: urlInputValue,
-                    image_data: null, // Очищаем файл при установке URL
+                    image_data: null, // Clear file when setting URL
                     image_file: null,
                     file_size: null,
                     file_type: null
@@ -8070,14 +8070,14 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 }}
                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition text-sm font-medium"
               >
-                Применить
+                Apply
               </button>
               <button
                 type="button"
                 onClick={() => setShowUrlModal(false)}
                 className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded transition text-sm"
               >
-                Отмена
+                Cancel
               </button>
             </div>
           </div>
@@ -8095,7 +8095,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
         >
           <div className="w-96 max-w-[90vw] rounded-lg border border-slate-700 bg-slate-900 p-6 shadow-xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-white">Настройки HTML ноды</h3>
+              <h3 className="text-lg font-medium text-white">HTML Node Settings</h3>
               <button
                 type="button"
                 className="text-white/70 hover:text-white"
@@ -8106,7 +8106,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
             </div>
             <div className="mt-4 space-y-4">
               <div>
-                <label className="text-xs text-white/70 block mb-1">Ширина экрана</label>
+                <label className="text-xs text-white/70 block mb-1">Screen Width</label>
                 <select
                   value={screenWidth}
                   onChange={(e) => handleScreenWidthChange(e.target.value)}
@@ -8121,7 +8121,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 </select>
               </div>
               <div>
-                <label className="text-xs text-white/70 block mb-1">Ширина в пикселях</label>
+                <label className="text-xs text-white/70 block mb-1">Width in Pixels</label>
                 <input
                   type="number"
                   min={320}
@@ -8133,22 +8133,22 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 />
               </div>
               <div>
-                <label className="text-xs text-white/70 block mb-1">Тип выхода</label>
+                <label className="text-xs text-white/70 block mb-1">Output Type</label>
                 <select
                   value={htmlOutputType}
                   onChange={(e) => handleHtmlOutputTypeChange(e.target.value as 'link' | 'image' | 'code')}
                   className="w-full rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/80 focus:border-blue-500 focus:outline-none"
                   disabled={disabled}
                 >
-                  <option value="link">Ссылка</option>
-                  <option value="image" disabled={!htmlScreenshot}>Изображение (скриншот)</option>
-                  <option value="code">HTML код</option>
+                  <option value="link">Link</option>
+                  <option value="image" disabled={!htmlScreenshot}>Image (screenshot)</option>
+                  <option value="code">HTML Code</option>
                 </select>
               </div>
             </div>
             <div className="mt-6 space-y-4 border-t border-white/10 pt-4">
               <div>
-                <div className="text-xs text-white/70 uppercase tracking-wide">Страница</div>
+                <div className="text-xs text-white/70 uppercase tracking-wide">Page</div>
                 <div className="mt-2 text-sm text-white/80 break-all">{displayHtmlUrl}</div>
                 <div className="mt-3 flex gap-2">
                   <button
@@ -8156,21 +8156,21 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     className="flex-1 rounded border border-white/15 bg-white/10 px-3 py-1.5 text-sm text-white/80 transition hover:bg-white/20"
                     onClick={handleOpenHtmlUrl}
                   >
-                    Открыть
+                    Open
                   </button>
                   <button
                     type="button"
                     className="flex-1 rounded border border-white/15 bg-white/10 px-3 py-1.5 text-sm text-white/80 transition hover:bg-white/20"
                     onClick={handleCopyHtmlUrl}
                   >
-                    Копировать
+                    Copy
                   </button>
                 </div>
               </div>
               <div>
-                <div className="text-xs text-white/70 uppercase tracking-wide">Скриншот</div>
+                <div className="text-xs text-white/70 uppercase tracking-wide">Screenshot</div>
                 <div className="mt-2 text-sm text-white/80">
-                  {htmlScreenshot ? `Сохранён: ${capturedAtLabel}` : 'Скриншот ещё не создавался'}
+                  {htmlScreenshot ? `Saved: ${capturedAtLabel}` : 'Screenshot not yet captured'}
                 </div>
                 <div className="mt-3 flex gap-2">
                   <button
@@ -8179,7 +8179,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onClick={handleOpenHtmlScreenshot}
                     disabled={!htmlScreenshot}
                   >
-                    Открыть
+                    Open
                   </button>
                   <button
                     type="button"
@@ -8187,7 +8187,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                     onClick={handleDownloadHtmlScreenshot}
                     disabled={!htmlScreenshot}
                   >
-                    Скачать
+                    Download
                   </button>
                 </div>
               </div>
@@ -8198,7 +8198,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 className="rounded border border-white/20 px-3 py-1.5 text-sm text-white/70 hover:text-white"
                 onClick={() => setShowHtmlSettingsModal(false)}
               >
-                Закрыть
+                Close
               </button>
             </div>
           </div>
@@ -8242,7 +8242,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
           }}
         >
           <div className="bg-slate-800 border border-slate-600 rounded-lg p-6 w-96 max-w-90vw">
-            <h3 className="text-lg font-medium text-white mb-4">Вставить ссылку на PDF</h3>
+            <h3 className="text-lg font-medium text-white mb-4">Insert PDF Link</h3>
             
             <input
               type="url"
@@ -8255,7 +8255,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 if (e.key === 'Enter') {
                   onChangeMeta(node.node_id, { 
                     pdf_url: pdfUrlInputValue,
-                    pdf_data: null, // Очищаем файл при установке URL
+                    pdf_data: null, // Clear file when setting URL
                     pdf_file: null,
                     file_size: null,
                     file_type: null,
@@ -8275,7 +8275,7 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 onClick={() => {
                   onChangeMeta(node.node_id, { 
                     pdf_url: pdfUrlInputValue,
-                    pdf_data: null, // Очищаем файл при установке URL
+                    pdf_data: null, // Clear file when setting URL
                     pdf_file: null,
                     file_size: null,
                     file_type: null,
@@ -8286,14 +8286,14 @@ const [loadingModels, setLoadingModels] = useState<Record<string, boolean>>({});
                 }}
                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition text-sm font-medium"
               >
-                Применить
+                Apply
               </button>
               <button
                 type="button"
                 onClick={() => setShowPdfUrlModal(false)}
                 className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded transition text-sm"
               >
-                Отмена
+                Cancel
               </button>
             </div>
           </div>

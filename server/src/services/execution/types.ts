@@ -112,24 +112,24 @@ export const BACKOFF = [0, 1_000, 2_000];
 // Default prompts for auto-filling when empty
 // ============================================================
 
-export const DEFAULT_MINDMAP_PROMPT = `Ты - эксперт по структурированию информации. Твоя задача:
-1. Разбить информацию на логические блоки (узлы)
-2. Установить иерархические связи между узлами (родитель-дети)
-3. Каждый узел должен иметь: type, title, content
-4. Создать tree структуру для визуализации
+export const DEFAULT_MINDMAP_PROMPT = `You are an expert in information structuring. Your task:
+1. Break information into logical blocks (nodes)
+2. Establish hierarchical relationships between nodes (parent-children)
+3. Each node must have: type, title, content
+4. Create a tree structure for visualization
 
-Пример формата ответа:
+Example response format:
 {
   "nodes": [
     {
       "type": "text",
-      "title": "Название узла",
-      "content": "Описание содержания узла",
+      "title": "Node title",
+      "content": "Description of node content",
       "children": [
         {
           "type": "text",
-          "title": "Подузел",
-          "content": "Описание подузла",
+          "title": "Sub-node",
+          "content": "Description of sub-node",
           "children": []
         }
       ]
@@ -137,24 +137,24 @@ export const DEFAULT_MINDMAP_PROMPT = `Ты - эксперт по структу
   ]
 }`;
 
-export const DEFAULT_MINDMAP_EXAMPLE = `Пример: Разбор проекта
+export const DEFAULT_MINDMAP_EXAMPLE = `Example: Project breakdown
 {
   "nodes": [
     {
       "type": "text",
-      "title": "Проект: Мобильное приложение",
-      "content": "Разработка мобильного приложения для управления задачами",
+      "title": "Project: Mobile Application",
+      "content": "Development of a mobile application for task management",
       "children": [
         {
           "type": "text",
-          "title": "Требования",
-          "content": "Список функциональных и технических требований",
+          "title": "Requirements",
+          "content": "List of functional and technical requirements",
           "children": []
         },
         {
           "type": "text",
-          "title": "Архитектура",
-          "content": "Описание системной архитектуры приложения",
+          "title": "Architecture",
+          "content": "Description of the application system architecture",
           "children": []
         }
       ]

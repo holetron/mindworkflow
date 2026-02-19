@@ -4,38 +4,38 @@ import type { Migration } from './index';
 
 const MIGRATION_ID = '20251010_create_prompt_presets';
 
-const plannerPrompt = `Ты - агент-планировщик workflow. Твоя задача создавать структурированные планы в виде множественных нод.
+const plannerPrompt = `You are a workflow planner agent. Your task is to create structured plans as multiple nodes.
 
-ДОСТУПНЫЕ ТИПЫ НОД:
-• text - Текстовый контент, заметки, описания
-• ai - AI-агент для генерации контента (используй для задач требующих ИИ)
-• ai_improved - Улучшенный AI-агент с расширенными возможностями
-• image - Изображения, картинки, визуализации
-• video - Видео контент, демонстрации
-• audio - Аудио контент, подкасты, записи
-• html - HTML страницы, веб-контент
-• json - Структурированные данные в JSON формате
-• markdown - Документы в формате Markdown
-• file - Файлы, документы, ресурсы
-• python - Python код, скрипты, вычисления
-• router - Условная логика, маршрутизация между нодами
+AVAILABLE NODE TYPES:
+• text - Text content, notes, descriptions
+• ai - AI agent for content generation (use for tasks requiring AI)
+• ai_improved - Enhanced AI agent with extended capabilities
+• image - Images, pictures, visualizations
+• video - Video content, demonstrations
+• audio - Audio content, podcasts, recordings
+• html - HTML pages, web content
+• json - Structured data in JSON format
+• markdown - Documents in Markdown format
+• file - Files, documents, resources
+• python - Python code, scripts, computations
+• router - Conditional logic, routing between nodes
 
-ПРАВИЛА СОЗДАНИЯ НОД:
-1. Всегда указывай type и title (обязательно!)
-2. Добавляй content с описанием того, что должна делать нода
-3. Для AI-нод добавляй ai конфигурацию с system_prompt
-4. Создавай логическую последовательность - от постановки задачи к результату
-5. Используй разные типы нод для разнообразия workflow
+NODE CREATION RULES:
+1. Always specify type and title (required!)
+2. Add content with a description of what the node should do
+3. For AI nodes, add ai configuration with system_prompt
+4. Create a logical sequence - from problem statement to result
+5. Use different node types for workflow diversity
 
-ФОРМАТ ОТВЕТА (строго JSON):
+RESPONSE FORMAT (strict JSON):
 {
   "nodes": [
     {
-      "type": "тип_ноды",
-      "title": "Название ноды",
-      "content": "Описание задачи ноды",
+      "type": "node_type",
+      "title": "Node Title",
+      "content": "Description of the node task",
       "ai": {
-        "system_prompt": "Инструкции для ИИ",
+        "system_prompt": "Instructions for AI",
         "model": "gpt-4",
         "temperature": 0.7
       }
@@ -43,62 +43,62 @@ const plannerPrompt = `Ты - агент-планировщик workflow. Тво
   ]
 }
 
-ПРИМЕРЫ ИСПОЛЬЗОВАНИЯ ТИПОВ:
-- text: для описаний, планов, заметок
-- ai: для генерации контента, анализа, обработки
-- python: для вычислений, обработки данных
-- image: для создания диаграмм, схем
-- markdown: для отчетов, документации
-- json: для структурированных результатов
+TYPE USAGE EXAMPLES:
+- text: for descriptions, plans, notes
+- ai: for content generation, analysis, processing
+- python: for computations, data processing
+- image: for creating diagrams, charts
+- markdown: for reports, documentation
+- json: for structured results
 
-Создавай практичные и полезные workflow!`;
+Create practical and useful workflows!`;
 
 const mindmapExample = JSON.stringify(
   {
     nodes: [
       {
         type: 'text',
-        title: '1. Подготовка к ремонту',
-        content: 'Определение бюджета, создание плана работ и списка необходимых материалов',
+        title: '1. Renovation Preparation',
+        content: 'Budget definition, work plan creation, and list of required materials',
         children: [
           {
             type: 'ai',
-            title: '1.1. Расчет бюджета',
-            content: 'AI-агент для расчета стоимости материалов и работ',
+            title: '1.1. Budget Estimation',
+            content: 'AI agent for calculating material and labor costs',
             ai: {
-              system_prompt: 'Рассчитай примерный бюджет для ремонта санузла',
+              system_prompt: 'Estimate an approximate budget for a bathroom renovation',
               model: 'gpt-4',
               temperature: 0.7,
             },
           },
           {
             type: 'text',
-            title: '1.2. План работ',
-            content: 'Последовательность выполнения ремонтных работ',
+            title: '1.2. Work Plan',
+            content: 'Sequence of renovation work execution',
           },
         ],
       },
       {
         type: 'ai_improved',
-        title: '2. Список покупок',
-        content: 'AI-агент для создания детального списка покупок',
+        title: '2. Shopping List',
+        content: 'AI agent for creating a detailed shopping list',
         ai: {
-          system_prompt: 'Создай подробный список покупок с брендами и моделями',
+          system_prompt: 'Create a detailed shopping list with brands and models',
           model: 'gpt-4',
           temperature: 0.5,
         },
         children: [
           {
             type: 'json',
-            title: '2.1. Структурированный список',
-            content: 'Список в JSON формате для удобства',
+            title: '2.1. Structured List',
+            content: 'List in JSON format for convenience',
           },
         ],
       },
       {
         type: 'markdown',
-        title: '3. Отчет по проекту',
-        content: '# План ремонта санузла\n\n## Основные этапы\n\n1. Демонтаж\n2. Черновые работы\n3. Чистовая отделка',
+        title: '3. Project Report',
+        content: '# Bathroom Renovation Plan\n\n## Main Phases\n\n1. Demolition\n2. Rough Work\n3. Finish Work',
       },
     ],
   },
@@ -159,8 +159,8 @@ export const createPromptPresetsMigration: Migration = {
       insert.run(
         crypto.randomUUID(),
         'system_prompt',
-        'Планировщик',
-        'Базовый системный промпт для генерации workflow планов',
+        'Planner',
+        'Basic system prompt for generating workflow plans',
         plannerPrompt,
         JSON.stringify(['workflow', 'planner', 'default']),
         1,
@@ -173,7 +173,7 @@ export const createPromptPresetsMigration: Migration = {
         crypto.randomUUID(),
         'output_example',
         'Mindmap',
-        'Пример выходных данных в формате mindmap',
+        'Example output data in mindmap format',
         mindmapExample,
         JSON.stringify(['mindmap', 'example', 'default']),
         1,

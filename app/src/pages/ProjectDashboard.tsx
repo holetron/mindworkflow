@@ -88,7 +88,7 @@ function ProjectDashboard() {
     loadShare().catch((err) => setShareError(err instanceof Error ? err.message : String(err)));
   }, [shareProject]);
 
-  // Проверяем Google Drive статус при загрузке
+  // Check Google Drive status on load
   useEffect(() => {
     const checkGoogleDrive = async () => {
       try {
@@ -174,7 +174,7 @@ function ProjectDashboard() {
 
   const handleDelete = async (project: ProjectSummary) => {
     const confirmed = window.confirm(
-      `Удалить проект "${project.title}"? Все связанные данные будут удалены без возможности восстановления.`,
+      `Delete project "${project.title}"? All related data will be deleted permanently.`,
     );
     if (!confirmed) {
       return;
@@ -200,7 +200,7 @@ function ProjectDashboard() {
 
   const handleConnectGoogleDrive = async () => {
     try {
-      // Получаем token из localStorage
+      // Get token from localStorage
       const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('Not authenticated. Please login first.');
@@ -218,7 +218,7 @@ function ProjectDashboard() {
       }
       const { authUrl } = await response.json();
       
-      // Открываем окно авторизации Google
+      // Open Google authorization window
       const width = 500;
       const height = 600;
       const left = window.screenX + (window.outerWidth - width) / 2;
@@ -226,7 +226,7 @@ function ProjectDashboard() {
       
       window.open(authUrl, 'google_drive_auth', `width=${width},height=${height},left=${left},top=${top}`);
       
-      // Проверяем статус через 2 секунды и потом каждые 2 секунды
+      // Check status every 2 seconds
       let attempts = 0;
       const checkInterval = setInterval(async () => {
         attempts++;
@@ -248,7 +248,7 @@ function ProjectDashboard() {
           console.error('Error checking Google Drive status:', err);
         }
 
-        // Прекращаем проверку после 60 секунд
+        // Stop checking after 60 seconds
         if (attempts > 30) {
           clearInterval(checkInterval);
         }
@@ -286,7 +286,7 @@ function ProjectDashboard() {
   const handleShareSubmit = async () => {
     if (!shareProject) return;
     if (!shareForm.email && !shareForm.user_id) {
-      setShareError('Укажите email или user_id');
+      setShareError('Enter email or user_id');
       return;
     }
     try {
@@ -405,8 +405,8 @@ function ProjectDashboard() {
                   </div>
                   <p className="line-clamp-2 text-sm text-slate-400">{project.description || 'No description'}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                    <span>Редакторы: {editors}</span>
-                    <span>Наблюдатели: {viewers}</span>
+                    <span>Editors: {editors}</span>
+                    <span>Viewers: {viewers}</span>
                     {project.is_public && (
                       <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-400">
                         Public
@@ -498,7 +498,7 @@ function ProjectDashboard() {
             <div className="flex items-start justify-between border-b border-slate-800 p-4">
               <div>
                 <h2 className="text-lg font-semibold text-white">Share "{shareProject.title}"</h2>
-                <p className="text-xs text-slate-400">Назначьте редакторов и зрителей. Только владелец может управлять доступом.</p>
+                <p className="text-xs text-slate-400">Assign editors and viewers. Only the owner can manage access.</p>
               </div>
               <button
                 type="button"
@@ -548,7 +548,7 @@ function ProjectDashboard() {
                 <h3 className="text-sm font-semibold text-slate-200">Collaborators</h3>
                 {shareLoading && !shareInfo && <p className="text-xs text-slate-500">Loading…</p>}
                 {!shareLoading && shareInfo && shareInfo.collaborators.length === 0 && (
-                  <p className="text-xs text-slate-500">Пока нет назначенных пользователей.</p>
+                  <p className="text-xs text-slate-500">No assigned users yet.</p>
                 )}
                 {shareInfo && shareInfo.collaborators.length > 0 && (
                   <ul className="space-y-2 text-sm">

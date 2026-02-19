@@ -24,14 +24,14 @@ interface AgentPreset {
 
 /**
  * GET /api/agent-presets
- * Получить все пресеты агентов текущего пользователя
+ * Get all agent presets for the current user
  */
 router.get('/agent-presets', (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId || null;
 
-    // Если нет userId (dev режим без авторизации), показываем всех
-    // В production всегда будет userId от auth middleware
+    // If there is no userId (dev mode without auth), show all
+    // In production there will always be a userId from auth middleware
     let presets: AgentPreset[];
     if (userId) {
       const stmt = db.prepare(`
@@ -49,7 +49,7 @@ router.get('/agent-presets', (req: Request, res: Response) => {
       presets = stmt.all() as AgentPreset[];
     }
 
-    // Парсим JSON поля
+    // Parse JSON fields
     const parsedPresets = presets.map((preset) => ({
       ...preset,
       node_template: JSON.parse(preset.node_template),
@@ -66,7 +66,7 @@ router.get('/agent-presets', (req: Request, res: Response) => {
 
 /**
  * POST /api/agent-presets
- * Создать новый пресет агента из ноды
+ * Create a new agent preset from a node
  */
 router.post('/agent-presets', (req: Request, res: Response) => {
   try {
@@ -116,7 +116,7 @@ router.post('/agent-presets', (req: Request, res: Response) => {
 
 /**
  * GET /api/agent-presets/:id
- * Получить конкретный пресет по ID
+ * Get a specific preset by ID
  */
 router.get('/agent-presets/:id', (req: Request, res: Response) => {
   try {
@@ -129,7 +129,7 @@ router.get('/agent-presets/:id', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Preset not found' });
     }
 
-    // Проверяем доступ (свой или публичный)
+    // Check access (own or public)
     if (preset.user_id !== null && preset.user_id !== userId) {
       return res.status(403).json({ error: 'Access denied' });
     }
@@ -148,7 +148,7 @@ router.get('/agent-presets/:id', (req: Request, res: Response) => {
 
 /**
  * PUT /api/agent-presets/:id
- * Обновить существующий пресет
+ * Update an existing preset
  */
 router.put('/agent-presets/:id', (req: Request, res: Response) => {
   try {
@@ -163,7 +163,7 @@ router.put('/agent-presets/:id', (req: Request, res: Response) => {
       field_mapping: node_template?.ai?.field_mapping,
     } }, '[agent-presets] PUT request');
 
-    // Проверяем что пресет принадлежит пользователю
+    // Check that the preset belongs to the user
     const existing = db.prepare('SELECT * FROM agent_presets WHERE preset_id = ?').get(id) as AgentPreset | undefined;
 
     if (!existing) {
@@ -218,14 +218,14 @@ router.put('/agent-presets/:id', (req: Request, res: Response) => {
 
 /**
  * PATCH /api/agent-presets/:id/favorite
- * Переключить статус избранного
+ * Toggle favorite status
  */
 router.patch('/agent-presets/:id/favorite', (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId || null;
     const { id } = req.params;
 
-    // Проверяем что пресет принадлежит пользователю
+    // Check that the preset belongs to the user
     const existing = db.prepare('SELECT * FROM agent_presets WHERE preset_id = ?').get(id) as AgentPreset | undefined;
 
     if (!existing) {
@@ -261,7 +261,7 @@ router.patch('/agent-presets/:id/favorite', (req: Request, res: Response) => {
 
 /**
  * POST /api/agent-presets/share
- * Поделиться агентом (отправить копию другому пользователю)
+ * Share an agent (send a copy to another user)
  */
 router.post('/agent-presets/share', (req: Request, res: Response) => {
   try {
@@ -272,21 +272,21 @@ router.post('/agent-presets/share', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'preset_id and recipient_email are required' });
     }
 
-    // Получаем агента
+    // Get the agent
     const preset = db.prepare('SELECT * FROM agent_presets WHERE preset_id = ?').get(preset_id) as AgentPreset | undefined;
 
     if (!preset) {
       return res.status(404).json({ error: 'Preset not found' });
     }
 
-    // Находим получателя по email
+    // Find the recipient by email
     const recipient = db.prepare('SELECT user_id, email FROM users WHERE email = ?').get(recipient_email) as { user_id: string; email: string } | undefined;
 
     if (!recipient) {
       return res.status(404).json({ error: 'Recipient not found' });
     }
 
-    // Создаём копию агента для получателя
+    // Create a copy of the agent for the recipient
     const newPresetId = `preset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
 
@@ -304,14 +304,14 @@ router.post('/agent-presets/share', (req: Request, res: Response) => {
       preset.icon,
       preset.node_template,
       preset.tags,
-      0, // не избранный
+      0, // not favorite
       (preset as any).folder || null,
       now,
       now
     );
 
-    // TODO: Отправить уведомление получателю (email или in-app notification)
-    // Можно добавить запись в таблицу notifications
+    // TODO: Send notification to the recipient (email or in-app notification)
+    // Could add a record to the notifications table
 
     res.json({ 
       success: true, 
@@ -326,24 +326,24 @@ router.post('/agent-presets/share', (req: Request, res: Response) => {
 
 /**
  * DELETE /api/agent-presets/:id
- * Удалить пресет
+ * Delete a preset
  */
 router.delete('/agent-presets/:id', (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId || null;
     const { id } = req.params;
 
-    // Проверяем что пресет существует
+    // Check that the preset exists
     const existing = db.prepare('SELECT * FROM agent_presets WHERE preset_id = ?').get(id) as AgentPreset | undefined;
 
     if (!existing) {
       return res.status(404).json({ error: 'Preset not found' });
     }
 
-    // Разрешаем удалять:
-    // 1. Свои пресеты (user_id совпадает)
-    // 2. Старые пресеты без user_id (user_id IS NULL)
-    // Запрещаем удалять чужие пресеты (user_id другой и не NULL)
+    // Allow deleting:
+    // 1. Own presets (user_id matches)
+    // 2. Legacy presets without user_id (user_id IS NULL)
+    // Deny deleting other users' presets (user_id is different and not NULL)
     if (existing.user_id !== null && existing.user_id !== userId) {
       return res.status(403).json({ error: 'Access denied' });
     }

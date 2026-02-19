@@ -16,7 +16,7 @@ interface RichTextEditorProps {
 export function RichTextEditor({
   value,
   onChange,
-  placeholder = 'Введите текст...',
+  placeholder = 'Enter text...',
   disabled = false,
   height = 200,
   mode = 'full',

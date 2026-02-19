@@ -76,7 +76,7 @@ export function PromptManagement({
               onClick={() => setPromptCategoryFilter('all')}
               className={`rounded-full px-3 py-1 text-sm transition ${promptCategoryFilter === 'all' ? 'bg-primary text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
             >
-              Все категории
+              All Categories
             </button>
             {PROMPT_CATEGORY_OPTIONS.map((option) => (
               <button
@@ -96,18 +96,18 @@ export function PromptManagement({
                 onClick={() => setPromptImportMode('append')}
                 className={`px-3 py-1 transition ${promptImportMode === 'append' ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
                 disabled={promptImporting}
-                title="Добавить новые промпты, не удаляя текущие"
+                title="Add new prompts without deleting existing ones"
               >
-                Добавить
+                Add
               </button>
               <button
                 type="button"
                 onClick={() => setPromptImportMode('replace')}
                 className={`px-3 py-1 transition ${promptImportMode === 'replace' ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
                 disabled={promptImporting}
-                title="Заменить текущую библиотеку импортируемым списком"
+                title="Replace current library with imported list"
               >
-                Заменить
+                Replace
               </button>
             </div>
             <button
@@ -117,7 +117,7 @@ export function PromptManagement({
               className="flex items-center gap-2 rounded-full border border-slate-700 px-3 py-1 text-sm text-slate-200 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-500"
             >
               {promptExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {promptExporting ? 'Экспорт...' : 'Экспорт JSON'}
+              {promptExporting ? 'Exporting...' : 'Export JSON'}
             </button>
             <button
               type="button"
@@ -126,7 +126,7 @@ export function PromptManagement({
               className="flex items-center gap-2 rounded-full border border-slate-700 px-3 py-1 text-sm text-slate-200 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-500"
             >
               {promptImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {promptImporting ? 'Импорт...' : 'Импорт JSON'}
+              {promptImporting ? 'Importing...' : 'Import JSON'}
             </button>
             <button
               type="button"
@@ -134,7 +134,7 @@ export function PromptManagement({
               className="flex items-center gap-2 rounded-full bg-primary px-4 py-1 text-sm font-medium text-white transition hover:bg-primary/90"
             >
               <Plus className="h-4 w-4" />
-              Новый промпт
+              New prompt
             </button>
           </div>
         </div>
@@ -147,26 +147,26 @@ export function PromptManagement({
         />
         {promptsError && (
           <div className="rounded border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-sm text-rose-200">
-            Не удалось загрузить библиотеку промптов: {promptsError}
+            Failed to load prompt library: {promptsError}
           </div>
         )}
         {promptsLoading && !promptPresets.length ? (
           <div className="flex items-center gap-2 rounded border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-400">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Загрузка библиотеки промптов...
+            Loading prompt library...
           </div>
         ) : promptPresets.length === 0 ? (
           <div className="rounded border border-slate-800 bg-slate-900/70 p-6 text-sm text-slate-400">
             {promptSearch.trim()
-              ? `Нет промптов по запросу \u00AB${promptSearch.trim()}\u00BB.`
-              : 'Пока нет сохраненных промптов. Добавьте первый пресет, чтобы использовать его в AI настройках.'}
+              ? `No prompts matching query \u00AB${promptSearch.trim()}\u00BB.`
+              : 'No saved prompts yet. Add the first preset to use it in AI settings.'}
           </div>
         ) : (
           <div className="grid gap-4">
             {promptPresets.map((preset) => {
               const categoryLabel =
                 PROMPT_CATEGORY_OPTIONS.find((option) => option.value === preset.category)?.label ??
-                (preset.category === 'system_prompt' ? 'Системные промпты' : 'Примеры вывода');
+                (preset.category === 'system_prompt' ? 'System prompts' : 'Output examples');
               return (
                 <article
                   key={preset.preset_id}
@@ -181,7 +181,7 @@ export function PromptManagement({
                         </span>
                         {preset.is_quick_access && (
                           <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] uppercase tracking-wide text-emerald-300">
-                            Быстрый доступ
+                            Quick Access
                           </span>
                         )}
                       </div>
@@ -189,8 +189,8 @@ export function PromptManagement({
                         <p className="text-sm text-slate-300">{preset.description}</p>
                       )}
                       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                        <span>Сортировка: {preset.sort_order}</span>
-                        <span>Обновлен: {formatDateTime(preset.updated_at)}</span>
+                        <span>Sort order: {preset.sort_order}</span>
+                        <span>Updated: {formatDateTime(preset.updated_at)}</span>
                       </div>
                       {preset.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 text-[11px] uppercase tracking-wide text-slate-400">
@@ -212,7 +212,7 @@ export function PromptManagement({
                         className="flex items-center gap-2 rounded-full border border-slate-700 px-3 py-1 text-sm text-slate-200 transition hover:border-primary hover:text-primary"
                       >
                         <Edit3 className="h-4 w-4" />
-                        Редактировать
+                        Edit
                       </button>
                       <button
                         type="button"
@@ -220,12 +220,12 @@ export function PromptManagement({
                         className="flex items-center gap-2 rounded-full border border-rose-500/40 px-3 py-1 text-sm text-rose-200 transition hover:border-rose-400 hover:text-rose-200"
                       >
                         <Trash2 className="h-4 w-4" />
-                        Удалить
+                        Delete
                       </button>
                     </div>
                   </header>
                   <div className="mt-4">
-                    <div className="text-xs uppercase tracking-wide text-slate-500">Содержимое</div>
+                    <div className="text-xs uppercase tracking-wide text-slate-500">Content</div>
                     <pre className="mt-2 max-h-48 overflow-y-auto rounded border border-slate-800 bg-black/40 p-3 text-xs text-slate-200">
                       {preset.content}
                     </pre>
@@ -240,7 +240,7 @@ export function PromptManagement({
       {/* Prompt create/edit modal */}
       {promptModalOpen && (
         <Modal
-          title={editingPrompt ? `Редактирование промпта \u00AB${editingPrompt.label}\u00BB` : 'Новый промпт'}
+          title={editingPrompt ? `Editing prompt \u00AB${editingPrompt.label}\u00BB` : 'New prompt'}
           onClose={onClosePromptModal}
           actions={
             <div className="flex items-center justify-end gap-3">
@@ -250,7 +250,7 @@ export function PromptManagement({
                 className="rounded-full border border-slate-700 px-4 py-1 text-sm text-slate-300 hover:border-slate-500 hover:text-slate-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-500"
                 disabled={promptSubmitting}
               >
-                Отмена
+                Cancel
               </button>
               <button
                 type="button"
@@ -258,7 +258,7 @@ export function PromptManagement({
                 className="rounded-full bg-primary px-4 py-1 text-sm font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-slate-700"
                 disabled={promptSubmitting}
               >
-                {promptSubmitting ? 'Сохранение...' : 'Сохранить'}
+                {promptSubmitting ? 'Saving...' : 'Save'}
               </button>
             </div>
           }
@@ -266,7 +266,7 @@ export function PromptManagement({
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="text-xs uppercase tracking-wide text-slate-400">Категория</label>
+                <label className="text-xs uppercase tracking-wide text-slate-400">Category</label>
                 <select
                   value={promptForm.category}
                   onChange={(event) => onPromptFieldChange('category', event.target.value as PromptPresetCategory)}
@@ -281,7 +281,7 @@ export function PromptManagement({
                 </select>
               </div>
               <div>
-                <label className="text-xs uppercase tracking-wide text-slate-400">Порядок</label>
+                <label className="text-xs uppercase tracking-wide text-slate-400">Order</label>
                 <input
                   type="number"
                   value={promptForm.sort_order}
@@ -293,11 +293,11 @@ export function PromptManagement({
                   disabled={promptSubmitting}
                   min={0}
                 />
-                <p className="mt-1 text-xs text-slate-500">Используется для сортировки кнопок быстрого доступа.</p>
+                <p className="mt-1 text-xs text-slate-500">Used for sorting quick access buttons.</p>
               </div>
             </div>
             <div>
-              <label className="text-xs uppercase tracking-wide text-slate-400">Название</label>
+              <label className="text-xs uppercase tracking-wide text-slate-400">Name</label>
               <input
                 type="text"
                 value={promptForm.label}
@@ -308,27 +308,27 @@ export function PromptManagement({
               />
             </div>
             <div>
-              <label className="text-xs uppercase tracking-wide text-slate-400">Описание</label>
+              <label className="text-xs uppercase tracking-wide text-slate-400">Description</label>
               <textarea
                 rows={2}
                 value={promptForm.description}
                 onChange={(event) => onPromptFieldChange('description', event.target.value)}
                 className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
                 disabled={promptSubmitting}
-                placeholder="Короткое пояснение, зачем этот промпт"
+                placeholder="Brief explanation of what this prompt is for"
               />
             </div>
             <div>
-              <label className="text-xs uppercase tracking-wide text-slate-400">Теги</label>
+              <label className="text-xs uppercase tracking-wide text-slate-400">Tags</label>
               <input
                 type="text"
                 value={promptForm.tags}
                 onChange={(event) => onPromptFieldChange('tags', event.target.value)}
                 className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-primary focus:outline-none"
                 disabled={promptSubmitting}
-                placeholder="например: planner, sales, onboarding"
+                placeholder="e.g.: planner, sales, onboarding"
               />
-              <p className="mt-1 text-xs text-slate-500">Через запятую. Используется для поиска.</p>
+              <p className="mt-1 text-xs text-slate-500">Comma-separated. Used for searching.</p>
             </div>
             <label className="flex items-center gap-3 text-sm text-slate-200">
               <input
@@ -338,17 +338,17 @@ export function PromptManagement({
                 className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-primary focus:ring-primary"
                 disabled={promptSubmitting}
               />
-              Показать в быстрых кнопках
+              Show in quick access buttons
             </label>
             <div>
-              <label className="text-xs uppercase tracking-wide text-slate-400">Содержимое промпта</label>
+              <label className="text-xs uppercase tracking-wide text-slate-400">Prompt Content</label>
               <textarea
                 rows={10}
                 value={promptForm.content}
                 onChange={(event) => onPromptFieldChange('content', event.target.value)}
                 className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-200 focus:border-primary focus:outline-none"
                 disabled={promptSubmitting}
-                placeholder="Полный текст промпта"
+                placeholder="Full prompt text"
                 required
               />
             </div>

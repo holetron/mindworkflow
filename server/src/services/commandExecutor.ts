@@ -1,7 +1,7 @@
 /**
  * Command Executor Service
  * 
- * Парсит команды из ответов AI, валидирует их и выполняет изменения в workflow.
+ * Parses commands from AI responses, validates them, and executes changes in the workflow.
  */
 
 import { db } from '../db';
@@ -26,12 +26,12 @@ export interface CommandResult {
 }
 
 /**
- * Извлекает JSON команды из текста ответа AI
+ * Extracts JSON commands from AI response text
  */
 export function extractCommands(aiResponse: string): Command[] {
   const commands: Command[] = [];
   
-  // Ищем все JSON блоки в формате ~~~json ... ~~~
+  // Find all JSON blocks in ~~~json ... ~~~ format
   const jsonBlockRegex = /~~~json\s*\n([\s\S]*?)\n~~~/g;
   let match;
   
@@ -40,12 +40,12 @@ export function extractCommands(aiResponse: string): Command[] {
       const jsonStr = match[1].trim();
       const parsed = JSON.parse(jsonStr);
       
-      // Проверяем что это команда (есть поле command)
+      // Check that this is a command (has a command field)
       if (parsed && typeof parsed === 'object' && 'command' in parsed) {
         commands.push(parsed as Command);
       }
     } catch (error) {
-      // Пропускаем невалидный JSON
+      // Skip invalid JSON
       log.warn({ err: error }, 'Failed to parse JSON command');
     }
   }
@@ -54,13 +54,13 @@ export function extractCommands(aiResponse: string): Command[] {
 }
 
 /**
- * Валидирует команду на основе режима агента
+ * Validates a command based on the agent mode
  */
 export function validateCommand(
   cmd: Command,
   mode: AgentMode
 ): { valid: boolean; error?: string } {
-  // Ask mode - никакие команды не разрешены
+  // Ask mode - no commands allowed
   if (mode === 'ask') {
     return { 
       valid: false, 
@@ -68,7 +68,7 @@ export function validateCommand(
     };
   }
   
-  // Edit mode - только update_node_content
+  // Edit mode - only update_node_content
   if (mode === 'edit') {
     if (cmd.command !== 'update_node_content') {
       return { 
@@ -78,7 +78,7 @@ export function validateCommand(
     }
   }
   
-  // Валидация структуры команды
+  // Command structure validation
   switch (cmd.command) {
     case 'create_node':
       if (!cmd.type || !cmd.title) {
@@ -119,7 +119,7 @@ export function validateCommand(
 }
 
 /**
- * Выполняет команду в БД
+ * Executes a command in the DB
  */
 export async function executeCommand(
   cmd: Command,
@@ -181,12 +181,12 @@ async function executeCreateNode(
   const nodeId = crypto.randomUUID();
   const now = new Date().toISOString();
   
-  // Позиция по умолчанию (center canvas)
+  // Default position (center canvas)
   const position = cmd.position as { x?: number; y?: number } | undefined;
   const x = position?.x ?? 400;
   const y = position?.y ?? 300;
   
-  // Подготовка данных ноды
+  // Prepare node data
   const data = {
     label: cmd.title,
     title: cmd.title,
@@ -194,10 +194,10 @@ async function executeCreateNode(
     ...(cmd.config || {}),
   };
   
-  // AI конфигурация (если есть)
+  // AI configuration (if present)
   const ai = cmd.ai ? (typeof cmd.ai === 'string' ? JSON.parse(cmd.ai) : cmd.ai) : null;
   
-  // Вставляем ноду
+  // Insert node
   const insert = db.prepare(`
     INSERT INTO nodes (
       node_id,
@@ -245,7 +245,7 @@ async function executeDeleteNode(
 ): Promise<CommandResult> {
   const nodeId = cmd.node_id as string;
   
-  // Проверяем что нода существует и принадлежит проекту
+  // Verify node exists and belongs to the project
   const existing = db.prepare('SELECT node_id FROM nodes WHERE node_id = ? AND project_id = ?')
     .get(nodeId, projectId);
     
@@ -257,10 +257,10 @@ async function executeDeleteNode(
     };
   }
   
-  // Удаляем связи
+  // Delete edges
   db.prepare('DELETE FROM edges WHERE source = ? OR target = ?').run(nodeId, nodeId);
   
-  // Удаляем ноду
+  // Delete node
   db.prepare('DELETE FROM nodes WHERE node_id = ?').run(nodeId);
   
   return {
@@ -289,7 +289,7 @@ async function executeUpdateNode(
     };
   }
   
-  // Проверяем что нода существует
+  // Verify node exists
   const existing = db.prepare('SELECT * FROM nodes WHERE node_id = ? AND project_id = ?')
     .get(nodeId, projectId) as any;
     
@@ -301,7 +301,7 @@ async function executeUpdateNode(
     };
   }
   
-  // Обновляем поля (в новой схеме нет колонки data)
+  // Update fields (in the new schema there is no data column)
   const updateStmt = db.prepare(`
     UPDATE nodes
     SET 
@@ -328,7 +328,7 @@ async function executeUpdateNode(
 }
 
 /**
- * UPDATE_NODE_CONTENT (упрощенная версия для Edit mode)
+ * UPDATE_NODE_CONTENT (simplified version for Edit mode)
  */
 async function executeUpdateNodeContent(
   cmd: Command,
@@ -345,7 +345,7 @@ async function executeUpdateNodeContent(
     };
   }
   
-  // Проверяем что нода существует
+  // Verify node exists
   const existing = db.prepare('SELECT node_id FROM nodes WHERE node_id = ? AND project_id = ?')
     .get(nodeId, projectId);
     
@@ -357,7 +357,7 @@ async function executeUpdateNodeContent(
     };
   }
   
-  // Обновляем только content
+  // Update content only
   db.prepare(`
     UPDATE nodes
     SET content = ?, updated_at = ?
@@ -385,7 +385,7 @@ async function executeCreateEdge(
   const sourceHandle = cmd.sourceHandle as string | null || null;
   const targetHandle = cmd.targetHandle as string | null || null;
   
-  // Проверяем что обе ноды существуют
+  // Verify both nodes exist
   const sourceExists = db.prepare('SELECT node_id FROM nodes WHERE node_id = ? AND project_id = ?')
     .get(source, projectId);
   const targetExists = db.prepare('SELECT node_id FROM nodes WHERE node_id = ? AND project_id = ?')
@@ -407,7 +407,7 @@ async function executeCreateEdge(
     };
   }
   
-  // Проверяем что связь не существует
+  // Verify edge does not already exist
   const existingEdge = db.prepare(`
     SELECT edge_id FROM edges 
     WHERE project_id = ? AND source = ? AND target = ?
@@ -423,7 +423,7 @@ async function executeCreateEdge(
     };
   }
   
-  // Создаем связь
+  // Create edge
   db.prepare(`
     INSERT INTO edges (edge_id, project_id, source, target, sourceHandle, targetHandle)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -445,7 +445,7 @@ async function executeDeleteEdge(
   projectId: string
 ): Promise<CommandResult> {
   if (cmd.edge_id) {
-    // Удаление по ID
+    // Delete by ID
     const edgeId = cmd.edge_id as string;
     const existing = db.prepare('SELECT edge_id FROM edges WHERE edge_id = ? AND project_id = ?')
       .get(edgeId, projectId);
@@ -467,7 +467,7 @@ async function executeDeleteEdge(
       edge_id: edgeId,
     };
   } else {
-    // Удаление по source + target
+    // Delete by source + target
     const source = cmd.source as string;
     const target = cmd.target as string;
     

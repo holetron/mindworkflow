@@ -1,8 +1,8 @@
 /**
  * Workflow Context Generation Service
  * 
- * Генерирует текстовое представление workflow для AI агента чата.
- * Поддерживает 3 режима: agent (полный доступ), edit (только контент), ask (read-only).
+ * Generates a text representation of the workflow for the AI chat agent.
+ * Supports 3 modes: agent (full access), edit (content only), ask (read-only).
  */
 
 import { db } from '../db';
@@ -13,13 +13,13 @@ export type ContextLevel = 0 | 1 | 2 | 3 | 4 | 5;
 
 interface WorkflowContextOptions {
   mode: AgentMode;
-  maxTokens?: number; // Лимит токенов (приблизительно 1 токен = 4 символа)
+  maxTokens?: number; // Token limit (approximately 1 token = 4 characters)
   depth?: number; // DEPRECATED, use context_level
-  context_level?: ContextLevel; // 0=нет, 1=описание, 2=clean, 3=simple, 4=simple_json, 5=full_json
+  context_level?: ContextLevel; // 0=none, 1=description, 2=clean, 3=simple, 4=simple_json, 5=full_json
 }
 
 /**
- * Главная функция генерации контекста workflow
+ * Main function for generating workflow context
  */
 export function generateWorkflowContext(
   projectId: string,
@@ -45,7 +45,7 @@ export function generateWorkflowContext(
     return 'No workflow context (level 0).';
   }
 
-  // Загружаем ноды и связи из БД
+  // Load nodes and edges from DB
   const nodes = db.prepare('SELECT * FROM nodes WHERE project_id = ?').all(projectId) as ProjectNode[];
   const edges = db.prepare('SELECT * FROM edges WHERE project_id = ?').all(projectId) as ProjectEdge[];
 
@@ -79,7 +79,7 @@ export function generateWorkflowContext(
       context = serializeReadOnlyContext(nodes, level);
   }
 
-  // Обрезаем если превышает лимит токенов (приблизительно 1 токен = 4 символа)
+  // Truncate if exceeding token limit (approximately 1 token = 4 characters)
   const maxChars = maxTokens * 4;
   if (context.length > maxChars) {
     context = context.substring(0, maxChars) + '\n\n... (context truncated due to token limit)';
@@ -89,7 +89,7 @@ export function generateWorkflowContext(
 }
 
 /**
- * CLEAN MODE: Компактный вывод через разделитель " ; "
+ * CLEAN MODE: Compact output with " ; " separator
  */
 function serializeCleanWorkflow(nodes: ProjectNode[], edges: ProjectEdge[], level: ContextLevel): string {
   const parts: string[] = [];
@@ -122,15 +122,15 @@ function serializeCleanWorkflow(nodes: ProjectNode[], edges: ProjectEdge[], leve
 }
 
 /**
- * AGENT MODE: Полный контекст - все ноды + связи + метаданные
- * 
- * Уровни контекста:
- * 0 - Нет контекста
- * 1 - Только описание проекта
- * 2 - Clean context (компактный текст)
- * 3 - Простой текст (расширенный)
- * 4 - JSON упрощенный
- * 5 - JSON полный
+ * AGENT MODE: Full context - all nodes + edges + metadata
+ *
+ * Context levels:
+ * 0 - No context
+ * 1 - Project description only
+ * 2 - Clean context (compact text)
+ * 3 - Simple text (extended)
+ * 4 - Simplified JSON
+ * 5 - Full JSON
  */
 function serializeFullWorkflow(nodes: ProjectNode[], edges: ProjectEdge[], level: ContextLevel): string {
   // Level 0: No context
@@ -217,15 +217,15 @@ function serializeFullWorkflow(nodes: ProjectNode[], edges: ProjectEdge[], level
 }
 
 /**
- * EDIT MODE: Только контент нод без структуры
- * 
- * Уровни контекста:
- * 0 - Нет контекста
- * 1 - Только описание проекта
- * 2 - Clean context (компактный текст)
- * 3 - Простой текст (расширенный)
- * 4 - JSON упрощенный
- * 5 - JSON полный
+ * EDIT MODE: Node content only without structure
+ *
+ * Context levels:
+ * 0 - No context
+ * 1 - Project description only
+ * 2 - Clean context (compact text)
+ * 3 - Simple text (extended)
+ * 4 - Simplified JSON
+ * 5 - Full JSON
  */
 function serializeNodesContentOnly(nodes: ProjectNode[], level: ContextLevel): string {
   // Level 0: No context
@@ -306,15 +306,15 @@ function serializeNodesContentOnly(nodes: ProjectNode[], level: ContextLevel): s
 }
 
 /**
- * ASK MODE: Read-only контекст
- * 
- * Уровни контекста:
- * 0 - Нет контекста
- * 1 - Только описание проекта
- * 2 - Clean context (компактный текст)
- * 3 - Простой текст (расширенный)
- * 4 - JSON упрощенный
- * 5 - JSON полный
+ * ASK MODE: Read-only context
+ *
+ * Context levels:
+ * 0 - No context
+ * 1 - Project description only
+ * 2 - Clean context (compact text)
+ * 3 - Simple text (extended)
+ * 4 - Simplified JSON
+ * 5 - Full JSON
  */
 function serializeReadOnlyContext(nodes: ProjectNode[], level: ContextLevel): string {
   // Level 0: No context
@@ -400,16 +400,16 @@ function serializeReadOnlyContext(nodes: ProjectNode[], level: ContextLevel): st
 }
 
 /**
- * Вспомогательные функции
+ * Helper functions
  */
 
 function getNodeContent(node: ProjectNode): string {
-  // Прямой content
+  // Direct content
   if (node.content) {
     return typeof node.content === 'string' ? node.content : JSON.stringify(node.content);
   }
 
-  // Из data
+  // From data
   try {
     const data = typeof node.data === 'string' ? JSON.parse(node.data) : (node.data || {});
     if (data.content) {
@@ -422,7 +422,7 @@ function getNodeContent(node: ProjectNode): string {
       return typeof data.description === 'string' ? data.description : JSON.stringify(data.description);
     }
   } catch (error) {
-    // Игнорируем ошибки парсинга
+    // Ignore parsing errors
   }
 
   return '';

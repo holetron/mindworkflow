@@ -14,8 +14,8 @@
     {
       "node_id": "start",
       "type": "text",
-      "title": "Начало",
-      "content": "# Начало проекта\n\nЭто стартовая нода вашего проекта. Добавьте описание или начните работу.",
+      "title": "Start",
+      "content": "# Project Start\n\nThis is the starting node of your project. Add a description or begin working.",
       "content_type": "text/markdown",
       "meta": {
         "position": {
