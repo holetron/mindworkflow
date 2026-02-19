@@ -34,11 +34,13 @@ function parseLegacyMarkdown(filePath: string, filename: string) {
     const titleLine = lines.find((line) => line.trim().startsWith('#'));
     const title = titleLine ? titleLine.replace(/^#+\s*/, '').trim() || 'Feedback' : 'Feedback';
 
+    // Support both English and Russian legacy markdown headers ("Контакт" = Contact)
     const contactLine = lines.find((line) => line.trim().startsWith('**Contact:**') || line.trim().startsWith('**Контакт:**'));
     const contact = contactLine
       ? contactLine.replace(/\*\*(Contact|Контакт):\*\*\s*/i, '').trim().replace(/^(Not specified|Не указан)$/i, '')
       : '';
 
+    // Support both English and Russian section headers (статус=status, решение=resolution, описание=description)
     const statusSectionIndex = lines.findIndex((line) => line.trim().toLowerCase() === '## status' || line.trim().toLowerCase() === '## статус');
     const resolutionSectionIndex = lines.findIndex((line) => line.trim().toLowerCase() === '## resolution' || line.trim().toLowerCase() === '## решение');
     const descriptionSectionIndex = lines.findIndex((line) => line.trim().toLowerCase() === '## description' || line.trim().toLowerCase() === '## описание');

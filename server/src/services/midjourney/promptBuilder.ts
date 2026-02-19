@@ -30,10 +30,10 @@ export function buildDiscordPrompt(
       log.info('[buildDiscordPrompt]     → Character reference (--cref flag)');
     } else if (purpose === 'style_reference' || purpose.includes('style')) {
       styleRefUrls.push(ref.url);
-      log.info('[buildDiscordPrompt]     → Style reference (перед текстом)');
+      log.info('[buildDiscordPrompt]     → Style reference (prepended before text)');
     } else if (purpose === 'image_prompt' || purpose === 'reference_image' || purpose.includes('reference') || purpose.includes('image')) {
       imagePromptUrls.push(ref.url);
-      log.info('[buildDiscordPrompt]     → Image prompt (в начале)');
+      log.info('[buildDiscordPrompt]     → Image prompt (at the beginning)');
     } else {
       imagePromptUrls.push(ref.url);
       log.info('[buildDiscordPrompt]     → Default to Image prompt');

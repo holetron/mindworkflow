@@ -93,6 +93,7 @@ function sanitizeFeedbackContact(value: unknown): string | null {
     return null;
   }
   const normalized = String(value).trim();
+  // "не указан" is Russian for "not specified"
   if (normalized.length === 0 || /^(not specified|не указан)$/i.test(normalized)) {
     return null;
   }

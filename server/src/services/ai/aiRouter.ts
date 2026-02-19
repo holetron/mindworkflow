@@ -245,8 +245,9 @@ export class AiService {
   // ---- Stub generators ----
 
   inferTargetAudience(source: string): string {
-    if (/школ/i.test(source)) return 'students aged 10-16';
-    if (/взросл/i.test(source)) return 'adult audience aged 25-45';
+    // Match Russian words: "школ" = school, "взросл" = adult
+    if (/школ|school/i.test(source)) return 'students aged 10-16';
+    if (/взросл|adult/i.test(source)) return 'adult audience aged 25-45';
     return 'general audience';
   }
 
@@ -256,8 +257,9 @@ export class AiService {
   }
 
   inferTone(source: string): string {
-    if (/серьез/i.test(source)) return 'serious';
-    if (/весел/i.test(source) || /смешн/i.test(source)) return 'playful';
+    // Match Russian words: "серьез" = serious, "весел" = cheerful, "смешн" = funny
+    if (/серьез|serious/i.test(source)) return 'serious';
+    if (/весел|смешн|cheerful|funny/i.test(source)) return 'playful';
     return 'dynamic';
   }
 
@@ -330,6 +332,7 @@ export class AiService {
     const combinedPrompt = nodeContent.trim() ? nodeContent : promptSource;
 
     let responseText = '';
+    // "ремонт" is Russian for "renovation/repair"
     if (combinedPrompt.toLowerCase().includes('ремонт') || combinedPrompt.toLowerCase().includes('renovation') || combinedPrompt.toLowerCase().includes('repair')) {
       responseText = `Step-by-step renovation plan:\n\n1. **Preparation phase**\n   - Remove old plumbing fixtures\n   - Clean surfaces\n   - Prepare tools and materials\n\n2. **Main work**\n   - Replace vanity under the sink\n   - Install new mirror\n   - Replace toilet\n   - Install backsplash behind the sink\n\n3. **Finishing phase**\n   - Connect utilities\n   - Seal joints\n   - Clean up the workspace\n   - Verify everything works properly`;
     } else {

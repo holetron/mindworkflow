@@ -6,8 +6,8 @@ import React from 'react';
 import { ImageAnnotationEditor } from '../ImageAnnotationEditor';
 import type { ImageAnnotationEditorHandle } from '../ImageAnnotationEditor';
 import type { FlowNode } from './nodeTypes';
+import { NODE_TOOLBAR_HEIGHT } from '../../../constants/nodeSizes';
 import {
-  NODE_TOOLBAR_HEIGHT,
   IMAGE_VIEWPORT_MIN_HEIGHT,
   IMAGE_NOTES_MIN_HEIGHT,
   TOOLBAR_BUTTON_BASE_CLASSES,

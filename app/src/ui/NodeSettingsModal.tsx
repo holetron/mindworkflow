@@ -85,7 +85,7 @@ export function NodeSettingsModal({ node, onClose, onUpdateNodeMeta, loading = f
         title: 'Unsaved changes',
         message: 'You have unsaved changes in node settings. Do you want to save them before closing?',
         confirmText: 'Save',
-        cancelText: 'Don't save',
+        cancelText: "Don't save",
         type: 'warning'
       });
       
